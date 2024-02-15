@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WAV File Processor</title>
+    <!-- Add your CSS and JavaScript references here -->
+    <script src="https://unpkg.com/wavesurfer.js@7.7.2/dist/wavesurfer.min.js"></script>
+    <script src="https://unpkg.com/wavesurfer.js@7/dist/plugins/regions.min.js"></script>
+</head>
+<body>
+    <h1>WAV File Processor</h1>
+
+    <input type="file" id="audioFile" accept=".wav">
+    <button id="visualizeButton">Visualize Audio</button>
+    <button id="processButton">Process Audio</button>
+
+    <button id="playButton">Play</button>
+    <button id="pauseButton">Pause</button>
+
+    <div id="waveform"></div>
+    <div id="result"></div>
+
+    <script src="https://unpkg.com/wavesurfer.js@7.7.2/dist/wavesurfer.min.js"></script>
+    <script src="https://unpkg.com/wavesurfer.js@7/dist/plugins/regions.min.js"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}" type="module"></script>
+
+
+</body>
+</html>
