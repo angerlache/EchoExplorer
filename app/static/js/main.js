@@ -1,8 +1,4 @@
-//import Regions from '../../node_modules/wavesurfer.js/dist/plugins/plugins/regions.cjs';
-//import Regions from '../../node_modules/wavesurfer.js/dist/plugins/plugins/regions.esm.js';
-//import Regions from '../../node_modules/wavesurfer.js/dist/plugins/plugins/regions.js';
-//import Regions from '../../node_modules/wavesurfer.js/dist/plugins/plugins/regions.min.js';
-//import RegionsPlugin from './wavesurfer.js/dist/plugins/regions.esm.js'
+import { generateColorMap } from './utils.js';
 
 document.addEventListener('DOMContentLoaded', function () {
     const fileInput = document.getElementById('audioFile');
@@ -39,13 +35,40 @@ document.addEventListener('DOMContentLoaded', function () {
                 container: '#waveform',
                 waveColor: 'black',
                 progressColor: 'red',
-                normalize: true
+                //normalize: true,
+                sampleRate: 192000,
             });
+            wavesurfer.load(url);
 
             // Initialize the Regions plugin
-            //const wsRegions = wavesurfer.registerPlugin(Regions.create())
+            const wsRegions = wavesurfer.registerPlugin(WaveSurfer.Regions.create())
 
-            wavesurfer.load(url);
+            wavesurfer.on('decode', () => {
+                // Regions
+                wsRegions.addRegion({
+                    start: 1,
+                    end: 2,
+                    content: 'Resize me',
+                    drag: true,
+                    resize: true,
+                })
+            });
+
+            wavesurfer.registerPlugin(
+                WaveSurfer.Spectrogram.create({
+                    container: '#spectrogram',
+                    //height: 500,
+                    //splitChannels: true,
+                    frequencyMax: 192000,
+                    fftSamples: 1024,  // Adjust the number of FFT samples
+                    labels: true,     // Show frequency labels
+                    colorMap: generateColorMap(),  // Change the color map (viridis, plasma, inferno, etc.)
+                    //windowFunc: 'hann',   // Change the window function (hann, hamming, blackman, etc.)
+                    scrollParent: true    // Enable scrolling within the parent container
+        
+                }),
+            )
+
         };
 
         reader.readAsArrayBuffer(file);
@@ -82,19 +105,7 @@ document.addEventListener('DOMContentLoaded', function () {
         .then(response => response.json())
         .then(data => {
             resultDiv.innerHTML = 'Result: ' + data.result;
-            // Additional processing or display logic can be added here
             
-            /*if (wavesurfer && data.timestep) {
-
-                wavesurfer.on('decode', () => {
-                    wsRegions.addRegion({
-                        start: data.timestep,
-                        content: data.result,
-                        color:'rgba(255, 0, 0, 0.3)',
-                    })
-                });
-
-            }*/
         
         })
         .catch(error => {
