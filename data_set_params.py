@@ -1,6 +1,6 @@
 import numpy as np
 import csv
-from models_params_helper import cnn_params, cnn_params_1, cnn_params_2, xgboost_params, resnet_params, resnet_params_1, resnet_params_2
+from models_params_helper import cnn_params, cnn_params_1, cnn_params_2, svm_params, xgboost_params
 
 
 class DataSetParams:
@@ -12,8 +12,8 @@ class DataSetParams:
         Parameters
         -----------
         model_name : String
-            Can be one of: 'cnn8', 'cnn2', 'hybrid_cnn_xgboost',
-            'resnet8', 'resnet2', 'hybrid_resnet_xgboost'
+            Can be one of: 'batmen', 'cnn2',  'hybrid_cnn_svm', 'hybrid_cnn_xgboost',
+            'hybrid_call_svm', 'hybrid_call_xgboost'.
         """
 
         self.spectrogram_params()
@@ -26,7 +26,7 @@ class DataSetParams:
         self.audio_dir_classif = '' # path to the directory containing the wav files for classification
         self.data_set_detect = '' # path to the npz file for detection
         self.data_set_classif = '' # path to the npz file for classification
-        self.model_dir = 'data/models/' # path to the saved models
+        self.model_dir = '' # path to the saved models
         self.feature_dir = '' # path to the saved features
 
         # gain of time by computng and saving the features only once and then loading them
@@ -44,11 +44,11 @@ class DataSetParams:
         self.tune_cnn_8 = False
         self.tune_cnn_2 = False
         self.tune_cnn_7 = False
+        self.tune_svm_spectrogram = False
+        self.tune_svm_call = False
         self.tune_xgboost_spectrogram = False
-        self.tune_resnet_8 = False
-        self.tune_resnet_2 = False
-        self.tune_resnet_7 = False
-        self.tune_time = 17*60*60 # maximum time of tuning in seconds
+        self.tune_xgboost_call = False
+        self.tune_time = 1 # maximum time of tuning in seconds
         self.filename_tuning()
         
         # CNN
@@ -80,22 +80,23 @@ class DataSetParams:
 
         self.trials_filename_1 = "results/"
         self.trials_filename_2 = "results/"
-        if self.classification_model == "cnn8":
+        if self.classification_model == "batmen":
             self.trials_filename_1 += "trials_"+self.classification_model
         elif self.classification_model == "cnn2":
             self.trials_filename_1 += "trials_"+self.classification_model+"_1"
             self.trials_filename_2 += "trials_"+self.classification_model+"_2"
+        elif self.classification_model == "hybrid_cnn_svm":
+            self.trials_filename_1 += "trials_hybrid_cnn_spectrogram"
+            self.trials_filename_2 += "trials_hybrid_svm_spectrogram"
         elif self.classification_model == "hybrid_cnn_xgboost":
             self.trials_filename_1 += "trials_hybrid_cnn_spectrogram"
             self.trials_filename_2 += "trials_hybrid_xgboost_spectrogram"
-        elif self.classification_model == "resnet8":
-            self.trials_filename_1 += "trials_"+self.classification_model
-        elif self.classification_model == "resnet2":
-            self.trials_filename_1 += "trials_"+self.classification_model+"_1"
-            self.trials_filename_2 += "trials_"+self.classification_model+"_2"
-        elif self.classification_model == "hybrid_resnet_xgboost":
-            self.trials_filename_1 += "trials_hybrid_resnet_spectrogram"
-            self.trials_filename_2 += "trials_hybrid_xgboost_spectrogram"
+        elif self.classification_model == "hybrid_call_svm":
+            self.trials_filename_1 += "trials_hybrid_cnn_call"
+            self.trials_filename_2 += "trials_hybrid_svm_call"
+        elif self.classification_model == "hybrid_call_xgboost":
+            self.trials_filename_1 += "trials_hybrid_cnn_call"
+            self.trials_filename_2 += "trials_hybrid_xgboost_call"
 
     
     def load_params_from_csv(self, model_name):
@@ -105,32 +106,33 @@ class DataSetParams:
         Parameters
         -----------
         model_name : String
-            Can be one of: 'cnn8', 'cnn2', 'hybrid_cnn_xgboost',
-            'resnet8', 'resnet2', 'hybrid_resnet_xgboost'
+            Can be one of: 'batmen', 'cnn2',  'hybrid_cnn_svm', 'hybrid_cnn_xgboost',
+            'hybrid_call_svm', 'hybrid_call_xgboost'.
         """
         
         filename_cnn = "data/cnn_params.csv"
+        filename_svm = "data/svm_params.csv"
         filename_xgboost = "data/xgboost_params.csv"
-        filename_resnet = "data/resnet_params.csv"
         dict_cnn = self.load_params(filename_cnn)
+        dict_svm = self.load_params(filename_svm)
         dict_xgboost = self.load_params(filename_xgboost)
-        dict_resnet = self.load_params(filename_resnet)
-        if model_name=="cnn8":
+        if model_name=="batmen":
             cnn_params(self, dict_cnn['cnn_8'])
         elif model_name == "cnn2":
             cnn_params_1(self, dict_cnn['cnn_2'])
             cnn_params_2(self, dict_cnn['cnn_7'])
+        elif model_name == "hybrid_cnn_svm":
+            cnn_params(self, dict_cnn['cnn_8'])
+            svm_params(self, dict_svm['svm_spectrogram'])
         elif model_name == "hybrid_cnn_xgboost":
             cnn_params(self, dict_cnn['cnn_8'])
             xgboost_params(self, dict_xgboost['xgboost_spectrogram'])
-        elif model_name == "resnet8":
-            resnet_params(self, dict_resnet['resnet_8'])
-        elif model_name == "resnet2":
-            resnet_params_1(self, dict_resnet['resnet_2'])
-            resnet_params_2(self, dict_resnet['resnet_7'])
-        elif model_name == "hybrid_resnet_xgboost":
-            resnet_params(self, dict_resnet['resnet_8'])
-            xgboost_params(self, dict_xgboost['xgboost_spectrogram'])
+        elif model_name == "hybrid_call_svm":
+            cnn_params(self, dict_cnn['cnn_2'])
+            svm_params(self, dict_svm['svm_call'])
+        elif model_name == "hybrid_call_xgboost":
+            cnn_params(self, dict_cnn['cnn_2'])
+            xgboost_params(self, dict_xgboost['xgboost_call'])
         else:
             print("Error while loading csv for model parameters")
             

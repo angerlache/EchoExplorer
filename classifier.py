@@ -1,14 +1,12 @@
 import numpy as np
 import time
 
-import cls_cnn8 as cls_cnn8
+import evaluate as evl
+import cls_cnn as cls_cnn
 import cls_cnn2 as cls_cnn2
 import cls_hybrid_cnn as cls_hybrid_cnn
-import cls_resnet8 as cls_resnet8
-import cls_resnet2 as cls_resnet2
-import cls_hybrid_resnet as cls_hybrid_resnet
+import cls_hybrid_call as cls_hybrid_call
 from run_training import save_model
-import evaluate as evl
 
 class Classifier:
 
@@ -23,18 +21,14 @@ class Classifier:
         """
 
         self.params = params_
-        if self.params.classification_model == 'cnn8':
-            self.model = cls_cnn8.NeuralNet(self.params)
+        if self.params.classification_model == 'batmen':
+            self.model = cls_cnn.NeuralNet(self.params)
         elif self.params.classification_model == 'cnn2':
             self.model = cls_cnn2.NeuralNet(self.params)
         elif 'hybrid_cnn' in self.params.classification_model:
             self.model = cls_hybrid_cnn.NeuralNet(self.params)
-        elif self.params.classification_model == 'resnet8':
-            self.model = cls_resnet8.NeuralNet(self.params)
-        elif self.params.classification_model == 'resnet2':
-            self.model = cls_resnet2.NeuralNet(self.params)
-        elif self.params.classification_model == 'hybrid_resnet_xgboost':
-            self.model = cls_hybrid_resnet.NeuralNet(self.params)
+        elif 'hybrid_call' in self.params.classification_model:
+            self.model = cls_hybrid_call.NeuralNet(self.params)
         else:
             print('Invalid model specified')
 
@@ -46,7 +40,7 @@ class Classifier:
         ----------
         goal : String
             Indicates whether the features are computed for detection or classification.
-            Can be "detection", "classification" or "validation".
+            Can be either "detection" or "classification".
         files : String
             Name of the wav file used to make a prediction.
         """
@@ -89,9 +83,9 @@ class Classifier:
         # generate the training positions (positive and/or negative)
         # for detection and classification together or separately depending on the model
         print("Generate training positions")
-        if self.params.classification_model in ['cnn8', 'hybrid_cnn_xgboost', 'resnet8', 'hybrid_resnet_xgboost']:
+        if self.params.classification_model in ['batmen', 'hybrid_cnn_svm', 'hybrid_cnn_xgboost']:
             positions, class_labels = generate_training_positions(files, gt_pos, gt_classes, durations, self.params, True)
-        elif self.params.classification_model in ['cnn2', 'resnet2']:
+        elif self.params.classification_model in ['cnn2', 'hybrid_call_svm', 'hybrid_call_xgboost']:
             positions = {"detect":[], "classif":[]}
             class_labels = {"detect":[], "classif":[]}
             positions["detect"], class_labels["detect"] = generate_training_positions(files["detect"], gt_pos["detect"], gt_classes["detect"],
@@ -114,26 +108,32 @@ class Classifier:
                 
                 tic_eval = time.time()
                 # evaluate on the validation files to compute the thresholds for each class
+                with open(self.params.model_dir + self.params.model_identifier_classif + '_perf_params.txt', 'a') as f:
+                    f.write('\n hard negative mining round '+str(hn)+'\n')
                 nms_pos_valid, nms_prob_valid, pred_classes_valid, nb_windows_valid = self.test_batch("classification",
                                                             files_valid, durations_valid)
                 threshold_classes = evl.prec_recall_1d( nms_pos_valid, nms_prob_valid, pos_valid,
                                     pred_classes_valid, classes_valid, durations_valid,
-                                    self.params.detection_overlap, self.params.window_size, nb_windows_valid, True)                
+                                    self.params.detection_overlap, self.params.window_size, nb_windows_valid,
+                                    self.params.model_dir + self.params.model_identifier_classif + '_perf_params.txt', True)                
                 
                 # evaluate on the test files with the obtained thresholds
                 nms_pos, nms_prob, pred_classes, nb_windows = self.test_batch("classification", test_files, test_durations)
                 evl.prec_recall_1d( nms_pos, nms_prob, test_pos, pred_classes, test_classes, 
                                     test_durations, self.params.detection_overlap, self.params.window_size, 
-                                    nb_windows, False, threshold_classes=threshold_classes)
+                                    nb_windows, self.params.model_dir + self.params.model_identifier_classif + '_perf_params.txt',
+                                    False, threshold_classes=threshold_classes)
                 toc_eval = time.time()
                 toc_global = time.time()
+                with open(self.params.model_dir + self.params.model_identifier_classif + '_perf_params.txt', 'a') as f:
+                    f.write('time hnm'+str(hn)+' = '+str(toc_global-tic_global-time_eval))
                 save_model(self.params.classification_model, self, self.params.model_dir, threshold_classes)
 
                 time_eval += (toc_eval-tic_eval)
                 # add training examples through hnm
-                if self.params.classification_model in ['cnn8', 'hybrid_cnn_xgboost', 'resnet8', 'hybrid_resnet_xgboost']:
+                if self.params.classification_model in ['batmen', 'hybrid_cnn_svm', 'hybrid_cnn_xgboost']:
                     positions, class_labels = self.do_hnm_classif(files, gt_pos, gt_classes, durations, positions, class_labels, True)
-                elif self.params.classification_model in ['cnn2', 'resnet2']:
+                elif self.params.classification_model in ['cnn2', 'hybrid_call_svm', 'hybrid_call_xgboost']:
                     positions["classif"], class_labels["classif"] = self.do_hnm_classif(files["classif"], gt_pos["classif"], gt_classes["classif"],
                                                                     durations["classif"], positions["classif"], class_labels["classif"], False)
                     positions["detect"], class_labels["detect"] = self.do_hnm_detect(files["detect"], gt_pos["detect"], 
@@ -145,6 +145,9 @@ class Classifier:
             self.params.model_identifier_detect = self.params.time + "detect_" + self.params.classification_model + "_hnm"+ str(self.params.num_hard_negative_mining)
             self.params.model_identifier_features = self.params.time + "features_" + self.params.classification_model + "_hnm"+ str(self.params.num_hard_negative_mining)
             self.params.model_identifier_classif = self.params.time + "classif_" + self.params.classification_model + "_hnm"+ str(self.params.num_hard_negative_mining)
+            with open(self.params.model_dir + self.params.model_identifier_classif + '_perf_params.txt', 'a') as f:
+                f.write('time eval = '+str(time_eval))
+            print("time eval=",time_eval)
 
         
     def test_single(self, audio_samples, sampling_rate):
@@ -179,7 +182,7 @@ class Classifier:
         -----------
         goal : String
             Indicates whether the files need to be tested for detection or classification.
-            Can be "detection", "classification" or "validation".
+            Can be either "detection" or "classification".
         files : numpy array
             Names of the wav files used to test the model.
         durations : numpy array
@@ -386,6 +389,7 @@ class Classifier:
 
             class_labels_new[ii] = class_labels_new[ii].astype('int')
             cnt_examples += new_negs.shape[0] + len(new_augmented_bats)
+        print("nbr of added examples in hnm classification =",cnt_examples)
         return positions_new, class_labels_new
 
 
@@ -407,7 +411,7 @@ def generate_training_positions(files, gt_pos, gt_classes, durations, params, ad
         True if negative examples need to be added, False otherwise
     goal : String
         Indicates whether the features are computed for detection or classification.
-        Can be either "detection", "classification" or "valdation".
+        Can be either "detection" or "classification".
 
     Returns
     ---------

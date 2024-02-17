@@ -7,13 +7,14 @@ import time
 
 from spectrogram import compute_features_spectrogram
 import nms as nms
-from resnet_helper import network_fit, tune_network
+from cnn_helper import network_fit, tune_network
+
 
 class NeuralNet:
 
     def __init__(self, params_):
         """
-        Creates a new resnet with 8 classes to detect and classify.
+        Creates a new CNN with 8 classes to detect and classify.
 
         Parameters
         -----------
@@ -33,7 +34,7 @@ class NeuralNet:
         positions : ndarray
             Training positions for each training file.
         class_labels : numpy array
-            Class label for each training position.
+            Class label for each training position. 1 if positive example and 0 otherwise.
         files : numpy array
             Names of the wav files used to train the model.        
         durations : numpy array
@@ -42,28 +43,26 @@ class NeuralNet:
 
         # compute or load the features of the training files
         print("Compute or load features")
-        feats = []
-        labs = []
         tic = time.time()
         features, labels, labels_not_merged = self.features_labels_from_file(positions, class_labels, files, durations)
         toc = time.time()
         self.params.features_computation_time += toc-tic
         
         # tuning of the hyperparameters of the CNN
-        if self.params.tune_resnet_8:
-            print("Tune cls_resnet8")
-            tic_resnet = time.time() 
+        if self.params.tune_cnn_8:
+            print("Tune cls_cnn")
+            tic_cnn_8 = time.time()
             tune_network(self.params, features, labels, labels_not_merged, self.params.trials_filename_1)
-            toc_resnet = time.time() 
-            while toc_resnet-tic_resnet < self.params.tune_time:
+            toc_cnn_8 = time.time()
+            while toc_cnn_8-tic_cnn_8 < self.params.tune_time:
                 tune_network(self.params, features, labels, labels_not_merged, self.params.trials_filename_1)
-                toc_resnet = time.time()
-            print('total tuning time', round(toc_resnet-tic_resnet, 3), '(secs) =', round((toc_resnet-tic_resnet)/60,2), r"min \\")
+                toc_cnn_8 = time.time()
+            print('total tuning time', round(toc_cnn_8-tic_cnn_8, 3), '(secs) =', round((toc_cnn_8-tic_cnn_8)/60,2), r"min \\")
         
-        # fit the ResNet
-        print("Fit cls_resnet8")
-        self.network_classif, _ = network_fit(self.params, features, labels, labels_not_merged ,8)
-
+        # fit the CNN
+        print("Fit cls_cnn")
+        self.network_classif, _ = network_fit(self.params, features, labels, labels_not_merged, 8)
+    
     def features_labels_from_file(self, positions, class_labels, files, durations):
         """
         Computes or loads the features of each position of the files
@@ -145,8 +144,9 @@ class NeuralNet:
         Parameters
         -----------
         goal : String
-            Indicates whether the file needs to be tested for detection or classification.
-            Can be either "detection" or "classification".
+            Indicates whether the features are used for detection or classification
+            or more specifically for validation.
+            Can be either "detection", "classification" or "validation".
         file_name : String
             Name of the wav file used to make a prediction.
         file_duration : float
@@ -172,7 +172,7 @@ class NeuralNet:
         tic = time.time()
         features = self.create_or_load_features(goal, file_name, audio_samples, sampling_rate)
         toc=time.time()
-        self.params.features_computation_time += toc - tic
+        self.params.features_computation_time += toc-tic
         features = features.reshape(features.shape[0], features.shape[2], features.shape[3], 1)
         tic = time.time()
         y_predictions = self.network_classif.predict(features)
@@ -183,7 +183,7 @@ class NeuralNet:
         tic = time.time()
         if self.params.smooth_op_prediction:
             y_predictions = gaussian_filter1d(y_predictions, self.params.smooth_op_prediction_sigma, axis=0)
-        
+
         call_predictions_not_bat = y_predictions[:,0]
         pos_bat = []
         prob_bat = []
@@ -193,7 +193,7 @@ class NeuralNet:
         for i in range(1,8):
             call_predictions_bat = y_predictions[:,i]
             classes = np.repeat(i, call_predictions_bat.shape[0])
-            pos, prob, classes, call_predictions_not_bat_nms = nms.nms_1d(call_predictions_bat.astype(np.float32),
+            pos, prob, classes, call_predictions_not_bat_nms = nms.nms_1d(call_predictions_bat.astype(np.float),
                                     classes, call_predictions_not_bat, self.params.nms_win_size, file_duration)
 
             # remove pred that have a higher probability of not being a bat
@@ -234,9 +234,9 @@ class NeuralNet:
         file_name : String
             Name of the wav file used to make a prediction.
         audio_samples : numpy array
-            Data read from a wav file.
+            Data read from wav file.
         sampling_rate : int
-            Sample rate of a wav file.
+            Sample rate of wav file.
 
         Returns
         --------
@@ -283,7 +283,7 @@ class NeuralNet:
         files : String
             Name of the wav file used to make a prediction.
         """
-        
+
         if goal == "detection":
             audio_dir = self.params.audio_dir_detect
             data_set = self.params.data_set_detect

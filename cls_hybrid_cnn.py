@@ -7,14 +7,17 @@ import tensorflow as tf
 from tensorflow.keras.models import Model
 from scipy.ndimage.filters import gaussian_filter1d
 from sklearn.utils import class_weight
+from sklearn.svm import SVC
 import xgboost as xgb
+from sklearn.utils import class_weight
+from sklearn.preprocessing import MinMaxScaler
 from sklearn.multioutput import MultiOutputClassifier
 import gc
 
 import nms as nms
 from spectrogram import compute_features_spectrogram
 from cnn_helper import network_fit, tune_network
-from xgb_helper import tune_xgb
+from svm_xgb_helper import tune_svm, tune_xgb
 from models_params_helper import params_to_dict
 
 
@@ -22,7 +25,7 @@ class NeuralNet:
 
     def __init__(self, params_):
         """
-        Creates a CNN for features computation and an XGBoost model for detection and classification.
+        Creates a CNN for features computation and an SVM or XGBoost model for detection and classification.
 
         Parameters
         -----------
@@ -33,6 +36,7 @@ class NeuralNet:
         self.network_features = None
         self.model_feat = None
         self.network_classif = None
+        self.scaler = None
 
     def train(self, positions, class_labels, files, durations):
         """
@@ -51,7 +55,7 @@ class NeuralNet:
         """
 
         # free memory
-        if self.network_classif is not None:
+        if self.params.classification_model == "hybrid_cnn_xgboost" and self.network_classif is not None:
             for clf_estimator in self.network_classif.estimators_:
                 clf_estimator._Booster.__del__()
             tf.keras.backend.clear_session()
@@ -83,31 +87,56 @@ class NeuralNet:
         features = features.reshape(features.shape[0], features.shape[2], features.shape[3], 1)
         feat_train = self.model_feat.predict(features)
 
+        # train and tune the svm classification model
+        if self.params.classification_model == "hybrid_cnn_svm":
+            self.scaler = MinMaxScaler()
+            feat_train = self.scaler.fit_transform(feat_train)
+            if self.params.tune_svm_spectrogram:
+                print("Tune SVM")
+                tic_svm = time.time()
+                tune_svm(self.params, feat_train, labels, self.params.trials_filename_2)
+                toc_svm = time.time()
+                while toc_svm-tic_svm < self.params.tune_time:
+                    tune_svm(self.params, feat_train, labels, self.params.trials_filename_2)
+                    toc_svm = time.time()
+                print('total tuning time', round(toc_svm-tic_svm, 3), '(secs) =', round((toc_svm-tic_svm)/60,2), r"min \\")
+            
+            print("Fit SVM")
+            tic = time.time()
+            self.network_classif = MultiOutputClassifier(SVC( kernel=self.params.kernel, C=self.params.C, degree=self.params.degree,
+                                        gamma=self.params.gamma_svm, class_weight=self.params.class_weight,
+                                        probability=True, verbose=False, max_iter=self.params.max_iter), n_jobs=-1)
+            self.network_classif.fit(feat_train, labels)
+            toc = time.time()
+            print('total SVM run time', round(toc-tic, 3), '(secs) =', round((toc-tic)/60,2), r"min \\")
+            print("CNN and SVM params= ", params_to_dict(self.params))
+
         # train and tune the xgb classification model 
-        if self.params.tune_xgboost_spectrogram:
-            print("Tune xgboost")
-            tic_xgb = time.time()
-            tune_xgb(self.params, feat_train, labels, self.params.trials_filename_2)
-            toc_xgb = time.time()
-            while toc_xgb-tic_xgb < self.params.tune_time:
+        elif self.params.classification_model == "hybrid_cnn_xgboost":
+            if self.params.tune_xgboost_spectrogram:
+                print("Tune xgboost")
+                tic_xgb = time.time()
                 tune_xgb(self.params, feat_train, labels, self.params.trials_filename_2)
                 toc_xgb = time.time()
-            print('total tuning time', round(toc_xgb-tic_xgb, 3), '(secs) =', round((toc_xgb-tic_xgb)/60,2), r"min \\")
-        
-        print("Fit xgboost")
-        tic = time.time()
-        xgb_clf = xgb.XGBClassifier(eta=self.params.eta,min_child_weight=self.params.min_child_weight,
-                                    max_depth=self.params.max_depth, n_estimators=self.params.n_estimators,
-                                    gamma=self.params.gamma_xgb, subsample=self.params.subsample,
-                                    scale_pos_weight=self.params.scale_pos_weight, objective="binary:logistic",
-                                    tree_method='gpu_hist')
-        self.network_classif = MultiOutputClassifier(xgb_clf)
-        sample_w = class_weight.compute_sample_weight('balanced',labels)
-        self.network_classif.fit(feat_train, labels, sample_weight=sample_w)
-        toc = time.time()
-        print('total xgboost run time', round(toc-tic, 3), '(secs) =', round((toc-tic)/60,2), r"min \\")
-        print("XGBoost params= ", params_to_dict(self.params))
-
+                while toc_xgb-tic_xgb < self.params.tune_time:
+                    tune_xgb(self.params, feat_train, labels, self.params.trials_filename_2)
+                    toc_xgb = time.time()
+                print('total tuning time', round(toc_xgb-tic_xgb, 3), '(secs) =', round((toc_xgb-tic_xgb)/60,2), r"min \\")
+            
+            print("Fit xgboost")
+            tic = time.time()
+            xgb_clf = xgb.XGBClassifier(eta=self.params.eta,min_child_weight=self.params.min_child_weight,
+                                        max_depth=self.params.max_depth, n_estimators=self.params.n_estimators,
+                                        gamma=self.params.gamma_xgb, subsample=self.params.subsample,
+                                        scale_pos_weight=self.params.scale_pos_weight, objective="binary:logistic",
+                                        tree_method='gpu_hist')
+            self.network_classif = MultiOutputClassifier(xgb_clf)
+            sample_w = class_weight.compute_sample_weight('balanced',labels)
+            self.network_classif.fit(feat_train, labels, sample_weight=sample_w)
+            toc = time.time()
+            print('total xgboost run time', round(toc-tic, 3), '(secs) =', round((toc-tic)/60,2), r"min \\")
+            print("XGBoost params= ", params_to_dict(self.params))
+    
 
     def features_labels_from_file(self, positions, class_labels, files, durations):
         """
@@ -227,6 +256,8 @@ class NeuralNet:
         toc=time.time()
         self.params.detect_time += toc - tic
         tic = time.time()
+        if self.params.classification_model == "hybrid_cnn_svm":
+            feat_test = self.scaler.transform(feat_test)
         y_predictions = self.network_classif.predict_proba(feat_test)
         y_predictions = np.array(y_predictions)[:,:,1].T
         toc=time.time()
@@ -246,7 +277,7 @@ class NeuralNet:
         for i in range(1,8):
             call_predictions_bat = y_predictions[:,i]
             pred_classes = np.repeat(i, call_predictions_bat.shape[0])
-            pos, prob, pred_classes, call_predictions_not_bat_nms = nms.nms_1d(call_predictions_bat.astype(np.float32),
+            pos, prob, pred_classes, call_predictions_not_bat_nms = nms.nms_1d(call_predictions_bat.astype(np.float),
                                     pred_classes, call_predictions_not_bat, self.params.nms_win_size, file_duration)
 
             # remove pred that have a higher probability of not being a bat

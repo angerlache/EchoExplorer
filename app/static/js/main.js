@@ -7,9 +7,41 @@ document.addEventListener('DOMContentLoaded', function () {
     const playButton = document.getElementById('playButton');
     const pauseButton = document.getElementById('pauseButton');
     const resultDiv = document.getElementById('result');
+    const timestepDiv = document.getElementById('timestep');
+    const probaDiv = document.getElementById('probability');
     const waveformDiv = document.getElementById('waveform');
 
     let wavesurfer;
+    let wsRegions; // Define wsRegions here
+    // Give regions a random color when they are created
+    const random = (min, max) => Math.random() * (max - min) + min
+    const randomColor = () => `rgba(${random(0, 255)}, ${random(0, 255)}, ${random(0, 255)}, 0.5)`
+
+
+    function setupRegionEventListener(wr, ws){
+        let activeRegion = null
+        wr.on('region-in', (region) => {
+            console.log('region-in', region)
+        })
+        wr.on('region-out', (region) => {
+            console.log('region-out', region)
+            if (activeRegion === region) {
+                activeRegion = null;
+                ws.playPause();
+            }
+        })
+        wr.on('region-clicked', (region, e) => {
+            e.stopPropagation() // prevent triggering a click on the waveform
+            console.log('region-clicked', region)
+            activeRegion = region
+            region.play()
+        })
+        // Reset the active region when the user clicks anywhere in the waveform
+        ws.on('interaction', () => {
+            activeRegion = null
+        })
+    }
+
 
     visualizeButton.addEventListener('click', function () {
         const file = fileInput.files[0];
@@ -41,18 +73,22 @@ document.addEventListener('DOMContentLoaded', function () {
             wavesurfer.load(url);
 
             // Initialize the Regions plugin
-            const wsRegions = wavesurfer.registerPlugin(WaveSurfer.Regions.create())
+            wsRegions = wavesurfer.registerPlugin(WaveSurfer.Regions.create()) // Define wsRegions here
 
             wavesurfer.on('decode', () => {
                 // Regions
                 wsRegions.addRegion({
                     start: 1,
                     end: 2,
+                    color: randomColor(),
                     content: 'Resize me',
                     drag: true,
                     resize: true,
                 })
             });
+            console.log('ws0:', wsRegions);
+            
+            //setupRegionEventListener(wsRegions, wavesurfer);
 
             wavesurfer.registerPlugin(
                 WaveSurfer.Spectrogram.create({
@@ -105,6 +141,30 @@ document.addEventListener('DOMContentLoaded', function () {
         .then(response => response.json())
         .then(data => {
             resultDiv.innerHTML = 'Result: ' + data.result;
+            timestepDiv.innerHTML = "Timestep: " + data.timestep;
+            probaDiv.innerHTML = "With probabilities: " + data.probability;
+
+            console.log('Result:', data.result);
+            console.log('Timestep:', data.timestep);
+            console.log("With probabilities:", data.probability);
+
+            //wsRegions.clearRegions();
+            //wsRegions = wavesurfer.registerPlugin(WaveSurfer.Regions.create()) // Define wsRegions here
+            console.log('ws1:', wsRegions);
+            data.timestep.forEach((timestamp, index) => {
+                console.log('Adding region:', timestamp);
+                wsRegions.addRegion({
+                    start: Math.max(timestamp-0.5,0),
+                    end: (timestamp + 0.5),
+                    color: randomColor(), 
+                    content: `${data.result[index]} ${index+1}`,
+                    drag: false,
+                    resize: false,
+                });
+            });
+            console.log('ws2:', wsRegions);
+                setupRegionEventListener(wsRegions, wavesurfer);
+
             
         
         })

@@ -180,7 +180,7 @@ def process_spectrogram(spec, denoise_spec=True, mean_log_mag=0.5, smooth_spec=T
 
 def compute_features_spectrogram(audio_samples, sampling_rate, params):
     """
-    Computes overlapping windows of spectrogram as input for classifier.
+    Computes overlapping windows of spectrogram as input for CNN.
 
     Parameters
     -----------

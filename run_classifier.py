@@ -143,6 +143,12 @@ def run_classifier(model, audio, file_dur, samp_rate, threshold_classes, chunk_s
         if do_time_expansion:
             call_time /= 10.0
     
+    print('chunk time', np.mean(test_time), '(secs)')
+    print('nb chunks', len(st_positions))
+    print('features computation time', model.params.features_computation_time, '(secs)')
+    print('nms computation time', model.params.nms_computation_time, '(secs)')
+    print('detect time total', model.params.detect_time, '(secs)')
+    print('classif time total', model.params.classif_time, '(secs)')
     return call_time, call_prob, call_class
 
 
@@ -159,14 +165,12 @@ if __name__ == "__main__":
     on_GPU = True   # True if tensorflow runs on GPU, False otherwise
     do_time_expansion = True  # set to True if audio is not already time expanded
     save_res = True    # True to save the results in a csv file and False otherwise
-    load_features_from_file = False 
-    data_dir = 'data/samples/' # path of the directory containing the audio files
+    chunk_size = 4.0    # The size of an audio chunk
+    data_dir =  "data/samples/" # path of the directory containing the audio files
     result_dir = 'results/'    # path to the directory where the results are saved
     model_dir = 'data/models/'  # path to the saved models
-    model_name = "cnn2" # one of: 'cnn8', 'cnn2', 'hybrid_cnn_xgboost' -> error
-    #'resnet8'->error, 'resnet2', "hybrid_resnet_xgboost"
-
-    chunk_size = 4.0    # The size of an audio chunk
+    model_name = "cnn2" # one of: 'batmen', 'cnn2',  'hybrid_cnn_svm',
+    # 'hybrid_cnn_xgboost', 'hybrid_call_svm', 'hybrid_call_xgboost'
 
     # name of the result file
     classification_result_file = result_dir + 'classification_result.csv'
@@ -184,46 +188,50 @@ if __name__ == "__main__":
         tf.config.set_visible_devices([], 'GPU')
         session = tf.compat.v1.InteractiveSession(config=config)
 
-    # model name and load models
-    if model_name == "cnn8":
+    # load model
+    if model_name == "batmen":
         date = "25_05_21_12_12_25_"
-        hnm = "1"
-        model_file_classif = model_dir + date + "classif_" + model_name + "_hnm" + hnm
+        hnm_iter = "1" 
+        model_file_classif = model_dir + date + "classif_" + model_name + "_hnm" + hnm_iter
         network_classif = load_model(model_file_classif + '_model')
     elif model_name == "cnn2":
-        date = "25_05_21_15_09_28_"
-        hnm = "0"
-        model_file_detect = model_dir + date + "detect_" + model_name + "_hnm" + hnm
+        date = "25_05_21_15_09_28_" 
+        hnm_iter = "0"
+        model_file_detect = model_dir + date + "detect_" + model_name + "_hnm" + hnm_iter
         network_detect = load_model(model_file_detect + '_model')
-        model_file_classif = model_dir + date + "classif_" + model_name + "_hnm" + hnm
+        model_file_classif = model_dir + date + "classif_" + model_name + "_hnm" + hnm_iter
         network_classif = load_model(model_file_classif + '_model')
-    elif model_name == "hybrid_cnn_xgboost":
-        date = "02_06_21_09_32_04_"
-        hnm = "2"
-        model_file_features = model_dir + date + "features_" + model_name + "_hnm" + hnm
+    elif model_name == "hybrid_cnn_svm":
+        date = "04_06_21_08_55_14_"
+        hnm_iter = "0"
+        model_file_features = model_dir + date + "features_" + model_name + "_hnm" + hnm_iter
         network_features = load_model(model_file_features + '_model')
         network_feat = Model(inputs=network_features.input, outputs=network_features.layers[-3].output)
-        model_file_classif = model_dir + date + "classif_" + model_name + "_hnm" + hnm
+        model_file_classif = model_dir + date + "classif_" + model_name + "_hnm" + hnm_iter
         network_classif = joblib.load(model_file_classif + '_model.pkl')
-    elif model_name == "resnet8":
-        date = "04_11_21_13_53_01_"
-        hnm = "1"
-        model_file_classif = model_dir + date + "classif_" + model_name + "_hnm" + hnm
-        network_classif = load_model(model_file_classif + '_model')
-    elif model_name == "resnet2":
-        date = "02_11_21_11_44_38_"
-        hnm = "0"
-        model_file_detect = model_dir + date + "detect_" + model_name + "_hnm" + hnm
-        network_detect = load_model(model_file_detect + '_model')
-        model_file_classif = model_dir + date + "classif_" + model_name + "_hnm" + hnm
-        network_classif = load_model(model_file_classif + '_model')
-    elif model_name == "hybrid_resnet_xgboost":
-        date = "03_11_21_12_01_42_"
-        hnm = "0"
-        model_file_features = model_dir + date + "features_" + model_name + "_hnm" + hnm
+        scaler = joblib.load(model_file_classif + '_scaler.pkl' )
+    elif model_name == "hybrid_cnn_xgboost":
+        date = "02_06_21_09_32_04_"
+        hnm_iter = "2"
+        model_file_features = model_dir + date + "features_" + model_name + "_hnm" + hnm_iter
         network_features = load_model(model_file_features + '_model')
-        network_feat = Model(inputs=network_features.input, outputs=network_features.layers[-2].output)
-        model_file_classif = model_dir + date + "classif_" + model_name + "_hnm" + hnm
+        network_feat = Model(inputs=network_features.input, outputs=network_features.layers[-3].output)
+        model_file_classif = model_dir + date + "classif_" + model_name + "_hnm" + hnm_iter
+        network_classif = joblib.load(model_file_classif + '_model.pkl')
+    elif model_name == "hybrid_call_svm":
+        date = "26_05_21_08_40_42_"
+        hnm_iter = "0"
+        model_file_detect = model_dir + date + "detect_" + model_name + "_hnm" + hnm_iter
+        network_detect = load_model(model_file_detect + '_model')
+        model_file_classif = model_dir + date + "classif_" + model_name + "_hnm" + hnm_iter
+        network_classif = joblib.load(model_file_classif + '_model.pkl')
+        scaler = joblib.load(model_file_classif + '_scaler.pkl' )
+    elif model_name == "hybrid_call_xgboost":
+        date = "25_05_21_17_51_23_"
+        hnm_iter = "1"
+        model_file_detect = model_dir + date + "detect_" + model_name + "_hnm" + hnm_iter
+        network_detect = load_model(model_file_detect + '_model')
+        model_file_classif = model_dir + date + "classif_" + model_name + "_hnm" + hnm_iter
         network_classif = joblib.load(model_file_classif + '_model.pkl')
     
     # load params
@@ -247,18 +255,20 @@ if __name__ == "__main__":
     params.smooth_spec = parameters['smooth_spec']
     params.nms_win_size = parameters['nms_win_size']
     params.smooth_op_prediction_sigma = parameters['smooth_op_prediction_sigma']
-    if model_name in ["hybrid_cnn_xgboost"]: params.n_estimators = parameters["n_estimators"]
-    params.load_features_from_file = load_features_from_file
+    if model_name in ["hybrid_cnn_xgboost", "hybrid_call_xgboost"]: params.n_estimators = parameters["n_estimators"]
+    params.load_features_from_file = False
     params.detect_time = 0
     params.classif_time = 0
     model_cls = clss.Classifier(params)
-    if model_name in  ["cnn8", "cnn2", "hybrid_cnn_xgboost","resnet8", "resnet2", "hybrid_resnet_xgboost"]:
+    if model_name in  ["batmen", "cnn2", "hybrid_cnn_svm", "hybrid_cnn_xgboost", "hybrid_call_svm", "hybrid_call_xgboost"]:
         model_cls.model.network_classif = network_classif
-    if model_name in ["cnn2", "resnet2"]:
+    if model_name in ["cnn2", "hybrid_call_svm", "hybrid_call_xgboost"]:
         model_cls.model.network_detect = network_detect
-    if model_name in ["hybrid_cnn_xgboost", "hybrid_resnet_xgboost"]:
+    if model_name in ["hybrid_cnn_svm", "hybrid_cnn_xgboost"]:
         model_cls.model.network_features = network_features
         model_cls.model.model_feat = network_feat
+    if model_name in ["hybrid_cnn_svm", "hybrid_call_svm"]:
+        model_cls.model.scaler = scaler
     
     # load thresholds
     threshold_classes = np.load(model_file_classif + '_thresholds.npy')
@@ -285,13 +295,14 @@ if __name__ == "__main__":
             print("total time = ",toc-tic)
             num_calls = len(call_time)
             if num_calls>0:
+
                 call_classes = np.concatenate(np.array(call_classes)).ravel()
                 call_species = [group_names[i] for i in call_classes]
                 print("call pos=",call_time)
                 print("call species=", call_species)
                 print("call proba=",call_prob)
             print('  ' + str(num_calls) + ' calls found')
-
+            
             # save results
             if save_res:
                 # save to AudioTagger format

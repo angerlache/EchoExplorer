@@ -7,7 +7,7 @@ import gc
 import os
 
 from models_params_helper import params_to_dict
-import evaluate_two_datasets_detec as evl_thresh_detect_classif
+import evaluate as evl
 from data_set_params import DataSetParams
 import classifier as clss
 
@@ -114,19 +114,22 @@ def save_model(model_name, model, model_dir, threshold_classes):
 
     print("\_".join(model.params.model_identifier_classif.split("_")))
 
-    if model_name in ["cnn2", "resnet2"]: # cnn detect
+    if model_name in ["cnn2", "hybrid_call_svm", "hybrid_call_xgboost"]: # cnn detect
         model.model.network_detect.save(model_dir + model.params.model_identifier_detect + '_model')
         weights = model.model.network_detect.get_weights()
         np.save(model_dir + model.params.model_identifier_detect + '_weights', weights)
-    if model_name in ["cnn8", "cnn2", "resnet8", "resnet2"]: # cnn classif
+    if model_name in ["batmen", "cnn2"]: # cnn classif
         model.model.network_classif.save(model_dir + model.params.model_identifier_classif + '_model')
         weights = model.model.network_classif.get_weights()
         np.save(model_dir + model.params.model_identifier_classif + '_weights', weights)
-    if model_name in ["hybrid_cnn_xgboost", "hybrid_resnet_xgboost"]: # cnn features
+    if model_name in ["hybrid_cnn_svm", "hybrid_cnn_xgboost"]: # cnn features
         model.model.network_features.save(model_dir + model.params.model_identifier_features + '_model')
         weights = model.model.network_features.get_weights()
         np.save(model_dir + model.params.model_identifier_features + '_weights', weights)
-    if model_name in ["hybrid_cnn_xgboost", "hybrid_resnet_xgboost"]: # xgboost
+    if model_name in ["hybrid_cnn_svm", "hybrid_call_svm"]: # svm
+        joblib.dump(model.model.network_classif, model_dir + model.params.model_identifier_classif + '_model.pkl')
+        joblib.dump(model.model.scaler, model_dir + model.params.model_identifier_classif + '_scaler.pkl')
+    if model_name in ["hybrid_cnn_xgboost","hybrid_call_xgboost"]: # xgboost
         joblib.dump(model.model.network_classif, model_dir + model.params.model_identifier_classif + '_model.pkl')
 
     mod_params = params_to_dict(model.params)
@@ -169,17 +172,17 @@ def delete_models(model_name, model):
         The model that needs to be deleted.
     """
 
-    if model_name in ["cnn8", "cnn2", "hybrid_cnn_xgboost", "resnet8", "resnet2", "hybrid_resnet_xgboost"]:
+    if model_name in ["batmen", "cnn2", "hybrid_cnn_svm", "hybrid_cnn_xgboost", "hybrid_call_svm", "hybrid_call_xgboost"]: # cnn detect
         tf.keras.backend.clear_session()
         gc.collect()
-    if model_name in ["hybrid_cnn_xgboost", "hybrid_resnet_xgboost"]:
+    if model_name in ["hybrid_cnn_xgboost","hybrid_call_xgboost"]:
         for clf in model.model.network_classif.estimators_:
             clf._Booster.__del__()
     gc.collect()
 
 if __name__ == '__main__':
     """
-    This can be used to train and evaluate different algorithms for bat echolocation classification.
+    This can be used to run and evaluate different algorithms for bat echolocation classification.
     The results can vary by a few percent from run to run.
     """
 
@@ -188,26 +191,29 @@ if __name__ == '__main__':
     ####################################
     on_GPU = True   # True if tensorflow runs on GPU, False otherwise
     # the name of the datasets used for detection, classification and validation
-    test_set_detect = 'norfolk'
+    test_set_detect = ''
     test_set_classif = ''
     validation_set = ''
     # the path to the npz files used for detection, classification and validation
-    data_set_detect = '' + test_set_detect + '.npz'
-    data_set_classif = '' + test_set_classif + '.npz'
-    data_set_valid = '' + validation_set + '.npz'
+    data_set_detect = ''
+    data_set_classif = ''
+    data_set_valid = ''
     # the path to the directories containing the detection, classification and validation audio files
     raw_audio_dir_detect = ''
     raw_audio_dir_classif = ''
     raw_audio_dir_valid = ''
-    # the path to the directories in which the results and the models will be saved
+    # the path to the directories in which the results, the models and the features will be saved
     result_dir = 'results/'
     model_dir = 'data/models/'
+    feature_dir = 'data/features/'
     if not os.path.isdir(result_dir):
         os.mkdir(result_dir)
     if not os.path.isdir(model_dir):
         os.mkdir(model_dir)
-    model_name = "hybrid_cnn_xgboost" # one of: cnn8, cnn2, hybrid_cnn_xgboost,
-    # resnet8, resnet2, hybrid_resnet_xgboost
+    if not os.path.isdir(feature_dir):
+        os.mkdir(feature_dir)
+    model_name = "hybrid_cnn_xgboost" # one of: batmen, cnn2, hybrid_cnn_svm, hybrid_cnn_xgboost,
+    # hybrid_call_svm, hybrid_call_xgboost
 
     if on_GPU:
         # needed to run tensorflow on GPU
@@ -227,18 +233,11 @@ if __name__ == '__main__':
     tic = time.time()
     # load data for detection, classification and validation
     train_pos_detect, train_files_detect, train_durations_detect, train_classes_detect, \
-        test_pos_detect, test_files_detect, test_durations_detect, _ = load_data(data_set_detect, "detection")
+        _, test_files_detect, _, _ = load_data(data_set_detect, "detection")
     train_pos_classif, train_files_classif, train_durations_classif, train_classes_classif, \
         test_pos_classif, test_files_classif, test_durations_classif, test_classes_classif = load_data(data_set_classif, "classification")
-    _, _, _, _, pos_valid, files_valid, durations_valid, classes_valid = load_data(data_set_valid, "classification")
+    _, train_files_valid, _, _, pos_valid, files_valid, durations_valid, classes_valid = load_data(data_set_valid, "classification")
 
-    test_classes_detect = test_pos_detect.copy()
-    for i in range(len(test_classes_detect)):
-        test_classes_detect[i] = test_pos_detect[i].copy()
-        for j in range(len(test_classes_detect[i])):
-            for k in range(len(test_classes_detect[i][j])): test_classes_detect[i][j][k] = 1
-        test_classes_detect[i] = test_classes_detect[i].astype('int32')
-    
     # load parameters
     params = DataSetParams(model_name)
     params.classification_model = model_name
@@ -250,6 +249,7 @@ if __name__ == '__main__':
     params.audio_dir_classif = raw_audio_dir_classif
     params.audio_dir_valid = raw_audio_dir_valid
     params.model_dir = model_dir
+    params.feature_dir = feature_dir
     params.data_set_detect = test_set_detect
     params.data_set_classif = test_set_classif
     params.data_set_valid = validation_set
@@ -257,12 +257,12 @@ if __name__ == '__main__':
     model = clss.Classifier(params)
 
     # train and test
-    if model_name in ['cnn8', 'hybrid_cnn_xgboost', 'resnet8', 'hybrid_resnet_xgboost']:
+    if model_name in ['batmen',  'hybrid_cnn_svm', 'hybrid_cnn_xgboost']:
         model.train(train_files_classif, train_pos_classif, train_durations_classif, train_classes_classif,
                     files_valid, pos_valid, durations_valid, classes_valid, test_files_classif, test_pos_classif,
                     test_durations_classif, test_classes_classif)
         nms_pos, nms_prob, pred_classes, nb_windows = model.test_batch("classification", test_files_classif, test_durations_classif)
-    elif model_name in ['cnn2', 'resnet2']:
+    elif model_name in ['cnn2', 'hybrid_call_svm', 'hybrid_call_xgboost']:
         train_pos = {"detect": train_pos_detect, "classif": train_pos_classif}
         train_files = {"detect": train_files_detect, "classif": train_files_classif}
         train_durations = {"detect": train_durations_detect, "classif": train_durations_classif}
@@ -272,52 +272,17 @@ if __name__ == '__main__':
         nms_pos, nms_prob, pred_classes, nb_windows = model.test_batch("classification", test_files_classif, test_durations_classif)
     session.close()
     
-    # tune the thresholds on the validation set and half of Norfolk set
+    # tune the thresholds on the validation set and evaluate the performance on the test set
     nms_pos_valid, nms_prob_valid, pred_classes_valid, nb_windows_valid = model.test_batch("classification", files_valid, durations_valid)
-    nms_pos_detect, nms_prob_detect, pred_classes_detect, nb_windows_detect = model.test_batch("detection", test_files_detect, test_durations_detect)
-    
-    nms_pos_detect_train = nms_pos_detect[::2]; nms_prob_detect_train = nms_prob_detect[::2]
-    pred_classes_detect_train = pred_classes_detect[::2]; nb_windows_detect_train = nb_windows_detect[::2]
-    pos_detect_train = test_pos_detect[::2]; classes_detect_train = test_classes_detect[::2]
-    durations_detect_train = test_durations_detect[::2]
-
-    nms_pos_detect_test = (nms_pos_detect[1:])[::2]; nms_prob_detect_test = (nms_prob_detect[1:])[::2]
-    pred_classes_detect_test = (pred_classes_detect[1:])[::2]; nb_windows_detect_test = (nb_windows_detect[1:])[::2]
-    pos_detect_test = (test_pos_detect[1:])[::2]; classes_detect_test = (test_classes_detect[1:])[::2]
-    durations_detect_test = (test_durations_detect[1:])[::2]
-
-    threshold_classes = evl_thresh_detect_classif.prec_recall_1d( nms_pos_detect_train, nms_prob_detect_train, 
-                        pos_detect_train, pred_classes_detect_train, classes_detect_train, durations_detect_train, 
-                        nb_windows_detect_train, nms_pos_valid, nms_prob_valid, pos_valid, pred_classes_valid, 
-                        classes_valid, durations_valid, nb_windows_valid, params.detection_overlap, params.window_size,
-                        model_dir + model_name+'_perf.txt', True)
-    
-    # evaluate the performance on Norfolk (detection) and Natagora (multi-label detec+classif) test sets
-    evl_thresh_detect_classif.prec_recall_1d( nms_pos_detect_test, nms_prob_detect_test, pos_detect_test, 
-                        pred_classes_detect_test, classes_detect_test, durations_detect_test, nb_windows_detect_test, 
-                        nms_pos, nms_prob, test_pos_classif, pred_classes, test_classes_classif, test_durations_classif, 
-                        nb_windows, params.detection_overlap, params.window_size, model_dir + model_name+'_perf.txt', 
+    threshold_classes = evl.prec_recall_1d( nms_pos_valid, nms_prob_valid, pos_valid, pred_classes_valid,
+                        classes_valid, durations_valid, model.params.detection_overlap, model.params.window_size, 
+                        nb_windows_valid, model_dir + model.params.model_identifier_classif + '_perf_params.txt',
+                        True)
+    evl.prec_recall_1d( nms_pos, nms_prob, test_pos_classif, pred_classes, test_classes_classif, 
+                        test_durations_classif, model.params.detection_overlap, model.params.window_size, 
+                        nb_windows, model_dir + model.params.model_identifier_classif + '_perf_params.txt',
                         False, threshold_classes=threshold_classes)
-
-    # evaluate the performance on the classification files containing only one species. A file is considered as correctly 
-    # predicted if the class that is predicted for the most is the same as the ground truth class
-    with open(model_dir + model_name+'_perf.txt', 'a') as f: f.write("-------- CLASSIFICATION performance on non-augmented classification dataset --------")
-    print("-------- CLASSIFICATION performance on non-augmented classification dataset --------")
-    nb_files = 0
-    nb_correct = 0
-    for i in range(len(test_files_classif)):
-        if "multilabel" not in test_files_classif[i]:
-            nb_files += 1
-            above_thresh = []
-            for j in range(len(nms_prob[i])):
-                if nms_prob[i][j] > threshold_classes[pred_classes[i][j]]/100: above_thresh.append(pred_classes[i][j])
-            unique, frequency = np.unique(above_thresh, return_counts=True)
-            if len(unique)!=0:
-                max_freq = np.argmax(frequency)
-                maj_class = unique[max_freq]
-                if maj_class == test_classes_classif[i][0]: nb_correct += 1
-    print("fraction of correctly preditect files", nb_correct/nb_files)
-
+    
     # save the model
     save_model(model_name, model, model_dir, threshold_classes)
 
@@ -327,7 +292,7 @@ if __name__ == '__main__':
     print('features computation time', round(model.params.features_computation_time, 3), '(secs) =', round((model.params.features_computation_time)/60,2), r"min \\")
     print('run time without features', round(time_no_features, 3), '(secs) =', round((time_no_features)/60,2), r"min \\")
     print('total run time', round(total_time, 3), '(secs) =', round((total_time)/60,2), r"min \\")
-    with open(model_dir + model.params.model_identifier_classif + '_perf.txt', 'a') as f:
+    with open(model_dir + model.params.model_identifier_classif + '_perf_params.txt', 'a') as f:
         f.write('features computation time '+ str(round(model.params.features_computation_time, 3))+ ' (secs) = '+ str(round((model.params.features_computation_time)/60,2))+ " min \n")
         f.write('run time without features '+ str(round(time_no_features, 3))+ ' (secs) = '+ str(round((time_no_features)/60,2))+ " min \n")
         f.write('total run time '+ str(round(total_time, 3))+ ' (secs) = '+ str(round((total_time)/60,2))+ " min \n")

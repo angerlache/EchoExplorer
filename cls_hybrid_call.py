@@ -1,22 +1,31 @@
 import numpy as np
-from scipy.ndimage.filters import gaussian_filter1d
 from scipy.io import wavfile
 import pyximport; pyximport.install()
 from os import path
 import time
-import pickle
+import gc
+from sklearn.utils import class_weight
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.multioutput import MultiOutputClassifier
+import tensorflow as tf
+from scipy.ndimage.filters import gaussian_filter1d
+from sklearn.utils import class_weight
+from sklearn.svm import SVC
+import xgboost as xgb
 
-from cnn_helper import obj_func_cnn, network_fit
 import nms_cnn2 as nms
 from spectrogram import compute_features_spectrogram
-from hyperopt import hp, tpe, fmin, space_eval, Trials
+from call_features import compute_features_call
+from cnn_helper import network_fit, tune_network
+from svm_xgb_helper import tune_svm, tune_xgb
+from models_params_helper import params_to_dict
 
 
 class NeuralNet:
 
     def __init__(self, params_):
         """
-        Creates a CNN for detection and a CNN for classification.
+        Creates a CNN for detection and an SVM or XGBoost model for classification.
 
         Parameters
         -----------
@@ -26,6 +35,7 @@ class NeuralNet:
         self.params = params_
         self.network_detect = None
         self.network_classif = None
+        self.scaler = None
 
     def train(self, positions, class_labels, files, durations):
         """
@@ -43,129 +53,89 @@ class NeuralNet:
             Durations of the wav files used to train the model.
         """
 
+        # free memory
+        if self.params.classification_model == "hybrid_cnn_xgboost" and self.network_classif is not None:
+            for clf_estimator in self.network_classif.estimators_:
+                clf_estimator._Booster.__del__()
+            tf.keras.backend.clear_session()
+            gc.collect()
+        
         # compute or load the features of the training files and the associated class label.
         print("Compute or load features")
         tic = time.time()
         features_detect, labels_detect, _ = self.features_labels_from_file(positions["detect"], class_labels["detect"], files["detect"],
                                                                         durations["detect"], "detection")
-        features_classif, labels_classif, labels_not_merged_classif = self.features_labels_from_file(positions["classif"], class_labels["classif"], files["classif"],
+        features_classif, labels_classif, _ = self.features_labels_from_file(positions["classif"], class_labels["classif"], files["classif"],
                                                                         durations["classif"], "classification")
         toc = time.time()
         self.params.features_computation_time += toc-tic
-
-        # tuning of the hyperparameters of the two CNNs
+        
+        # tuning of the hyperparameters of the detection CNN and fit the model       
         if self.params.tune_cnn_2:
             print("Tune CNN detect")
             tic_cnn_2 = time.time()
-            best_space_detect = self.tune_network(features_detect, labels_detect, labels_detect, self.params.trials_filename_1, goal="detection")
+            tune_network(self.params, features_detect, labels_detect, labels_detect, 
+                        self.params.trials_filename_1, goal="detection")
             toc_cnn_2 = time.time()
             while toc_cnn_2-tic_cnn_2 < self.params.tune_time:
-                best_space_detect = self.tune_network(features_detect, labels_detect, labels_detect, self.params.trials_filename_1, goal="detection")
+                tune_network(self.params, features_detect, labels_detect, labels_detect, 
+                        self.params.trials_filename_1, goal="detection")
                 toc_cnn_2 = time.time()
             print('total tuning time', round(toc_cnn_2-tic_cnn_2, 3), '(secs) =', round((toc_cnn_2-tic_cnn_2)/60,2), r"min \\")
-        if self.params.tune_cnn_7:
-            print("Tune CNN classif")
-            tic_cnn_7 = time.time()
-            best_space_classif = self.tune_network(features_classif, labels_classif, labels_not_merged_classif, self.params.trials_filename_2, goal="classification")
-            toc_cnn_7 = time.time()
-            while toc_cnn_7-tic_cnn_7 < self.params.tune_time:
-                best_space_classif = self.tune_network(features_classif, labels_classif, labels_not_merged_classif, self.params.trials_filename_2, goal="classification")
-                toc_cnn_7 = time.time()
-            print('total tuning time', round(toc_cnn_7-tic_cnn_7, 3), '(secs) =', round((toc_cnn_7-tic_cnn_7)/60,2), r"min \\")
         
-        # fit the two CNN
-        self.network_detect, _ = network_fit(self.params, features_detect, labels_detect,  labels_detect, 2, '_1')
-        self.network_classif, _ = network_fit(self.params, features_classif, labels_classif, labels_not_merged_classif, 7, '_2')
-
-        if self.params.tune_cnn_2:
-            print("best_space_detect =", best_space_detect)
-        if self.params.tune_cnn_7:
-            print("best_space_classif =", best_space_classif)
-
-
-    def tune_network(self, features, labels, labels_not_merged, trials_filename, goal):
-        """
-        Tunes the network with hyperopt.
-
-        Parameters
-        -----------
-        features : ndarray
-            Array containing the spectrogram features for each training window of the audio file.
-        labels : ndarray
-            Class labels in one-hot encoding for each training window of the audio files.
-        labels_not_merged : ndarray
-            Array containing one class label per call instead of per position in one-hot encoding.
-            (Used to compute the class weights.)
-        trials_filename : String
-            Name of the file where the previous iterations of hyperopt are saved.
-        goal : String
-            Indicates whether the network needs to be tuned for detection or classification.
-            Can be either "detection" or "classification".
-        
-        Returns
-        --------
-        best_space : dict
-            Best hyperparameters found so far for the CNN.
-        """
-        
-        space_cnn = { 'nb_conv_layers': hp.choice('nb_conv_layers', range(1,4)),
-                    'nb_dense_layers': hp.choice('nb_dense_layers', range(1,5)),
-                    'nb_filters': hp.choice('nb_filters', range(16, 65, 8)),
-                    'filter_size': hp.choice('filter_size', range(2,6)),
-                    'pool_size': 2,
-                    'nb_dense_nodes': hp.choice('nb_dense_nodes', range(64, 513, 64)),
-                    'dropout_proba': hp.choice('dropout_proba', np.arange(0.3, 0.8, 0.1)),
-                    'learn_rate_adam': hp.choice('learn_rate_adam', np.logspace(-5, -2, num=15)),
-                    'beta_1': hp.choice('beta_1', [0.8, 0.9, 0.95]),
-                    'beta_2': hp.choice('beta_2', [0.95, 0.999]),
-                    'epsilon': hp.choice('epsilon', [1e-8]),
-                    'min_delta': hp.choice('min_delta', [0.00005, 0.0005, 0.005]),
-                    'patience': hp.choice('patience', [5, 10, 15, 20]),
-                    'batchsize': hp.choice('batchsize', range(64, 513, 64)),
-                    'features': features,
-                    'labels': labels,
-                    'labels_not_merged': labels_not_merged,
-                    'nb_output': (2 if goal=="detection" else 7)
-                    }
+        self.network_detect, _ = network_fit(self.params, features_detect, labels_detect, 
+                                                        labels_detect, 2)
                 
-        # load the saved trials
-        try:
-            trials = pickle.load(open(trials_filename+".hyperopt", "rb"))
-            max_trials = len(trials.trials) + 1
-        # create a new trials
-        except:
-            max_trials = 1
-            trials = Trials()
-
-        # optimise the objective function with the defined set of CNN parameters
-        best_space_indices = fmin(obj_func_cnn, space_cnn, trials=trials,algo=tpe.suggest, max_evals=max_trials)
-        best_space = space_eval(space_cnn, best_space_indices)
-        best_space = {k: best_space[k] for k in best_space.keys() - {'features', 'labels', 'labels_not_merged'}}
-        with open(trials_filename + ".hyperopt", "wb") as f:
-            pickle.dump(trials, f)
-
-        nb_cnn = (1 if goal=="detection" else 2)
-        # CNN
-        setattr(self.params, "nb_conv_layers_"+str(nb_cnn), best_space['nb_conv_layers'])
-        setattr(self.params, "nb_dense_layers_"+str(nb_cnn), best_space['nb_dense_layers'])
-        setattr(self.params, "nb_filters_"+str(nb_cnn), best_space['nb_filters'])
-        setattr(self.params, "filter_size_"+str(nb_cnn), best_space['filter_size'])
-        setattr(self.params, "pool_size_"+str(nb_cnn), 2)
-        setattr(self.params, "nb_dense_nodes_"+str(nb_cnn), best_space['nb_dense_nodes'])
-        setattr(self.params, "dropout_proba_"+str(nb_cnn), best_space['dropout_proba'])
-        # Adam
-        setattr(self.params, "learn_rate_adam_"+str(nb_cnn), best_space['learn_rate_adam'])
-        setattr(self.params, "beta_1_"+str(nb_cnn), best_space['beta_1'])
-        setattr(self.params, "beta_2_"+str(nb_cnn), best_space['beta_2'])
-        setattr(self.params, "epsilon_"+str(nb_cnn), best_space['epsilon'])
-        # early stopping
-        setattr(self.params, "min_delta_"+str(nb_cnn), best_space['min_delta'])
-        setattr(self.params, "patience_"+str(nb_cnn), best_space['patience'])
-        # fit
-        setattr(self.params, "batchsize_"+str(nb_cnn), best_space['batchsize'])
-
-        return best_space
-
+        # train and tune the svm classification model
+        if self.params.classification_model == "hybrid_call_svm":
+            self.scaler = MinMaxScaler()
+            features_classif = self.scaler.fit_transform(features_classif)
+            if self.params.tune_svm_call:
+                print("Tune SVM")
+                tic_svm = time.time()
+                tune_svm(self.params, features_classif, labels_classif, self.params.trials_filename_2)
+                toc_svm = time.time()
+                while toc_svm-tic_svm < self.params.tune_time:
+                    tune_svm(self.params, features_classif, labels_classif, self.params.trials_filename_2)
+                    toc_svm = time.time()
+                print('total tuning time', round(toc_svm-tic_svm, 3), '(secs) =', round((toc_svm-tic_svm)/60,2), r"min \\")
+            
+            print("Fit SVM")
+            tic = time.time()
+            self.network_classif = MultiOutputClassifier(SVC( kernel=self.params.kernel, C=self.params.C, degree=self.params.degree,
+                                        gamma=self.params.gamma_svm, class_weight=self.params.class_weight,
+                                        probability=True, verbose=False, max_iter=self.params.max_iter), n_jobs=-1)
+            print("SVM best params =",params_to_dict(self.params))
+            self.network_classif.fit(features_classif, labels_classif)
+            toc = time.time()
+            print('total SVM run time', round(toc-tic, 3), '(secs) =', round((toc-tic)/60,2), r"min \\")
+        
+        # train and tune the xgb classification model
+        elif self.params.classification_model == "hybrid_call_xgboost":
+            if self.params.tune_xgboost_call:
+                print("Tune xgboost")
+                tic_xgb = time.time()
+                tune_xgb(self.params, features_classif, labels_classif, self.params.trials_filename_2)
+                toc_xgb = time.time()
+                while toc_xgb-tic_xgb < self.params.tune_time:
+                    tune_xgb(self.params, features_classif, labels_classif, self.params.trials_filename_2)
+                    toc_xgb = time.time()
+                print('total tuning time', round(toc_xgb-tic_xgb, 3), '(secs) =', round((toc_xgb-tic_xgb)/60,2), r"min \\")
+            
+            print("Fit xgboost")
+            tic = time.time()
+            self.network_classif = MultiOutputClassifier(xgb.XGBClassifier(eta=self.params.eta,
+                                                    min_child_weight=self.params.min_child_weight,
+                                                    max_depth=self.params.max_depth, n_estimators=self.params.n_estimators,
+                                                    gamma=self.params.gamma_xgb, subsample=self.params.subsample,
+                                                    scale_pos_weight=self.params.scale_pos_weight, objective="binary:logistic",
+                                                    tree_method='gpu_hist'))       
+            class_w = class_weight.compute_sample_weight('balanced',labels_classif)
+            self.network_classif.fit(features_classif, labels_classif, sample_weight=class_w)
+            toc = time.time()
+            print("XGBoost best params =",params_to_dict(self.params))
+            print('total xgboost run time', round(toc-tic, 3), '(secs) =', round((toc-tic)/60,2), r"min \\")
+            
     
     def features_labels_from_file(self, positions, class_labels, files, durations, goal):
         """
@@ -189,9 +159,12 @@ class NeuralNet:
         Returns
         --------
         features : ndarray
-            Array containing the spectrogram features for each position of the audio files.
+            Array containing the spectrogram features for each training position of the audio files.
         labels : ndarray
             Class labels in one-hot encoding for each training position of the audio files.
+        labels_not_merged : ndarray
+            Array containing one class label per call instead of per position in one-hot encoding.
+            (Used to compute the class weights.)
         """
 
         feats = []
@@ -214,7 +187,6 @@ class NeuralNet:
                     local_class = np.zeros((class_labels[i].size, 7), dtype=int)
                     rows = np.arange(class_labels[i].size)
                     local_class[rows, class_labels[i]-1] = 1
-
                     train_inds_no_dup = []
 
                     # combine call pos that are in the same window and merge their labels
@@ -236,8 +208,7 @@ class NeuralNet:
                             elif labels[-1].sum() == 1:
                                 train_inds_no_dup.append(win_ind)
                                 labels = np.concatenate((labels,np.array([local_class[pos_ind]])), axis=0)
-                                
-                    feats.append(local_feats[train_inds_no_dup, :, :, :])
+                    feats.append(local_feats[train_inds_no_dup, :])
                     if labels_not_merged.shape[0] == 0: labels_not_merged = local_class
                     else: labels_not_merged = np.vstack((labels_not_merged, local_class))
                     nb_inds_no_dup += len(train_inds_no_dup)
@@ -245,7 +216,7 @@ class NeuralNet:
         if goal=="detection": labels = labels.astype(np.uint8)
         features = np.vstack(feats)
         return features, labels, labels_not_merged
-    
+
     def test(self, goal, file_name=None, file_duration=None, audio_samples=None, sampling_rate=None):
         """
         Makes a prediction on the position, probability and class of the calls present in an audio file.
@@ -279,15 +250,24 @@ class NeuralNet:
 
         # compute features and perform detection
         tic = time.time()
-        features = self.create_or_load_features(goal, file_name, audio_samples, sampling_rate)
+        features_detect = self.create_or_load_features(goal, file_name, audio_samples, sampling_rate, "_spectrogram")
         toc=time.time()
         self.params.features_computation_time += toc-tic
-        features = features.reshape(features.shape[0], features.shape[2], features.shape[3], 1)
-        nb_windows = features.shape[0]
-        tic = time.time()
-        y_predictions_detect = self.network_detect.predict(features)
+        features_detect = features_detect.reshape(features_detect.shape[0], features_detect.shape[2], features_detect.shape[3], 1)
+        nb_windows = features_detect.shape[0]
+        tic = time.time()  
+        y_predictions_detect = self.network_detect.predict(features_detect)
         toc=time.time()
         self.params.detect_time += toc - tic
+
+        # compute features for classification
+        tic = time.time()
+        features_classif = self.create_or_load_features(goal, file_name, audio_samples, sampling_rate, "_call")
+        toc=time.time()
+        self.params.features_computation_time += toc-tic
+        if self.params.classification_model == "hybrid_call_svm":
+            features_classif = self.scaler.transform(features_classif)
+        
 
         # smooth the output prediction per column so smooth each class prediction over time
         tic = time.time()
@@ -297,13 +277,13 @@ class NeuralNet:
         # trying to get rid of rows with 0 highest
         call_predictions_bat = y_predictions_detect[:,1:]
         call_predictions_not_bat = y_predictions_detect[:,0]
-        high_preds = np.array([np.max(x) for x in call_predictions_bat])[:, np.newaxis] #=call_predictions_bat
-        pred_classes = np.array([np.argmax(x)+1 for x in call_predictions_bat])[:, np.newaxis]# array de 1
+        high_preds = np.array([np.max(x) for x in call_predictions_bat])[:, np.newaxis]
+        pred_classes = np.array([np.argmax(x)+1 for x in call_predictions_bat])[:, np.newaxis]
         
         # perform non max suppression
-        pos, prob, pred_classes, call_predictions_not_bat, features = nms.nms_1d(high_preds[:,0].astype(np.float), pred_classes, 
-                                                                    call_predictions_not_bat, features, self.params.nms_win_size, file_duration)
-        
+        pos, prob, pred_classes, call_predictions_not_bat, features_classif = nms.nms_1d(high_preds[:,0].astype(np.float), pred_classes, 
+                                                                    call_predictions_not_bat, features_classif, self.params.nms_win_size, file_duration)
+  
         # remove pred that have a higher probability of not being a bat
         pos_bat = []
         prob_bat = []
@@ -314,7 +294,8 @@ class NeuralNet:
                 pos_bat.append(pos[i])
                 prob_bat.append(prob[i])
                 pred_classes_bat.append(pred_classes[i])
-                features_bat.append(features[i])
+                features_bat.append(features_classif[i])
+        
         toc=time.time()
         self.params.nms_computation_time += toc-tic
 
@@ -323,7 +304,8 @@ class NeuralNet:
         pred_proba = np.array([])
         pred_classes = np.array([])
         if np.array(features_bat).shape[0] != 0:
-            y_predictions_classif = self.network_classif.predict(np.array(features_bat))
+            y_predictions_classif = self.network_classif.predict_proba(np.array(features_bat))
+            y_predictions_classif = np.array(y_predictions_classif)[:,:,1].T
             pred_proba = y_predictions_classif.flatten('F')[..., np.newaxis]
             pred_classes = np.repeat(np.arange(1,8,1),len(pos_bat))
         toc=time.time()
@@ -333,9 +315,7 @@ class NeuralNet:
         nms_prob = pred_proba
         return nms_pos, nms_prob, pred_classes, nb_windows
 
-
-
-    def create_or_load_features(self, goal, file_name=None, audio_samples=None, sampling_rate=None):
+    def create_or_load_features(self, goal, file_name=None, audio_samples=None, sampling_rate=None, feature_type=None):
         """
         Does 1 of 3 possible things
         1) computes feature from audio samples directly
@@ -363,28 +343,29 @@ class NeuralNet:
 
         if goal == "detection":
             audio_dir = self.params.audio_dir_detect
-            data_set = self.params.data_set_classif if "multilabel" in file_name else self.params.data_set_detect
+            data_set = self.params.data_set_detect
+            feat_type = '_spectrogram'
         elif goal =="classification":
             audio_dir = self.params.audio_dir_classif
             data_set = self.params.data_set_classif
-        elif goal =="validation":
-            audio_dir = self.params.audio_dir_valid
-            data_set = self.params.data_set_valid
+            feat_type = '_call'
+        if feature_type is not None:
+            feat_type = feature_type
 
         # 1) computes feature from audio samples directly
         if file_name is None:
-            features = compute_features_spectrogram(audio_samples, sampling_rate, self.params)
+            features= compute_features(goal, audio_samples, sampling_rate, self.params, feat_type)
         else:
             # 2) loads feature from disk
-            if self.params.load_features_from_file and path.exists(self.params.feature_dir + data_set + '_' + file_name.split("/")[-1] + '_spectrogram' + '.npy'):
-                features = np.load(self.params.feature_dir + data_set + '_' + file_name.split("/")[-1] + '_spectrogram' + '.npy')
+            if self.params.load_features_from_file and path.exists(self.params.feature_dir + data_set + '_' + file_name.split("/")[-1] + feat_type + '.npy'):
+                features = np.load(self.params.feature_dir + data_set + '_' + file_name.split("/")[-1] + feat_type + '.npy')
             # 3) computes features from file name
             else:
                 if self.params.load_features_from_file: print("missing features have to be computed")
                 sampling_rate, audio_samples = wavfile.read(audio_dir + file_name.split("/")[-1]  + '.wav')
-                features = compute_features_spectrogram(audio_samples, sampling_rate, self.params)
+                features = compute_features(goal, audio_samples, sampling_rate, self.params, feat_type)
                 if self.params.save_features_to_file or self.params.load_features_from_file:
-                    np.save(self.params.feature_dir + data_set + '_' + file_name.split("/")[-1] + '_spectrogram', features)
+                    np.save(self.params.feature_dir + data_set + '_' + file_name.split("/")[-1] + feat_type, features)
         return features
 
     def save_features(self, goal, files):
@@ -400,18 +381,60 @@ class NeuralNet:
         files : String
             Name of the wav file used to make a prediction.
         """
-        
-        if goal == "detection":
-            audio_dir = self.params.audio_dir_detect
-            data_set = self.params.data_set_detect
-        elif goal =="classification":
-            audio_dir = self.params.audio_dir_classif
-            data_set = self.params.data_set_classif
-        elif goal =="validation":
-            audio_dir = self.params.audio_dir_valid
-            data_set = self.params.data_set_valid
 
+        audio_dir_detect = self.params.audio_dir_detect
+        data_set_detect = self.params.data_set_detect
+        audio_dir_classif = self.params.audio_dir_classif
+        data_set_classif = self.params.data_set_classif
+        audio_dir_valid = self.params.audio_dir_valid
+        data_set_valid = self.params.data_set_valid
         for file_name in files:
-            sampling_rate, audio_samples = wavfile.read(audio_dir + file_name.split("/")[-1] + '.wav')
-            features = compute_features_spectrogram(audio_samples, sampling_rate, self.params)
-            np.save(self.params.feature_dir + data_set + '_' + file_name.split("/")[-1] + '_spectrogram', features)
+            if goal == "detection":
+                sampling_rate, audio_samples = wavfile.read(audio_dir_detect + file_name.split("/")[-1] + '.wav')
+                features = compute_features(goal, audio_samples, sampling_rate, self.params)
+                np.save(self.params.feature_dir + data_set_detect + '_' + file_name.split("/")[-1] + '_spectrogram', features)
+            elif goal == "classification":
+                sampling_rate, audio_samples = wavfile.read(audio_dir_classif + file_name.split("/")[-1] + '.wav')
+                features = compute_features(goal, audio_samples, sampling_rate, self.params)
+                np.save(self.params.feature_dir + data_set_classif + '_' + file_name.split("/")[-1] + '_call', features)
+            elif goal == "validation":
+                sampling_rate, audio_samples = wavfile.read(audio_dir_valid + file_name.split("/")[-1] + '.wav')
+                features = compute_features(goal, audio_samples, sampling_rate, self.params)
+                np.save(self.params.feature_dir + data_set_valid + '_' + file_name.split("/")[-1] + '_call', features)
+    
+
+def compute_features(goal, audio_samples, sampling_rate, params, feat_type=None):
+    """
+    Computes either spectrograms or call features in function of the goal and the feature type.
+
+    Parameters
+    -----------
+    goal : String
+        Indicates whether the features are used for detection or classification
+        or more specifically for validation.
+        Can be either "detection", "classification" or "validation".
+    audio_samples : numpy array
+        Data read from wav file.
+    sampling_rate : int
+        Sample rate of wav file.
+    params : DataSetParams
+        Parameters of the model.
+    feat_type : String
+        "_call" if the type of features to be computed are call features
+        "_spectrogram" if the type of features to be computed are spectrograms
+    
+    Returns
+    --------
+    features : ndarray
+        Array containing the spectrogram or call features for each window of the audio samples.
+    """
+
+    if feat_type=="_spectrogram" or (feat_type is None and goal == "detection"):
+        temp = compute_features_spectrogram(audio_samples, sampling_rate, params)
+        return temp
+    elif feat_type=="_call" or goal == "classification" or goal=="validation":
+        temp =  compute_features_call(audio_samples, sampling_rate, params)
+        return temp
+    else:
+        return None
+

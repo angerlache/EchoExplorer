@@ -60,7 +60,7 @@ def remove_end_preds(nms_pos_o, nms_prob_o, gt_pos_o, pred_classes_o, durations,
 
 
 def prec_recall_1d(nms_pos_o, nms_prob_o, gt_pos_o, pred_classes_o, gt_classes, durations, detection_overlap, 
-                    win_size, nb_windows, tuning, threshold_classes=np.zeros(8), remove_eof=True):
+                    win_size, nb_windows, filename, tuning, threshold_classes=np.zeros(8), remove_eof=True):
     """
     Computes the best thresholds or saves the performance for detection, classification
     and the combination of both using the given thresholds.
@@ -75,7 +75,7 @@ def prec_recall_1d(nms_pos_o, nms_prob_o, gt_pos_o, pred_classes_o, gt_classes, 
         Ground truth positions of the calls for every file.
     pred_classes_o : ndarray
         Predicted class of each prediction for every file.
-    gt_classes : ndarray
+    gt_classes_o : ndarray
         Ground truth class for each file.
     durations : numpy array
         Durations of the wav files.
@@ -85,6 +85,8 @@ def prec_recall_1d(nms_pos_o, nms_prob_o, gt_pos_o, pred_classes_o, gt_classes, 
         Size of a window.
     nb_windows : ndarray
         Number of windows for every test file.
+    filename : String
+        Name of the file in which the performance will be saved.
     tuning : bool
         True if the thresholds need to be tuned, False otherwise.
     threshold_classes : numpy array
@@ -113,7 +115,7 @@ def prec_recall_1d(nms_pos_o, nms_prob_o, gt_pos_o, pred_classes_o, gt_classes, 
     if not tuning:
         F1_global_classes = np.zeros((1,9))
         F1_global_classes = compute_conf_matrices(nms_pos, nms_prob, gt_pos, pred_classes, gt_classes, durations,
-                                    detection_overlap, nb_windows, tuning, threshold_classes)
+                                    detection_overlap, nb_windows, filename, tuning, threshold_classes)
         best_F1 = F1_global_classes[0]
         best_threshold_classes = threshold_classes
     
@@ -124,17 +126,23 @@ def prec_recall_1d(nms_pos_o, nms_prob_o, gt_pos_o, pred_classes_o, gt_classes, 
         for i in range(0,101):
             threshold_classes = np.array([0,i,i,i,i,i,i,i])
             current_F1 = compute_conf_matrices(nms_pos, nms_prob, gt_pos, pred_classes, gt_classes, durations,
-                                    detection_overlap, nb_windows, tuning, threshold_classes)
+                                    detection_overlap, nb_windows, filename, tuning, threshold_classes)
             current_F1 = current_F1[1:]
             inds = np.where(current_F1 > best_F1)
             best_threshold_classes[inds] = threshold_classes[inds]
             best_F1[inds] = current_F1[inds]
+        
+    with open(filename,'a') as f:
+        f.write("Best F1 = "+ str(best_F1))
+        f.write("Best thresholds = "+ str(best_threshold_classes))
+    print("Best F1=",best_F1)
+    print("Best thresholds =",best_threshold_classes)
 
     return best_threshold_classes
 
 
 def compute_conf_matrices(nms_pos, nms_prob, gt_pos, pred_classes, gt_classes, durations, detection_overlap,
-                        nb_windows, tuning, threshold_classes):
+                        nb_windows, filename, tuning, threshold_classes):
     """
     Computes and saves the performance for detection, classification and the combination of both.
 
@@ -205,7 +213,7 @@ def compute_conf_matrices(nms_pos, nms_prob, gt_pos, pred_classes, gt_classes, d
                             gt_found_incorrect[inds] = True
                             gt_incorrect_classes[inds,pred_classes[ii][jj]] = True
                         # correct timing and correct species
-                        else: 
+                        else:
                             for i_overlap in inds: # one pred can overlap with several gt pos
                                 # do not add to conf matrix if the gt pos was already overlapped by another pred pos
                                 if gt_classes[ii][i_overlap][0]==pred_classes[ii][jj] and not gt_found_correct[i_overlap]:
@@ -272,14 +280,15 @@ def compute_conf_matrices(nms_pos, nms_prob, gt_pos, pred_classes, gt_classes, d
     conf_matrix[cl_num[1:], 1,1] += nb_tp_0
     conf_matrix_detect[1][1] = nb_tp_0
 
-    F1_threshold = compute_perf('tout', conf_matrix)
-    compute_perf('detect', conf_matrix_detect)
-    compute_perf('classif', conf_matrix_classif)
+    F1_threshold = compute_perf('tout', conf_matrix, filename, tuning, threshold_classes)
+    compute_perf('detect', conf_matrix_detect, filename, tuning, threshold_classes)
+    compute_perf('classif', conf_matrix_classif, filename, tuning, threshold_classes)
     return F1_threshold
 
-def compute_perf(perf_type, conf_matrix):
+def compute_perf(perf_type, conf_matrix, filename, tuning, threshold_classes):
     """
     Computes the performance based on the confusion matrix.
+    Saves and displays them only if tuning is False.
 
     Parameters
     -----------
@@ -287,6 +296,12 @@ def compute_perf(perf_type, conf_matrix):
         Can be one of 'detect', 'classif', 'detect + classif' in function of the given confusion matrix.
     conf_matrix : numpy array
         Confusion matrix of the model.
+    filename : String
+        Name of the file in which the performance will be saved.
+    tuning : bool
+        True if the thresholds need to be tuned, False otherwise.
+    threshold_classes : numpy array
+        Thresholds used to evaluate the performance of the model.
     
     Returns
     --------
@@ -294,19 +309,92 @@ def compute_perf(perf_type, conf_matrix):
         Array containing the global F1 score and the F1 scores of each class.
     """
 
+    with open(filename,'a') as f:
+        # print and save the thresholds and the confusion matrix
+        if not tuning:
+            f.write('\n=====================================================\n')
+            f.write('Threshold = '+str(threshold_classes)+'\n')
+            f.write('\n=====================================================\n')
+            f.write('\n--------------\n')
+            f.write('Confusion matrix '+perf_type+'\n')
+            f.write('--------------\n')
+            f.write(''+str(conf_matrix)+'\n')
+            print('\n=====================================================\n')
+            print('Threshold = '+str(threshold_classes)+'\n')
+            print('\n=====================================================\n')
 
-    # compute the metrics
-    if perf_type=="detect":
-        TP = np.array([conf_matrix[0][0]])
-        FP = np.array([conf_matrix[1][0]])
-        FN = np.array([conf_matrix[0][1]])
-    else:
-        TP = conf_matrix[:,0,0]
-        FP = conf_matrix[:,1,0]
-        FN = conf_matrix[:,0,1]
-    PRE = TP/(TP+FP).astype(float)
-    REC = TP/(TP+FN).astype(float)
-    F1 = 2*(PRE*REC)/(PRE+REC)
+        # compute the metrics
+        if perf_type=="detect":
+            TP = np.array([conf_matrix[0][0]])
+            FP = np.array([conf_matrix[1][0]])
+            FN = np.array([conf_matrix[0][1]])
+            TN = np.array([conf_matrix[1][1]])
+            nb_iter = 1
+        else:
+            TP = conf_matrix[:,0,0]
+            FP = conf_matrix[:,1,0]
+            FN = conf_matrix[:,0,1]
+            TN = conf_matrix[:,1,1]
+            nb_iter = conf_matrix.shape[0]
+        AC = (TP+TN)/(TP+FP+FN+TN).astype(float)
+        PRE = TP/(TP+FP).astype(float)
+        REC = TP/(TP+FN).astype(float)
+        F1 = 2*(PRE*REC)/(PRE+REC)
+        beta = 1.3
+        F1_beta = (1+beta**2)*(PRE*REC)/((beta**2)*PRE+REC)
+        SPEC = TN/(TN+FP)
+        BCR = (REC+SPEC)/2
+
+        # print and save the metrics
+        if not tuning:
+            for i in range(nb_iter):
+                print('--------------')
+                if perf_type == 'classif': print('Class', i+1, perf_type)
+                elif perf_type == 'detect': print("GLOBAL", perf_type)
+                else: print('Class', i, perf_type)
+                print('--------------')
+                print('True Positive', TP[i])
+                print('False Positive', FP[i])
+                print('False Negative', FN[i])
+                print('True Negative',TN[i])
+                print('Accuracy', AC[i])
+                print('Precision', PRE[i])
+                print('Recall', REC[i])
+                print('F1',F1[i])
+                print('BCR',BCR[i])
+                print( )
+
+                f.write('--------------\n')
+                if perf_type == 'classif': f.write('Class '+ str((i+1))+' '+ str(perf_type)+'\n')
+                elif perf_type == 'detect': f.write("GLOBAL "+ str(perf_type)+'\n')
+                else: f.write('Class '+ str(i)+' ' + str(perf_type)+'\n')
+                f.write('--------------\n')
+                f.write('True Positive '+ str(TP[i])+'\n')
+                f.write('False Positive '+ str(FP[i])+'\n')
+                f.write('False Negative '+ str(FN[i])+'\n')
+                f.write('True Negative '+ str(TN[i])+'\n')
+                f.write('Accuracy '+str(AC[i])+'\n')
+                f.write('Precision '+str(PRE[i])+'\n')
+                f.write('Recall '+str(REC[i])+'\n')
+                f.write('F1 '+str(F1[i])+'\n')
+                f.write('BCR '+str(BCR[i])+'\n')
+            if perf_type != "detect":
+                print('--------------')
+                print('GLOBAL', perf_type)
+                print('--------------')
+                print('Average Accuracy', np.mean(AC))
+                print('Average Precision', np.mean(PRE))
+                print('Average Recall', np.mean(REC))
+                print('Average F1', np.mean(F1))
+                print('Average BCR', np.mean(BCR), "\n")
+            f.write('--------------\n')
+            f.write('GLOBAL '+perf_type+'\n')
+            f.write('--------------\n')
+            f.write('Average Accuracy '+str(np.mean(AC))+'\n')
+            f.write('Average Precision '+str(np.mean(PRE))+'\n')
+            f.write('Average Recall '+str(np.mean(REC))+'\n')
+            f.write('Average F1 '+str(np.mean(F1))+'\n')
+            f.write('Average BCR '+str(np.mean(BCR))+'\n')
         
-    F1_threshold = np.array(np.concatenate(([np.mean(F1)],F1)))
+    F1_threshold = np.array(np.concatenate(([np.mean(F1_beta)],F1_beta)))
     return F1_threshold
