@@ -18,7 +18,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const randomColor = () => `rgba(${random(0, 255)}, ${random(0, 255)}, ${random(0, 255)}, 0.5)`
 
 
-    function setupRegionEventListener(wr, ws){
+    /*function setupRegionEventListener(wr, ws){
         let activeRegion = null
         wr.on('region-in', (region) => {
             console.log('region-in', region)
@@ -40,7 +40,7 @@ document.addEventListener('DOMContentLoaded', function () {
         ws.on('interaction', () => {
             activeRegion = null
         })
-    }
+    }*/
 
 
     visualizeButton.addEventListener('click', function () {
@@ -75,17 +75,38 @@ document.addEventListener('DOMContentLoaded', function () {
             // Initialize the Regions plugin
             wsRegions = wavesurfer.registerPlugin(WaveSurfer.Regions.create()) // Define wsRegions here
 
-            wavesurfer.on('decode', () => {
-                // Regions
-                wsRegions.addRegion({
-                    start: 1,
-                    end: 2,
-                    color: randomColor(),
-                    content: 'Resize me',
-                    drag: true,
-                    resize: true,
+            wsRegions.enableDragSelection({
+                color: 'rgba(255, 0, 0, 0.1)',
+            })
+              
+            wsRegions.on('region-updated', (region) => {
+                console.log('Updated region', region)
+            })
+
+            {
+                let activeRegion = null
+                
+                wsRegions.on('region-out', (region) => {
+                    console.log('region-out', region)
+                    if (activeRegion === region) {
+                        wavesurfer.stop()
+                        activeRegion = null
+                    }
                 })
-            });
+                wsRegions.on('region-clicked', (region, e) => {
+                    e.stopPropagation() // prevent triggering a click on the waveform
+                    activeRegion = region
+                    //region.play()
+                    region.setOptions({ color: randomColor() })
+                    e.ctrlKey ? region.remove() : region.play();
+                })
+                
+                // Reset the active region when the user clicks anywhere in the waveform
+                wavesurfer.on('interaction', () => {
+                    activeRegion = null
+                })
+            }
+
             console.log('ws0:', wsRegions);
             
             //setupRegionEventListener(wsRegions, wavesurfer);
@@ -107,8 +128,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
         };
 
+        
+
         reader.readAsArrayBuffer(file);
     });
+    
 
     playButton.addEventListener('click', function () {
         if (wavesurfer) {
@@ -150,12 +174,14 @@ document.addEventListener('DOMContentLoaded', function () {
 
             //wsRegions.clearRegions();
             //wsRegions = wavesurfer.registerPlugin(WaveSurfer.Regions.create()) // Define wsRegions here
+            
             console.log('ws1:', wsRegions);
             data.timestep.forEach((timestamp, index) => {
                 console.log('Adding region:', timestamp);
                 wsRegions.addRegion({
-                    start: Math.max(timestamp-0.5,0),
-                    end: (timestamp + 0.5),
+                    //start: Math.max(timestamp-0.5,0),
+                    start: timestamp,
+                    //end: (timestamp + 0.5),
                     color: randomColor(), 
                     content: `${data.result[index]} ${index+1}`,
                     drag: false,
@@ -163,7 +189,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 });
             });
             console.log('ws2:', wsRegions);
-                setupRegionEventListener(wsRegions, wavesurfer);
+            //setupRegionEventListener(wsRegions, wavesurfer);
 
             
         

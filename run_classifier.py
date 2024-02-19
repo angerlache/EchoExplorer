@@ -296,7 +296,8 @@ if __name__ == "__main__":
             num_calls = len(call_time)
             if num_calls>0:
 
-                call_classes = np.concatenate(np.array(call_classes)).ravel()
+                #call_classes = np.concatenate(np.array(call_classes)).ravel()
+                call_classes = np.concatenate(call_classes).ravel()
                 call_species = [group_names[i] for i in call_classes]
                 print("call pos=",call_time)
                 print("call species=", call_species)
