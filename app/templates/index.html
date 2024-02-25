@@ -26,7 +26,6 @@
     <h1>WAV File Processor</h1>
 
     <input type="file" id="audioFile" accept=".wav">
-    <button id="uploadButton">Upload Audio</button>
     <button id="visualizeButton">Visualize Audio</button>
     <button id="processButton">Process Audio</button>
 
@@ -37,7 +36,7 @@
     <button id="next">Next</button>
 
     <label>
-        Iteration: <input type="range" min="1" max="300" value="1" />
+        Iteration: <input type="range" id="slider" min="1" max="300" value="1" />
     </label>
 
     <div id="waveform"></div>

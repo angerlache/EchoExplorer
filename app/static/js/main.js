@@ -10,11 +10,13 @@ document.addEventListener('DOMContentLoaded', function () {
     const resultDiv = document.getElementById('result');
     const timestepDiv = document.getElementById('timestep');
     const probaDiv = document.getElementById('probability');
+    const slider = document.querySelector('input[type="range"]');
     const next = document.getElementById('next');
     const prec = document.getElementById('prec');
     const chunkLength = 60;
     let currentPosition = 0;
-    const audioLength = 5*60;
+    let audioLength;
+    const sR = 44100;
 
 
     let wavesurfer;
@@ -70,7 +72,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function loadNextChunk(event) {
         // Check if the entire audio has been processed
         if (currentPosition >= audioLength) {
-            alert('Audio fully processed.');
+            //alert('Audio fully processed.');
             return;
         }
 
@@ -78,8 +80,13 @@ document.addEventListener('DOMContentLoaded', function () {
         const metaData = arrayBuffer.slice(0,44); 
         let start = currentPosition;
         const end = Math.min(currentPosition + chunkLength, audioLength);
+        let data
 
-        const data = arrayBuffer.slice(start * 44100 * 4, end * 44100 * 4);
+        if (start == 0) {
+            data = arrayBuffer.slice(44, end * sR * 4);
+        } else {
+            data = arrayBuffer.slice(start * sR * 4, end * sR * 4);
+        }
         console.log(arrayBuffer);
         console.log(currentPosition);
         console.log(metaData,data);
@@ -97,21 +104,8 @@ document.addEventListener('DOMContentLoaded', function () {
         // Load the next chunk into wavesurfer
         wavesurfer.load(url);
 
-        wavesurfer.once('decode', () => {
-            const slider = document.querySelector('input[type="range"]')
-        
-            slider.addEventListener('input', (e) => {
-                const val = e.target.valueAsNumber
-                currentPosition = val
-            })
-        })
-
         // Initialize the Regions plugin
         wsRegions = wavesurfer.registerPlugin(WaveSurfer.Regions.create()) // Define wsRegions here
-
-        wsRegions.enableDragSelection({
-            color: 'rgba(255, 0, 0, 0.1)',
-        })
 
         setupRegionEventListener(wsRegions, wavesurfer);
 
@@ -131,13 +125,8 @@ document.addEventListener('DOMContentLoaded', function () {
             }),
         )
 
-        
-
-        // Print the current position (for testing purposes)
         console.log('Current Position:', currentPosition);
 
-        // Allow the next iteration after user interaction
-        //isProcessing = false;
     }
 
     var _appendBuffer = function(buffer1, buffer2) {
@@ -146,6 +135,40 @@ document.addEventListener('DOMContentLoaded', function () {
         tmp.set(new Uint8Array(buffer2), buffer1.byteLength);
         return tmp.buffer;
     };
+
+
+    fileInput.addEventListener('change', (event) => {
+
+        ////////////////////
+        const selectedFile = event.target.files[0];
+        const buff = event.target;
+        console.log("buff",selectedFile);
+    
+        if (selectedFile) {
+            //const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const audioElement = new Audio();
+            audioElement.src = URL.createObjectURL(selectedFile);
+        
+            audioElement.addEventListener('loadedmetadata', () => {
+                const durationInSeconds = audioElement.duration;
+                console.log(audioElement.sampleRate, "sample rate here")
+
+                audioLength = durationInSeconds;
+                slider.max = Math.ceil(durationInSeconds);
+                console.log('Audio duration:', durationInSeconds, 'seconds');
+                if (durationInSeconds < chunkLength) {
+                    prec.style.visibility = 'hidden';
+                    next.style.visibility = 'hidden';
+                    slider.style.visibility = 'hidden';
+                } else {
+                    prec.style.visibility = 'visible';
+                    next.style.visibility = 'visible';
+                    slider.style.visibility = 'visible';
+                }
+            });
+            
+        }
+    });
     
     
 
@@ -165,14 +188,32 @@ document.addEventListener('DOMContentLoaded', function () {
         
         }
 
-        
-        //currentPosition += chunkLength;
         reader.readAsArrayBuffer(file);
     });
+
+    slider.addEventListener('input', (e) => {
+        const val = e.target.valueAsNumber
+        currentPosition = val
+        const file = fileInput.files[0];
+
+        if (!file) {
+            alert('Please select an audio file first.');
+            return;
+        }
+
+        const reader = new FileReader();
+
+        reader.onload = function (event) {
+            loadNextChunk(event)
+        }
+        reader.readAsArrayBuffer(file);
+
+    })
 
     next.addEventListener('click' ,function () {
         currentPosition += chunkLength;
         const file = fileInput.files[0];
+        slider.value = currentPosition;
 
         if (!file) {
             alert('Please select an audio file first.');
@@ -190,6 +231,8 @@ document.addEventListener('DOMContentLoaded', function () {
     prec.addEventListener('click' ,function () {
         currentPosition -= chunkLength;
         const file = fileInput.files[0];
+        slider.value = currentPosition;
+
 
         if (!file) {
             alert('Please select an audio file first.');
@@ -255,15 +298,17 @@ document.addEventListener('DOMContentLoaded', function () {
             console.log('ws1:', wsRegions);
             data.timestep.forEach((timestamp, index) => {
                 console.log('Adding region:', timestamp);
-                wsRegions.addRegion({
-                    //start: Math.max(timestamp-0.5,0),
-                    start: timestamp,
-                    //end: (timestamp + 0.5),
-                    color: randomColor(), 
-                    content: `${data.result[index]} ${index+1}`,
-                    drag: false,
-                    resize: false,
-                });
+                if (timestamp-currentPosition > 0 && timestamp-currentPosition < chunkLength) {
+                    wsRegions.addRegion({
+                        //start: Math.max(timestamp-0.5,0),
+                        start: timestamp-currentPosition,
+                        //end: (timestamp + 0.5),
+                        color: randomColor(), 
+                        content: `${data.result[index]} ${index+1}`,
+                        drag: false,
+                        resize: false,
+                    });
+                }
             });
             console.log('ws2:', wsRegions);
             //setupRegionEventListener(wsRegions, wavesurfer);
