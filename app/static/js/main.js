@@ -1,4 +1,5 @@
 import { generateColorMap } from './utils.js';
+'use strict';
 
 document.addEventListener('DOMContentLoaded', function () {
     const fileInput = document.getElementById('audioFile');
@@ -9,7 +10,12 @@ document.addEventListener('DOMContentLoaded', function () {
     const resultDiv = document.getElementById('result');
     const timestepDiv = document.getElementById('timestep');
     const probaDiv = document.getElementById('probability');
-    const waveformDiv = document.getElementById('waveform');
+    const next = document.getElementById('next');
+    const prec = document.getElementById('prec');
+    const chunkLength = 60;
+    let currentPosition = 0;
+    const audioLength = 5*60;
+
 
     let wavesurfer;
     let wsRegions; // Define wsRegions here
@@ -18,29 +24,130 @@ document.addEventListener('DOMContentLoaded', function () {
     const randomColor = () => `rgba(${random(0, 255)}, ${random(0, 255)}, ${random(0, 255)}, 0.5)`
 
 
-    /*function setupRegionEventListener(wr, ws){
+    function setupRegionEventListener(wr, ws){
+
         let activeRegion = null
-        wr.on('region-in', (region) => {
-            console.log('region-in', region)
+
+        wsRegions.enableDragSelection({
+            color: 'rgba(255, 0, 0, 0.1)',
         })
+                
         wr.on('region-out', (region) => {
             console.log('region-out', region)
             if (activeRegion === region) {
-                activeRegion = null;
-                ws.playPause();
+                ws.stop()
+                activeRegion = null
             }
         })
         wr.on('region-clicked', (region, e) => {
             e.stopPropagation() // prevent triggering a click on the waveform
-            console.log('region-clicked', region)
             activeRegion = region
-            region.play()
+            region.setOptions({ color: randomColor() })
+            e.ctrlKey ? region.remove() : region.play();
         })
+        
         // Reset the active region when the user clicks anywhere in the waveform
         ws.on('interaction', () => {
             activeRegion = null
         })
-    }*/
+        
+    }
+
+    let options = {
+        /** The width of the waveform in pixels or any CSS value; defaults to 100% */
+        //width: 2000,
+        /** Decoding sample rate. Doesn't affect the playback. Defaults to 8000 */
+        container: '#waveform',
+        waveColor: 'black',
+        progressColor: 'red',
+        sampleRate: 192000,
+        //minPxPerSec: 500,
+        dragToSeek: true,
+        
+    }
+
+    // Function to load the next chunk
+    function loadNextChunk(event) {
+        // Check if the entire audio has been processed
+        if (currentPosition >= audioLength) {
+            alert('Audio fully processed.');
+            return;
+        }
+
+        const arrayBuffer = event.target.result;
+        const metaData = arrayBuffer.slice(0,44); 
+        let start = currentPosition;
+        const end = Math.min(currentPosition + chunkLength, audioLength);
+
+        const data = arrayBuffer.slice(start * 44100 * 4, end * 44100 * 4);
+        console.log(arrayBuffer);
+        console.log(currentPosition);
+        console.log(metaData,data);
+        const buff = _appendBuffer(metaData,data);
+
+        const blob = new Blob([buff])
+        const url = URL.createObjectURL(blob);
+
+        if (wavesurfer) {
+            wavesurfer.destroy();
+        }
+
+        wavesurfer = WaveSurfer.create(options);
+
+        // Load the next chunk into wavesurfer
+        wavesurfer.load(url);
+
+        wavesurfer.once('decode', () => {
+            const slider = document.querySelector('input[type="range"]')
+        
+            slider.addEventListener('input', (e) => {
+                const val = e.target.valueAsNumber
+                currentPosition = val
+            })
+        })
+
+        // Initialize the Regions plugin
+        wsRegions = wavesurfer.registerPlugin(WaveSurfer.Regions.create()) // Define wsRegions here
+
+        wsRegions.enableDragSelection({
+            color: 'rgba(255, 0, 0, 0.1)',
+        })
+
+        setupRegionEventListener(wsRegions, wavesurfer);
+
+        wavesurfer.registerPlugin(
+            WaveSurfer.Spectrogram.create({
+                wavesurfer: wavesurfer,
+                container: '#spectrogram',
+                //height: 500,
+                //splitChannels: true,
+                //frequencyMax: 52000,
+                fftSamples: 512,  // Adjust the number of FFT samples
+                labels: true,     // Show frequency labels
+                colorMap: generateColorMap(),  // Change the color map (viridis, plasma, inferno, etc.)
+                //windowFunc: 'hann',   // Change the window function (hann, hamming, blackman, etc.)
+                //scrollParent: true    // Enable scrolling within the parent container
+                minPxPerSec: 1000,
+            }),
+        )
+
+        
+
+        // Print the current position (for testing purposes)
+        console.log('Current Position:', currentPosition);
+
+        // Allow the next iteration after user interaction
+        //isProcessing = false;
+    }
+
+    var _appendBuffer = function(buffer1, buffer2) {
+        var tmp = new Uint8Array(buffer1.byteLength + buffer2.byteLength);
+        tmp.set(new Uint8Array(buffer1), 0);
+        tmp.set(new Uint8Array(buffer2), buffer1.byteLength);
+        return tmp.buffer;
+    };
+    
+    
 
 
     visualizeButton.addEventListener('click', function () {
@@ -54,92 +161,62 @@ document.addEventListener('DOMContentLoaded', function () {
         const reader = new FileReader();
 
         reader.onload = function (event) {
-            const arrayBuffer = event.target.result;
-
-            const blob = new Blob([arrayBuffer]);
-            const url = URL.createObjectURL(blob);
-
-            if (wavesurfer) {
-                wavesurfer.destroy();
-            }
-
-            wavesurfer = WaveSurfer.create({
-                container: '#waveform',
-                waveColor: 'black',
-                progressColor: 'red',
-                //normalize: true,
-                sampleRate: 192000,
-            });
-            wavesurfer.load(url);
-
-            // Initialize the Regions plugin
-            wsRegions = wavesurfer.registerPlugin(WaveSurfer.Regions.create()) // Define wsRegions here
-
-            wsRegions.enableDragSelection({
-                color: 'rgba(255, 0, 0, 0.1)',
-            })
-              
-            wsRegions.on('region-updated', (region) => {
-                console.log('Updated region', region)
-            })
-
-            {
-                let activeRegion = null
-                
-                wsRegions.on('region-out', (region) => {
-                    console.log('region-out', region)
-                    if (activeRegion === region) {
-                        wavesurfer.stop()
-                        activeRegion = null
-                    }
-                })
-                wsRegions.on('region-clicked', (region, e) => {
-                    e.stopPropagation() // prevent triggering a click on the waveform
-                    activeRegion = region
-                    //region.play()
-                    region.setOptions({ color: randomColor() })
-                    e.ctrlKey ? region.remove() : region.play();
-                })
-                
-                // Reset the active region when the user clicks anywhere in the waveform
-                wavesurfer.on('interaction', () => {
-                    activeRegion = null
-                })
-            }
-
-            console.log('ws0:', wsRegions);
-            
-            //setupRegionEventListener(wsRegions, wavesurfer);
-
-            wavesurfer.registerPlugin(
-                WaveSurfer.Spectrogram.create({
-                    container: '#spectrogram',
-                    //height: 500,
-                    //splitChannels: true,
-                    frequencyMax: 192000,
-                    fftSamples: 1024,  // Adjust the number of FFT samples
-                    labels: true,     // Show frequency labels
-                    colorMap: generateColorMap(),  // Change the color map (viridis, plasma, inferno, etc.)
-                    //windowFunc: 'hann',   // Change the window function (hann, hamming, blackman, etc.)
-                    scrollParent: true    // Enable scrolling within the parent container
+            loadNextChunk(event)
         
-                }),
-            )
-
-        };
+        }
 
         
+        //currentPosition += chunkLength;
+        reader.readAsArrayBuffer(file);
+    });
 
+    next.addEventListener('click' ,function () {
+        currentPosition += chunkLength;
+        const file = fileInput.files[0];
+
+        if (!file) {
+            alert('Please select an audio file first.');
+            return;
+        }
+
+        const reader = new FileReader();
+
+        reader.onload = function (event) {
+            loadNextChunk(event)
+        }
+        reader.readAsArrayBuffer(file);
+    });
+
+    prec.addEventListener('click' ,function () {
+        currentPosition -= chunkLength;
+        const file = fileInput.files[0];
+
+        if (!file) {
+            alert('Please select an audio file first.');
+            return;
+        }
+
+        const reader = new FileReader();
+
+        reader.onload = function (event) {
+            loadNextChunk(event)
+        }
         reader.readAsArrayBuffer(file);
     });
     
 
     playButton.addEventListener('click', function () {
+        //wavesurfer.spectrogram.canvas.style.width = Math.max(wavesurfer.drawer.getWidth(), Math.round(wavesurfer.getDuration() * wavesurfer.params.minPxPerSec * wavesurfer.params.pixelRatio)) + "px"
+        //wavesurfer.plugins[0].canvas.style.width = Math.max(wavesurfer.options['width'], Math.round(wavesurfer.getDuration() * wavesurfer.options['minPxPerSec'] * wavesurfer.options['pixelRatio'])) + "px"
+        //wavesurfer.plugins[0].render()
         if (wavesurfer) {
             wavesurfer.play();
+            //console.log("bbbbbbb : ", options["sampleRate"])
         }
     });
 
+
+    
     pauseButton.addEventListener('click', function () {
         if (wavesurfer) {
             wavesurfer.pause();
@@ -197,5 +274,6 @@ document.addEventListener('DOMContentLoaded', function () {
         .catch(error => {
             console.error('Error:', error);
         });
+
     });
 });

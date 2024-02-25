@@ -29,9 +29,6 @@ def process():
     if file.filename == '':
         return jsonify({'error': 'No selected file'})
     
-    # Process the file using your AI model function
-    #result = your_ai_function(file)
-
     if file and allowed_file(file.filename):
 
         filename = secure_filename(file.filename)
@@ -65,8 +62,8 @@ def process():
                 results[2].append(line[3])
 
         print(results)
-        result = 'ENVSP'
-        timestep = 1
+        #result = 'ENVSP'
+        #timestep = 1
         
         #empty by deleting then 
         shutil.rmtree(ALTERNATE_UPLOAD_FOLDER) # delete the folder where AI is applied
