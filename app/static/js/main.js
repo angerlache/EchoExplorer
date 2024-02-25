@@ -21,11 +21,40 @@ document.addEventListener('DOMContentLoaded', function () {
 
     let wavesurfer;
     let wsRegions; // Define wsRegions here
+    let regions = [];
     // Give regions a random color when they are created
     const random = (min, max) => Math.random() * (max - min) + min
     const randomColor = () => `rgba(${random(0, 255)}, ${random(0, 255)}, ${random(0, 255)}, 0.5)`
 
+    function renderRegions(ws){
+        getCurrRegions().forEach(reg => {
+            //console.log("region added")
+            //console.log(reg)
+            ws.addRegion({
+                start: reg.start - currentPosition,
+                end: reg.end - currentPosition,
+                color: randomColor(), 
+                content: reg.content,
+                drag: reg.drag,
+                resize: reg.resize,
+                id: reg.id,
+            });
+        });
+    }
 
+    function getCurrRegions(){
+        if(wsRegions){
+            //console.log("Regions list:")
+            //console.log(regions)
+            const regionsBetween = regions.filter(region => {
+                const regionStart = region.start;
+                return regionStart >= currentPosition && regionStart <= (currentPosition+60);
+            });
+            return regionsBetween;
+        }
+    }
+
+    
     function setupRegionEventListener(wr, ws){
 
         let activeRegion = null
@@ -33,9 +62,29 @@ document.addEventListener('DOMContentLoaded', function () {
         wsRegions.enableDragSelection({
             color: 'rgba(255, 0, 0, 0.1)',
         })
+        wr.on("region-created", (region) => {
+            let r = Object.assign({}, region);
+            r.start = r.start + currentPosition;
+            r.end = r.end + currentPosition;
+            regions.push(r);
+        })
+
+        wr.on("region-removed", (region) => {
+            //console.log('region-removed', region)
+            regions = regions.filter(item => item.id !== region.id);
+        })
+
+        wr.on("region-updated", (region) => {
+            //console.log('region-updated', region)
+            regions = regions.filter(item => item.id !== region.id);
+            let r = Object.assign({}, region);
+            r.start = r.start + currentPosition;
+            r.end = r.end + currentPosition;
+            regions.push(r);
+        })
                 
         wr.on('region-out', (region) => {
-            console.log('region-out', region)
+            //console.log('region-out', region)
             if (activeRegion === region) {
                 ws.stop()
                 activeRegion = null
@@ -95,7 +144,12 @@ document.addEventListener('DOMContentLoaded', function () {
         const blob = new Blob([buff])
         const url = URL.createObjectURL(blob);
 
+        
+
         if (wavesurfer) {
+            // ICI tu fait un truc pour que il fasse plus qqchs on-delete
+            wsRegions.unAll();
+            
             wavesurfer.destroy();
         }
 
@@ -106,8 +160,14 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // Initialize the Regions plugin
         wsRegions = wavesurfer.registerPlugin(WaveSurfer.Regions.create()) // Define wsRegions here
+        
+        wavesurfer.once('decode', () => {
+            renderRegions(wsRegions);
+            setupRegionEventListener(wsRegions, wavesurfer);
+        })
+        
 
-        setupRegionEventListener(wsRegions, wavesurfer);
+        
 
         wavesurfer.registerPlugin(
             WaveSurfer.Spectrogram.create({
@@ -124,7 +184,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 minPxPerSec: 1000,
             }),
         )
-
+        
+        
         console.log('Current Position:', currentPosition);
 
     }
@@ -229,7 +290,7 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     prec.addEventListener('click' ,function () {
-        currentPosition -= chunkLength;
+        currentPosition = Math.max(currentPosition - chunkLength, 0);
         const file = fileInput.files[0];
         slider.value = currentPosition;
 
@@ -309,6 +370,18 @@ document.addEventListener('DOMContentLoaded', function () {
                         resize: false,
                     });
                 }
+                else {
+                    regions.push({
+                        id: `bat-${Math.random().toString(32).slice(2)}`,
+                        start: timestamp-currentPosition,
+                        end: timestamp-currentPosition,
+                        content: `${data.result[index]} ${index+1}`,
+                        drag: false,
+                        resize: false,
+                    })
+                }
+
+                
             });
             console.log('ws2:', wsRegions);
             //setupRegionEventListener(wsRegions, wavesurfer);

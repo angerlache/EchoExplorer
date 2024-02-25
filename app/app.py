@@ -45,8 +45,11 @@ def process():
         with open(alternate_filepath, 'wb') as f:
             f.write(file_content)
 
+
+        # This is ZONE DE TEST removed AI pour le fun
+            
         os.chdir('../')
-        #file.save("data/samples/"+file.filename)
+        #file.save("data/samples/"+file.filename)                           wasalready commented
         os.system('{} {}'.format('python3', 'run_classifier.py'))
         os.chdir('app')
 
