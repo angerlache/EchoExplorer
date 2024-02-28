@@ -13,12 +13,10 @@
     <!--script src="https://unpkg.com/wavesurfer.js@7.7.2/dist/plugins/zoom.min.js"></script-->
     <!--script src="https://unpkg.com/wavesurfer.js@7.7.2/dist/plugins/spectrogram.min.js"></script-->
 
-    <script src="{{ url_for('static', filename='js/jquery-2.2.3.min.js') }}" type="text/javascript"></script>
-    <script src="{{ url_for('static', filename='js/wavesurfer.min.js') }}" type="text/javascript"></script>
-    <script src="{{ url_for('static', filename='js/wavesurfer.spectrogram.min.js') }}" type="text/javascript"></script>
-    <script src="{{ url_for('static', filename='js/wavesurfer.regions.js') }}" type="text/javascript"></script>
-
-
+    <script src="{{ url_for('static', filename='js/lib/jquery-2.2.3.min.js') }}" type="text/javascript"></script>
+    <script src="{{ url_for('static', filename='js/lib/wavesurfer.min.js') }}" type="text/javascript"></script>
+    <script src="{{ url_for('static', filename='js/lib/wavesurfer.spectrogram.min.js') }}" type="text/javascript"></script>
+    <script src="{{ url_for('static', filename='js/lib/wavesurfer.regions.js') }}" type="text/javascript"></script>
     
 
 </head>
@@ -39,10 +37,24 @@
         Iteration: <input type="range" id="slider" min="1" max="300" value="1" />
     </label>
 
+    <button id="save">Save Labels</button>
+    
+
     <div id="waveform"></div>
 
+    
 
+    <select id="choiceSelector" style="display: none;">
+        <option value="Barbarg">Barbarg</option>
+        <option value="Envsp">Envsp</option>
+        <option value="Myosp">Myosp</option>
+        <option value="Pip35">Pip35</option>
+        <option value="Pip50">Pip50</option>
+        <option value="Plesp">Plesp</option>
+        <option value="Rhisp">Rhisp</option>
+    </select>
 
+    <button id="apply" style="display: none;">Apply</button>
 
     
     <div id="result"></div>
@@ -50,7 +62,31 @@
     <div id="probability"></div>
     <div id="spectrogram"></div>
 
-    <script src="{{ url_for('static', filename='js/main.js') }}" type="module"></script>
+
+
+    <form role="form" name="edit" style="opacity: 0; transition: opacity 300ms linear; margin: 30px 0;">
+        
+        <div>
+            <select class="custom-select" id="choiceSelector" name="choiceSelector" style="height: 30px;width: 100%">
+                <option value="Barbarg">Barbarg</option>
+                <option value="Envsp">Envsp</option>
+                <option value="Myosp">Myosp</option>
+                <option value="Pip35">Pip35</option>
+                <option value="Pip50">Pip50</option>
+                <option value="Plesp">Plesp</option>
+                <option value="Rhisp">Rhisp</option>
+            </select>
+        </div>
+        
+
+        <div>
+            <button type="submit" class="btn btn-success btn-block">Save</button>
+        </div>
+        
+    </form>
+
+
+    <script src="{{ url_for('static', filename='js/src/main.js') }}" type="module"></script>
 
 
 

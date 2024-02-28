@@ -1,13 +1,16 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify,send_from_directory
 import os
 from werkzeug.utils import secure_filename
 import shutil
+import json
 
 app = Flask(__name__)
 
+work_dir = ""
+
 ALLOWED_EXTENSIONS = {'wav'}
 UPLOAD_FOLDER = 'uploads'
-ALTERNATE_UPLOAD_FOLDER = '../data/samples'
+ALTERNATE_UPLOAD_FOLDER = '../AI/data/samples'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['ALTERNATE_UPLOAD_FOLDER'] = ALTERNATE_UPLOAD_FOLDER
 
@@ -48,15 +51,14 @@ def process():
 
         # This is ZONE DE TEST removed AI pour le fun
             
-        os.chdir('../')
-        #file.save("data/samples/"+file.filename)                           wasalready commented
+        os.chdir('../AI')
         os.system('{} {}'.format('python3', 'run_classifier.py'))
-        os.chdir('app')
+        os.chdir('../app')
 
 
         # Process the file using your AI model function
         results = [[],[],[]]
-        with open("../results/classification_result.csv") as resultfile:
+        with open("../AI/results/classification_result.csv") as resultfile:
             next(resultfile)
             for line in resultfile:
                 line = line.strip().split(',')
@@ -74,6 +76,22 @@ def process():
         return jsonify({'result': results[1], 'timestep': results[0], 'probability':results[2]})
 
     return jsonify({'error': 'Invalid file format'})
+
+## FROM : https://github.com/smart-audio/audio_diarization_annotation/tree/master
+@app.route('/annotation/<path:path>', methods=['GET', 'POST'])
+def annotation(path):
+    if request.method == 'GET':
+        return send_from_directory(os.path.join(work_dir, 'annotation'), path)
+    else:
+        data = request.data
+        filename = path
+        output_dir = os.path.join(work_dir, 'annotation')
+        os.makedirs(output_dir, exist_ok=True)
+        with open(os.path.join(output_dir, filename), 'w') as f:
+            data = data.decode('utf-8')
+            data = json.loads(data)
+            json.dump(data, f, indent=2)
+        return 'ok'
 
 if __name__ == '__main__':
     if not os.path.exists(app.config['UPLOAD_FOLDER']):

@@ -1,0 +1,44 @@
+[
+  {
+    "duration": 300,
+    "file": "sample-file-1.wav",
+    "start": 5.725043626415094,
+    "end": 8.927186671698113,
+    "content": "Rhisp"
+  },
+  {
+    "duration": 300,
+    "file": "sample-file-1.wav",
+    "start": 13.48781464528302,
+    "end": 19.212858271698114,
+    "content": "Rhisp"
+  },
+  {
+    "duration": 300,
+    "file": "sample-file-1.wav",
+    "start": 25.034936535849056,
+    "end": 28.495838615094335,
+    "content": "Rhisp"
+  },
+  {
+    "duration": 300,
+    "file": "sample-file-1.wav",
+    "start": 72.09703504043127,
+    "end": 74.58760107816711,
+    "content": "Barbarg"
+  },
+  {
+    "duration": 300,
+    "file": "sample-file-1.wav",
+    "start": 76.52830188679245,
+    "end": 81.47708894878707,
+    "content": "Barbarg"
+  },
+  {
+    "duration": 300,
+    "file": "sample-file-1.wav",
+    "start": 86.74932614555256,
+    "end": 91.43935309973045,
+    "content": "Barbarg"
+  }
+]
