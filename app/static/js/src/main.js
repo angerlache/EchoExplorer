@@ -1,4 +1,4 @@
-import { generateColorMap,appendBuffer,renderRegions,saveAnnotationToServer } from './utils.js';
+import { generateColorMap,appendBuffer,renderRegions,saveAnnotationToServer, createRegionContent, loadRegions } from './utils.js';
 'use strict';
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -14,10 +14,11 @@ document.addEventListener('DOMContentLoaded', function () {
     const next = document.getElementById('next');
     const prec = document.getElementById('prec');
     const save = document.getElementById('save');
+    const note = document.getElementById('note');
     const chunkLength = 60;
     let currentPosition = 0;
     let audioLength;
-    const sR = 384000; // TODO : user can choose the sampleRate based on his audio
+    const sR = 44100; // TODO : user can choose the sampleRate based on his audio
 
 
     let wavesurfer;
@@ -30,6 +31,25 @@ document.addEventListener('DOMContentLoaded', function () {
     const randomColor = () => `rgba(${random(0, 255)}, ${random(0, 255)}, ${random(0, 255)}, 0.5)`
 
 
+
+    /**
+     * Save annotations to localStorage.
+     */
+    /*function saveRegions() {
+        localStorage.regions = JSON.stringify(
+            Object.keys(regions).map(function (id) {
+                var region = regions[id];
+                return {
+                    //duration: audioLength,
+                    //file: fileInput.files[0].name,
+                    start: region.start,
+                    end: region.end,
+                    content: region.content,
+                };
+            })
+        );
+    }*/
+
     // FROM : https://github.com/smart-audio/audio_diarization_annotation/tree/master
     function selectElement(id, valueToSelect) {
         let element = document.getElementById(id);
@@ -40,12 +60,20 @@ document.addEventListener('DOMContentLoaded', function () {
     function editAnnotation(region) {
         let form = document.forms.edit;
         form.style.opacity = 1;
-        selectElement('choiceSelector', region.content || '');
+        //selectElement('choiceSelector', region.content.querySelector('h3') || '');
+        //selectElement('choiceSelector', region.content || '');
+        //selectElement('note', region.content.querySelector('p') || '');
+        //selectElement('note', region.content.querySelector('p') || '');
         form.onsubmit = function (e) {
             e.preventDefault();
+            
+            //console.log('eeefff',region.content)
+            var regionContent = createRegionContent(document,form.elements.choiceSelector.value, form.elements.note.value)
+            region.setContent(regionContent);
+            //region.setContent(form.elements.choiceSelector.value);
             console.log('eeefff',region.content)
-            region.setContent(form.elements.choiceSelector.value);
-            console.log('eeefff',region.content.outerText)
+            //console.log(region.content.querySelector('p').textContent,region.content.innerText)
+
 
 
             regions = regions.filter(item => item.id !== region.id);
@@ -73,7 +101,9 @@ document.addEventListener('DOMContentLoaded', function () {
             color: 'rgba(255, 0, 0, 0.1)',
         })
         wr.on("region-created", (region) => {
+            //region.setOptions({ color: randomColor(), contentEditable:true, content: createRegionContent(document,'','')});
             region.setOptions({ color: randomColor(), contentEditable:true});
+            console.log('content = ', region.content);
 
             let r = Object.assign({}, region);
             r.start = r.start + currentPosition;
@@ -106,11 +136,17 @@ document.addEventListener('DOMContentLoaded', function () {
         wr.on('region-clicked', (region, e) => {
             e.stopPropagation() // prevent triggering a click on the waveform
             activeRegion = region
+            //console.log('gerdved')
             //region.setOptions({ color: randomColor() })
             if (e.ctrlKey) {
                 region.remove();
             } else if (e.shiftKey) {
-                //showDropdown(region)
+
+                if (region.content !== undefined) {
+                    document.forms.edit.elements.note.value = region.content.textContent
+                    document.forms.edit.elements.note.value = region.content.querySelector('p').textContent;
+                    document.forms.edit.elements.choiceSelector.value = region.content.querySelector('h3').textContent;
+                }
                 editAnnotation(region)
                 
 
@@ -131,6 +167,8 @@ document.addEventListener('DOMContentLoaded', function () {
         })
         
     }
+
+
 
     // Function to load the next chunk
     function loadNextChunk(event) {
@@ -159,7 +197,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const blob = new Blob([buff])
         const url = URL.createObjectURL(blob);
 
-
+        console.log('USERRRRRRRRR', typeof userName);
         if (wavesurfer) {
             // ICI tu fait un truc pour que il fasse plus qqchs on-delete
             wsRegions.unAll();
@@ -185,10 +223,28 @@ document.addEventListener('DOMContentLoaded', function () {
         // Initialize the Regions plugin
         wsRegions = wavesurfer.registerPlugin(WaveSurfer.Regions.create()) // Define wsRegions here
         
-        wavesurfer.once('decode', () => {
+        wavesurfer.once('decode', async () => {
             renderRegions(chunkLength,currentPosition,wsRegions,regions);
             setupRegionEventListener(wsRegions, wavesurfer);
-        })
+            //loadRegions(document,chunkLength,currentPosition,wsRegions,regions);
+            
+            //////
+            wavesurfer.once('ready', async function () {
+                try {
+                    const response = await fetch('users/' + userName + '/annotation/' + annotation_name);
+                    const data = await response.json();
+                    //renderRegions(chunkLength,currentPosition,wsRegions,data);
+                    loadRegions(document,chunkLength,currentPosition,wsRegions,data,regions);
+                    
+                    //saveRegions();
+                } catch (error) {
+                    console.error('Error fetching annotation:', error);
+                }
+            });
+            
+
+        });
+        
         
 
         wavesurfer.registerPlugin(
@@ -213,6 +269,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
     fileInput.addEventListener('change', (event) => {
+
 
         const selectedFile = event.target.files[0];
         const buff = event.target;
@@ -242,6 +299,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     slider.style.visibility = 'visible';
                 }
             });
+
             
         }
     });
@@ -327,6 +385,7 @@ document.addEventListener('DOMContentLoaded', function () {
     playButton.addEventListener('click', function () {
         if (wavesurfer) {
             wavesurfer.play();
+            console.log('play')
         }
     });
 
@@ -339,7 +398,8 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     save.addEventListener('click', function () {
-        saveAnnotationToServer(audioLength,annotation_name,fileInput,regions)
+        saveAnnotationToServer(audioLength,annotation_name,fileInput,regions,userName);
+        //saveRegions();
     });
 
     processButton.addEventListener('click', function () {
@@ -368,6 +428,13 @@ document.addEventListener('DOMContentLoaded', function () {
             console.log('Timestep:', data.timestep);
             console.log("With probabilities:", data.probability);
 
+            wsRegions.addRegion({
+                start: 20,
+                end: 30,
+                content: createRegionContent(document, "ENVSP","noteeeeee")
+                //content: "biot",
+            })
+
             
             console.log('ws1:', wsRegions);
             data.timestep.forEach((timestamp, index) => {
@@ -378,7 +445,8 @@ document.addEventListener('DOMContentLoaded', function () {
                         start: timestamp-currentPosition,
                         //end: (timestamp + 0.5),
                         color: randomColor(), 
-                        content: `${data.result[index]} ${index+1}`,
+                        //content: `${data.result[index]} ${index+1}`,
+                        content: createRegionContent(document,`${data.result[index]} ${index+1}` , "noteeee") ,
                         drag: false,
                         resize: false,
                     });

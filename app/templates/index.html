@@ -23,6 +23,14 @@
 <body>
     <h1>WAV File Processor</h1>
 
+    <a href="{{url_for('login')}}">Login Page</a><br>
+    <a href="{{url_for('register')}}">Register Page</a><br>
+    {% if session['is_logged_in'] %}
+        <!-- Show the button only if the user is logged in -->
+        <a href="{{url_for('dashboard')}}">Logout Page</a><br>
+    {% endif %}
+    
+
     <input type="file" id="audioFile" accept=".wav">
     <button id="visualizeButton">Visualize Audio</button>
     <button id="processButton">Process Audio</button>
@@ -37,7 +45,13 @@
         Iteration: <input type="range" id="slider" min="1" max="300" value="1" />
     </label>
 
-    <button id="save">Save Labels</button>
+    {% if session['is_logged_in'] %}
+        <!-- Show the button only if the user is logged in -->
+        <button id="save">Save Labels</button>
+    {% else %}
+        <!-- Show a hidden button if the user is not logged in -->
+        <button id="save" style="display: none;">Save Labels</button>
+    {% endif %}
     
 
     <div id="waveform"></div>
@@ -77,6 +91,11 @@
                 <option value="Rhisp">Rhisp</option>
             </select>
         </div>
+
+        <div class="form-group">
+            <label for="note">Note</label>
+            <textarea id="note" class="form-control" rows="3" name="note"></textarea>
+        </div>
         
 
         <div>
@@ -85,6 +104,9 @@
         
     </form>
 
+    <script>
+        var userName = "{{username}}";
+    </script>
 
     <script src="{{ url_for('static', filename='js/src/main.js') }}" type="module"></script>
 

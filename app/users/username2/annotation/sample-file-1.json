@@ -1,0 +1,18 @@
+[
+  {
+    "duration": 300,
+    "file": "sample-file-1.wav",
+    "start": 11.954098861899565,
+    "end": 17.39075752237991,
+    "label": "Rhisp",
+    "note": "rhisp"
+  },
+  {
+    "duration": 300,
+    "file": "sample-file-1.wav",
+    "start": 78.53711790393012,
+    "end": 82.53275109170306,
+    "label": "Pip50",
+    "note": "pip50"
+  }
+]

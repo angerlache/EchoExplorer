@@ -15,6 +15,37 @@ export function generateColorMap() {
     return colorMap;
 }
 
+export function containsObject(obj, list) {
+    var i;
+    for (i = 0; i < list.length; i++) {
+        if (obj.start === list[i].start && obj.end === list[i].end && 
+            obj.label === list[i].content.querySelector('h3').textContent &&
+            obj.note === list[i].content.querySelector('p').textContent) {
+            return true;
+        }
+        
+    }
+
+    return false;
+}
+
+export function createRegionContent(document,regionLabel,regionNote) {
+    var regionContent = document.createElement('div');
+
+    // Add a title element (e.g., h3) to the container
+    var title = document.createElement('h3');
+    title.textContent = regionLabel;
+    regionContent.appendChild(title);
+
+    // Add a paragraph element (p) for the longer note
+    var note = document.createElement('p');
+    note.textContent = regionNote;
+    note.style.display = 'none'
+    regionContent.appendChild(note);
+
+    return regionContent;
+}
+
 // FROM : https://gist.github.com/72lions/4528834
 export function appendBuffer(buffer1,buffer2) {
     var tmp = new Uint8Array(buffer1.byteLength + buffer2.byteLength);
@@ -37,7 +68,7 @@ export function getCurrRegions(chunkLength,currentPosition,wr,regions){
 
 export function renderRegions(chunkLength,currentPosition,wr,regions){
     getCurrRegions(chunkLength,currentPosition,wr,regions).forEach(reg => {
-        //console.log("region added")
+        console.log("region added",reg)
         //console.log(reg)
         wr.addRegion({
             start: reg.start - currentPosition,
@@ -49,13 +80,51 @@ export function renderRegions(chunkLength,currentPosition,wr,regions){
             id: reg.id,
         });
     });
+    
+
+}
+
+// same as renderRegions but with regions saved in the json of the file
+export function loadRegions(document,chunkLength,currentPosition,wr,annotations,regions){
+
+    annotations.forEach(region => {
+
+        if (region.start >= currentPosition && region.start <= (currentPosition+chunkLength) &&
+            !containsObject({
+                start: region.start,
+                end: region.end,
+                label: region.label,
+                note: region.note,
+            },regions)) {
+
+            wr.addRegion({
+                start: region.start - currentPosition,
+                end: region.end - currentPosition,
+                contentEditable: true,
+                content: createRegionContent(document,region.label,region.note),
+                //content: region.label,
+
+            });
+        } else if (!containsObject({
+                start: region.start,
+                end: region.end,
+                label: region.label,
+                note: region.note,},regions)) {
+            regions.push({
+                start: region.start,
+                end: region.end,
+                content: createRegionContent(document,region.label,region.note)})
+        }
+    });
+
+
 }
 
 /**
  * upload to server
  * FROM : https://github.com/smart-audio/audio_diarization_annotation/tree/master
  */
-export function saveAnnotationToServer(audioLength,annotation_name,fileInput,regions) {
+export function saveAnnotationToServer(audioLength,annotation_name,fileInput,regions,userName) {
         // ! this saves also the response of the AI, maybe we should change this ?
         let data = JSON.stringify(
             Object.keys(regions).map(function (id) {
@@ -65,11 +134,17 @@ export function saveAnnotationToServer(audioLength,annotation_name,fileInput,reg
                     file: fileInput.files[0].name,
                     start: region.start,
                     end: region.end,
-                    content: region.content.outerText
+                    //content: region.content,
+                    label: region.content.querySelector('h3').textContent,
+                    note: region.content.querySelector('p').textContent
+                    
                 };
             })
         );
-        fetch("/annotation/" + annotation_name, {
+        //console.log('path : ', "/users/" + userName + "/annotation/" + annotation_name);
+        //console.log('path : ', "/annotation/" + annotation_name);
+        fetch("/users/" + userName + "/annotation/" + annotation_name, {
+        //fetch("/annotation/" + annotation_name, {
             method: "POST",
             body: data
         }).then(res => {
