@@ -118,6 +118,10 @@ def login():
 def dashboard():
     return render_template('dashboard.html')
 
+@app.route('/species', methods=['GET', 'POST'])
+def species():
+    return render_template('species.html')
+
 @app.route('/logout', methods=['GET', 'POST'])
 @login_required
 def logout():
@@ -168,7 +172,8 @@ def process():
         # This is ZONE DE TEST removed AI pour le fun
             
         os.chdir('../AI')
-        #os.system('{} {}'.format('python3', 'run_classifier.py'))
+        print(os.getcwd())
+        os.system('{} {}'.format('python3', 'run_classifier.py'))
         os.chdir('../app')
 
 
@@ -212,6 +217,8 @@ def annotation(username,path):
             data = json.loads(data)
             json.dump(data, f, indent=2)
         return 'ok'
+    
+
 
 if __name__ == '__main__':
     if not os.path.exists(app.config['UPLOAD_FOLDER']):

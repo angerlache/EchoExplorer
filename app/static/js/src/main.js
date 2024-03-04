@@ -10,7 +10,10 @@ document.addEventListener('DOMContentLoaded', function () {
     const resultDiv = document.getElementById('result');
     const timestepDiv = document.getElementById('timestep');
     const probaDiv = document.getElementById('probability');
-    const slider = document.querySelector('input[type="range"]');
+    //const slider = document.querySelector('input[type="range"]');
+    const slider = document.getElementById('slider');
+    const sliderContainer = document.getElementById('slider-container');
+    const sliderFreq = document.getElementById('maxFreq');
     const next = document.getElementById('next');
     const prec = document.getElementById('prec');
     const save = document.getElementById('save');
@@ -18,13 +21,14 @@ document.addEventListener('DOMContentLoaded', function () {
     const chunkLength = 60;
     let currentPosition = 0;
     let audioLength;
-    const sR = 44100; // TODO : user can choose the sampleRate based on his audio
+    let sR = 44100; // TODO : user can choose the sampleRate based on his audio
 
 
     let wavesurfer;
     let wsRegions; // Define wsRegions here
     let regions = [];
     let annotation_name;
+    let maxFreq = 96000;
 
     // Give regions a random color when they are created
     const random = (min, max) => Math.random() * (max - min) + min
@@ -68,7 +72,7 @@ document.addEventListener('DOMContentLoaded', function () {
             e.preventDefault();
             
             //console.log('eeefff',region.content)
-            var regionContent = createRegionContent(document,form.elements.choiceSelector.value, form.elements.note.value)
+            var regionContent = createRegionContent(document,form.elements.choiceSelector.value, form.elements.note.value,false)
             region.setContent(regionContent);
             //region.setContent(form.elements.choiceSelector.value);
             console.log('eeefff',region.content)
@@ -101,6 +105,18 @@ document.addEventListener('DOMContentLoaded', function () {
             color: 'rgba(255, 0, 0, 0.1)',
         })
         wr.on("region-created", (region) => {
+            region.on('over', (e) => {
+                // todo show 
+                if (region.content !== undefined)
+                    region.setContent(createRegionContent(document,region.content.querySelector('h3').textContent,
+                                        region.content.querySelector('p').textContent,true))
+            });
+            region.on('leave', (e) => {
+                // todo hide 
+                if (region.content !== undefined)
+                region.setContent(createRegionContent(document,region.content.querySelector('h3').textContent,
+                                    region.content.querySelector('p').textContent,false))
+            });
             //region.setOptions({ color: randomColor(), contentEditable:true, content: createRegionContent(document,'','')});
             region.setOptions({ color: randomColor(), contentEditable:true});
             console.log('content = ', region.content);
@@ -160,10 +176,7 @@ document.addEventListener('DOMContentLoaded', function () {
         // Reset the active region when the user clicks anywhere in the waveform
         ws.on('interaction', () => {
             activeRegion = null
-            var apply = document.getElementById('apply');
-            var dropdown = document.getElementById('choiceSelector');
-            dropdown.style.display = 'none';
-            apply.style.display = 'none';
+            
         })
         
     }
@@ -179,10 +192,15 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         const arrayBuffer = event.target.result;
-        const metaData = arrayBuffer.slice(0,44); 
+        const metaData = arrayBuffer.slice(0,44); //44
         let start = currentPosition;
         const end = Math.min(currentPosition + chunkLength, audioLength);
-        let data
+        let data;
+
+        // calculate the sample rate of the audio indicated in the WAV header
+        var i = new Uint32Array(arrayBuffer.slice(24,28));
+        sR = (i[0] << 0) | (i[1] << 8) | (i[2] << 16) | (i[3] << 24);
+
 
         if (start == 0) {
             data = arrayBuffer.slice(44, end * sR * 4);
@@ -192,6 +210,9 @@ document.addEventListener('DOMContentLoaded', function () {
         console.log(arrayBuffer);
         console.log(currentPosition);
         console.log(metaData,data);
+
+
+
         const buff = appendBuffer(metaData,data);
 
         const blob = new Blob([buff])
@@ -206,13 +227,10 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         wavesurfer = WaveSurfer.create({
-            /** The width of the waveform in pixels or any CSS value; defaults to 100% */
-            //width: 2000,
-            /** Decoding sample rate. Doesn't affect the playback. Defaults to 8000 */
             container: '#waveform',
             waveColor: 'black',
             progressColor: 'red',
-            sampleRate: 192000,
+            sampleRate: maxFreq * 2,
             //minPxPerSec: 500,
             dragToSeek: true,
         });
@@ -222,6 +240,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // Initialize the Regions plugin
         wsRegions = wavesurfer.registerPlugin(WaveSurfer.Regions.create()) // Define wsRegions here
+
+        console.log('111111', wavesurfer)
         
         wavesurfer.once('decode', async () => {
             renderRegions(chunkLength,currentPosition,wsRegions,regions);
@@ -272,12 +292,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
         const selectedFile = event.target.files[0];
-        const buff = event.target;
         console.log("buff",selectedFile);
         regions = [];
         annotation_name = fileInput.files[0].name.split('.')[0] + '.json'
     
         if (selectedFile) {
+            currentPosition = 0;
+            maxFreq = 96000;
             //const audioContext = new (window.AudioContext || window.webkitAudioContext)();
             const audioElement = new Audio();
             audioElement.src = URL.createObjectURL(selectedFile);
@@ -288,20 +309,29 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 audioLength = durationInSeconds;
                 slider.max = Math.ceil(durationInSeconds);
+                slider.value = 0;
+                sliderFreq.value = 96000;
+
                 console.log('Audio duration:', durationInSeconds, 'seconds');
                 if (durationInSeconds < chunkLength) {
                     prec.style.visibility = 'hidden';
                     next.style.visibility = 'hidden';
                     slider.style.visibility = 'hidden';
+                    sliderContainer.style.visibility = 'hidden'
                 } else {
                     prec.style.visibility = 'visible';
                     next.style.visibility = 'visible';
                     slider.style.visibility = 'visible';
+                    sliderContainer.style.visibility = 'visible'
                 }
             });
 
             
         }
+
+        ///////////////////
+
+        
     });
     
     
@@ -325,7 +355,26 @@ document.addEventListener('DOMContentLoaded', function () {
         reader.readAsArrayBuffer(file);
     });
 
-    slider.addEventListener('input', (e) => {
+    sliderFreq.addEventListener('change', (e) => {
+        const val = e.target.valueAsNumber;
+        maxFreq = val;
+
+        const file = fileInput.files[0];
+
+        if (!file) {
+            alert('Please select an audio file first.');
+            return;
+        }
+
+        const reader = new FileReader();
+
+        reader.onload = function (event) {
+            loadNextChunk(event)
+        }
+        reader.readAsArrayBuffer(file);
+    });
+
+    slider.addEventListener('change', (e) => {
         const val = e.target.valueAsNumber
         currentPosition = val
         const file = fileInput.files[0];
@@ -428,12 +477,7 @@ document.addEventListener('DOMContentLoaded', function () {
             console.log('Timestep:', data.timestep);
             console.log("With probabilities:", data.probability);
 
-            wsRegions.addRegion({
-                start: 20,
-                end: 30,
-                content: createRegionContent(document, "ENVSP","noteeeeee")
-                //content: "biot",
-            })
+            
 
             
             console.log('ws1:', wsRegions);
@@ -446,7 +490,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         //end: (timestamp + 0.5),
                         color: randomColor(), 
                         //content: `${data.result[index]} ${index+1}`,
-                        content: createRegionContent(document,`${data.result[index]} ${index+1}` , "noteeee") ,
+                        content: createRegionContent(document,`${data.result[index]}` , "noteeee",false) ,
                         drag: false,
                         resize: false,
                     });
@@ -456,7 +500,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         id: `bat-${Math.random().toString(32).slice(2)}`,
                         start: timestamp-currentPosition,
                         end: timestamp-currentPosition,
-                        content: `${data.result[index]} ${index+1}`,
+                        content: `${data.result[index]}`,
                         drag: false,
                         resize: false,
                     })

@@ -29,12 +29,16 @@ export function containsObject(obj, list) {
     return false;
 }
 
-export function createRegionContent(document,regionLabel,regionNote) {
+export function createRegionContent(document,regionLabel,regionNote,show) {
     var regionContent = document.createElement('div');
 
     // Add a title element (e.g., h3) to the container
     var title = document.createElement('h3');
     title.textContent = regionLabel;
+    title.style.fontSize = "12px";
+    if (!show) {
+        title.style.display = 'none'
+    }
     regionContent.appendChild(title);
 
     // Add a paragraph element (p) for the longer note
@@ -101,7 +105,7 @@ export function loadRegions(document,chunkLength,currentPosition,wr,annotations,
                 start: region.start - currentPosition,
                 end: region.end - currentPosition,
                 contentEditable: true,
-                content: createRegionContent(document,region.label,region.note),
+                content: createRegionContent(document,region.label,region.note,false),
                 //content: region.label,
 
             });
@@ -113,7 +117,7 @@ export function loadRegions(document,chunkLength,currentPosition,wr,annotations,
             regions.push({
                 start: region.start,
                 end: region.end,
-                content: createRegionContent(document,region.label,region.note)})
+                content: createRegionContent(document,region.label,region.note,false)})
         }
     });
 
