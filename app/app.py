@@ -199,9 +199,8 @@ def process():
 
         # Process the response from the second machine (if needed)
         result_data = response.json()
-        print('-----------')
-        print('here',result_data)
-        print('kgfk', response)
+        print(result_data)
+        print(response)
 
         csv_response = requests.get('http://localhost:5001/send_csv')
 
@@ -212,7 +211,8 @@ def process():
 
         # Process the file using your AI model function
         results = [[],[],[]]
-        with open("../AI/results/classification_result.csv") as resultfile:
+        #with open("../AI/results/classification_result.csv") as resultfile:
+        with open("received_classification_result.csv") as resultfile:
             next(resultfile)
             for line in resultfile:
                 line = line.strip().split(',')
@@ -271,4 +271,4 @@ if __name__ == '__main__':
 
     if not os.path.exists(app.config['ALTERNATE_UPLOAD_FOLDER']):
         os.makedirs(app.config['ALTERNATE_UPLOAD_FOLDER'])
-    app.run(debug=True)
+    app.run(debug=True,host="0.0.0.0")

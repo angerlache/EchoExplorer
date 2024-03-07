@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify, send_file
 from werkzeug.utils import secure_filename
 import os
+import shutil
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = '../AI/data/samples'
@@ -33,6 +34,9 @@ def process_on_second_machine():
     print("'''''''''''''''---------------------------------------------")
     os.chdir('../app')
     #run_classifier_task.apply_async(args=[filepath])
+
+    #shutil.rmtree(app.config['ALTERNATE_UPLOAD_FOLDER']) # delete the folder where AI is applied
+    #os.makedirs(app.config['ALTERNATE_UPLOAD_FOLDER'])
 
     return jsonify({'success': True})
 
