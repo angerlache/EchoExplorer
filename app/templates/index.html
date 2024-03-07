@@ -22,15 +22,17 @@
 
 </head>
 <body>
-    <h1>WAV File Processor</h1>
+    
 
-    <a href="{{url_for('species')}}">See all species</a><br>
-    <a href="{{url_for('login')}}">Login Page</a><br>
-    <a href="{{url_for('register')}}">Register Page</a><br>
+    <a href="{{url_for('species')}}">See all species</a>
+    <a href="{{url_for('login')}}">Login Page</a>
+    <a href="{{url_for('register')}}">Register Page</a>
     {% if session['is_logged_in'] %}
         <!-- Show the button only if the user is logged in -->
-        <a href="{{url_for('dashboard')}}">Logout Page</a><br>
+        <a href="{{url_for('dashboard')}}">Logout Page</a>
+        <a href="{{url_for('allAudios')}}">All Audio Page</a>
     {% endif %}
+    <br>
     
 
     <input type="file" id="audioFile" accept=".wav">
@@ -54,9 +56,14 @@
     {% if session['is_logged_in'] %}
         <!-- Show the button only if the user is logged in -->
         <button id="save">Save Labels</button>
+        <button id="loadLabels">Load Labels</button>
+        {% if isExpert %}
+
+        {% endif %}
     {% else %}
         <!-- Show a hidden button if the user is not logged in -->
         <button id="save" style="display: none;">Save Labels</button>
+        <button id="loadLabels" style="display: none;">Load Labels</button>
     {% endif %}
     
 
@@ -69,6 +76,18 @@
     <div id="timestep"></div>
     <div id="probability"></div>
     <div id="spectrogram"></div>
+
+    <!--table id="myTable">
+        <thead>
+            <tr>
+                <th>Species</th>
+                <th>Time</th>
+                <th>Probabilities</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table-->
+      
 
 
 
@@ -94,6 +113,14 @@
 
         <div>
             <button type="submit" class="btn btn-success btn-block">Save</button>
+
+            {% if session['is_logged_in'] %}
+                {% if isExpert %}
+                    <!--button type="button" id="submitLabels" class="btn btn-primary btn-block">Submit Label</button-->
+                {% endif %}
+            {% endif %}
+            <!--button type="button" id="submitLabels" style="display: none;" class="btn btn-primary btn-block">Submit Label</button-->
+
         </div>
         
     </form>

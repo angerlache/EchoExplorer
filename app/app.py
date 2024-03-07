@@ -3,6 +3,9 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin, login_user, LoginManager, login_required, logout_user, current_user
 from flask_wtf import FlaskForm
 from flask_login import current_user
+from flask_sslify import SSLify
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 from wtforms import StringField, PasswordField, SubmitField
 from wtforms.validators import InputRequired, Length, ValidationError
@@ -14,8 +17,17 @@ import os
 from werkzeug.utils import secure_filename
 import shutil
 import json
+import uuid
+import requests
 
 app = Flask(__name__)
+sslify = SSLify(app)
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    default_limits=["200 per day", "50 per hour"],
+    storage_uri="memory://", # change storage for production
+)
 
 work_dir = ""
 
@@ -26,7 +38,7 @@ ALTERNATE_UPLOAD_FOLDER = '../AI/data/samples'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['ALTERNATE_UPLOAD_FOLDER'] = ALTERNATE_UPLOAD_FOLDER
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
-app.config['SECRET_KEY'] = 'thisisasecretkey'
+app.config['SECRET_KEY'] = uuid.uuid4().hex # good secret key
 
 
 
@@ -53,13 +65,13 @@ def load_user(user_id):
     return User.query.get(int(user_id))
 
 # executes this once to set up the database
-with app.app_context():
-    db.create_all()
+#with app.app_context():
+#    db.create_all()
 
 bcrypt = Bcrypt(app)
 
 
-class RegisterForm(FlaskForm):
+class RegisterForm(FlaskForm): # FlaskForm/wtforms protects from CSRF attack thanks to StringField/PasswordField
     username = StringField(validators=[InputRequired(), Length(
         min=4, max=20)], render_kw={"placeholder": "Username"})
     
@@ -81,7 +93,7 @@ class LoginForm(FlaskForm):
         min=4, max=20)], render_kw={"placeholder": "Username"})
 
     password = PasswordField(validators=[InputRequired(), Length(
-        min=8, max=20)], render_kw={"placeholder": "Password"})
+        min=4, max=20)], render_kw={"placeholder": "Password"})
 
     submit = SubmitField('Login')
 
@@ -94,7 +106,9 @@ def allowed_file(filename):
 def index():
     if current_user.is_authenticated:
        print(current_user.username)
-       return render_template('index.html',username=current_user.username)
+       print(current_user.isExpert)
+       
+       return render_template('index.html',username=current_user.username,isExpert=current_user.isExpert)
     
     return render_template('index.html')
         
@@ -154,7 +168,7 @@ def process():
     
     if file and allowed_file(file.filename):
 
-        filename = secure_filename(file.filename)
+        filename = secure_filename(file.filename) # protects from malicious input file
 
         file_content = file.read()
 
@@ -164,17 +178,36 @@ def process():
             f.write(file_content)
 
         # Save in the second directory
-        alternate_filepath = os.path.join(app.config['ALTERNATE_UPLOAD_FOLDER'], filename)
-        with open(alternate_filepath, 'wb') as f:
-            f.write(file_content)
+        #alternate_filepath = os.path.join(app.config['ALTERNATE_UPLOAD_FOLDER'], filename)
+        #with open(alternate_filepath, 'wb') as f:
+        #    f.write(file_content)
 
 
         # This is ZONE DE TEST removed AI pour le fun
-            
+
+        """   
         os.chdir('../AI')
         print(os.getcwd())
         os.system('{} {}'.format('python3', 'run_classifier.py'))
         os.chdir('../app')
+        """
+
+            # Send a request to the second machine for processing (local testing)
+        second_machine_url = 'http://localhost:5001/process_on_second_machine'
+        files = {'audio': open(filepath, 'rb')}  # Include the file in the request
+        response = requests.post(second_machine_url, files=files)
+
+        # Process the response from the second machine (if needed)
+        result_data = response.json()
+        print('-----------')
+        print('here',result_data)
+        print('kgfk', response)
+
+        csv_response = requests.get('http://localhost:5001/send_csv')
+
+        # Save the received CSV file on the first machine
+        with open('received_classification_result.csv', 'wb') as f:
+            f.write(csv_response.content)
 
 
         # Process the file using your AI model function
@@ -183,17 +216,19 @@ def process():
             next(resultfile)
             for line in resultfile:
                 line = line.strip().split(',')
-                results[0].append(line[1])
-                results[1].append(line[2])
-                results[2].append(line[3])
+                if float(line[3]) > 0.8: # keep label only if 80% sure
+                    results[0].append(line[1])
+                    results[1].append(line[2])
+                    results[2].append(line[3])
+                
+        if os.path.exists("../AI/results/classification_result.csv"):
+            os.remove("../AI/results/classification_result.csv")
 
         print(results)
-        #result = 'ENVSP'
-        #timestep = 1
         
         #empty by deleting then 
-        shutil.rmtree(ALTERNATE_UPLOAD_FOLDER) # delete the folder where AI is applied
-        os.makedirs(app.config['ALTERNATE_UPLOAD_FOLDER'])
+        #shutil.rmtree(ALTERNATE_UPLOAD_FOLDER) # delete the folder where AI is applied
+        #os.makedirs(app.config['ALTERNATE_UPLOAD_FOLDER'])
         return jsonify({'result': results[1], 'timestep': results[0], 'probability':results[2]})
 
     return jsonify({'error': 'Invalid file format'})
@@ -218,6 +253,16 @@ def annotation(username,path):
             json.dump(data, f, indent=2)
         return 'ok'
     
+@app.route('/allAudios', methods=['GET', 'POST'])
+@login_required
+def allAudios():
+    files = os.listdir(app.config['UPLOAD_FOLDER'])
+    return render_template('allAudios.html',files=files)
+
+@app.route('/uploads/<filename>')
+def uploaded_file(filename):
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+
 
 
 if __name__ == '__main__':

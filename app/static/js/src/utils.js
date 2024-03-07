@@ -89,36 +89,17 @@ export function renderRegions(chunkLength,currentPosition,wr,regions){
 }
 
 // same as renderRegions but with regions saved in the json of the file
-export function loadRegions(document,chunkLength,currentPosition,wr,annotations,regions){
+//export function loadRegions(document,chunkLength,currentPosition,wr,annotations,regions){
+export function loadRegions(document,annotations,regions){
 
+    // todo: check if the id is present in the list, so that
+    // if user repush on the button, the regions are not duplicated
     annotations.forEach(region => {
-
-        if (region.start >= currentPosition && region.start <= (currentPosition+chunkLength) &&
-            !containsObject({
-                start: region.start,
-                end: region.end,
-                label: region.label,
-                note: region.note,
-            },regions)) {
-
-            wr.addRegion({
-                start: region.start - currentPosition,
-                end: region.end - currentPosition,
-                contentEditable: true,
-                content: createRegionContent(document,region.label,region.note,false),
-                //content: region.label,
-
-            });
-        } else if (!containsObject({
-                start: region.start,
-                end: region.end,
-                label: region.label,
-                note: region.note,},regions)) {
-            regions.push({
-                start: region.start,
-                end: region.end,
-                content: createRegionContent(document,region.label,region.note,false)})
-        }
+        regions.push({
+            start: region.start,
+            end: region.end,
+            id: region.id,
+            content: createRegionContent(document,region.label,region.note,true)})
     });
 
 
@@ -140,7 +121,8 @@ export function saveAnnotationToServer(audioLength,annotation_name,fileInput,reg
                     end: region.end,
                     //content: region.content,
                     label: region.content.querySelector('h3').textContent,
-                    note: region.content.querySelector('p').textContent
+                    note: region.content.querySelector('p').textContent,
+                    id: region.id
                     
                 };
             })

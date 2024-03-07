@@ -9,7 +9,7 @@
     <h1>Register Page</h1>
 
     <form action="" method="POST">
-        {{ form.hidden_tag() }}
+        {{ form.hidden_tag() }}   <!-- this notation protects against XSS attack  -->
         {{ form.username }}
         {{ form.password }}
         {{ form.submit }}
