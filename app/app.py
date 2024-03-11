@@ -178,20 +178,21 @@ def process():
             f.write(file_content)
 
         # Save in the second directory
-        #alternate_filepath = os.path.join(app.config['ALTERNATE_UPLOAD_FOLDER'], filename)
-        #with open(alternate_filepath, 'wb') as f:
-        #    f.write(file_content)
+        alternate_filepath = os.path.join(app.config['ALTERNATE_UPLOAD_FOLDER'], filename)
+        with open(alternate_filepath, 'wb') as f:
+            f.write(file_content)
 
 
         # This is ZONE DE TEST removed AI pour le fun
 
-        """   
+        """
         os.chdir('../AI')
         print(os.getcwd())
         os.system('{} {}'.format('python3', 'run_classifier.py'))
         os.chdir('../app')
-        """
+       """
 
+        """
             # Send a request to the second machine for processing (local testing)
         second_machine_url = 'http://localhost:5001/process_on_second_machine'
         files = {'audio': open(filepath, 'rb')}  # Include the file in the request
@@ -207,12 +208,12 @@ def process():
         # Save the received CSV file on the first machine
         with open('received_classification_result.csv', 'wb') as f:
             f.write(csv_response.content)
-
+        """
 
         # Process the file using your AI model function
         results = [[],[],[]]
-        #with open("../AI/results/classification_result.csv") as resultfile:
-        with open("received_classification_result.csv") as resultfile:
+        with open("../AI/results/classification_result.csv") as resultfile:
+        #with open("received_classification_result.csv") as resultfile:
             next(resultfile)
             for line in resultfile:
                 line = line.strip().split(',')
@@ -220,10 +221,11 @@ def process():
                     results[0].append(line[1])
                     results[1].append(line[2])
                     results[2].append(line[3])
-                
+
+        """  
         if os.path.exists("../AI/results/classification_result.csv"):
             os.remove("../AI/results/classification_result.csv")
-
+        """
         print(results)
         
         #empty by deleting then 

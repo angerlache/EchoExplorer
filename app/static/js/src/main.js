@@ -6,10 +6,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const processButton = document.getElementById('processButton');
     const visualizeButton = document.getElementById('visualizeButton');
     const playButton = document.getElementById('playButton');
-    const pauseButton = document.getElementById('pauseButton');
-    const resultDiv = document.getElementById('result');
-    const timestepDiv = document.getElementById('timestep');
-    const probaDiv = document.getElementById('probability');
+    
     //const slider = document.querySelector('input[type="range"]');
     const slider = document.getElementById('slider');
     const sliderContainer = document.getElementById('slider-container');
@@ -23,14 +20,33 @@ document.addEventListener('DOMContentLoaded', function () {
     let currentPosition = 0;
     let audioLength;
     let sR = 44100; 
+    const checkBoxes = document.querySelectorAll('.dropdown-menu input[type="checkbox"]'); 
+    let SelectedSpecies = ['Barbarg', 'Envsp', 'Myosp', 'Pip35', 'Pip50', 'Plesp', 'Rhisp']; 
 
+    let removefun;
 
     let wavesurfer;
+    
     let wsRegions; // Define wsRegions here
     let regions = [];
     let annotation_name;
     let maxFreq = 96000;
     let arrayBuffer;
+
+
+    //temporary init
+    wavesurfer = WaveSurfer.create({
+        container: '#waveform',
+        waveColor: 'black',
+        progressColor: 'red',
+        sampleRate: maxFreq * 2,
+        //minPxPerSec: 500,
+        dragToSeek: true,
+    });
+
+
+
+
 
     // Give regions a random color when they are created
     const random = (min, max) => Math.random() * (max - min) + min
@@ -69,7 +85,24 @@ document.addEventListener('DOMContentLoaded', function () {
         form.dataset.region = region.id;
     }
 
-    
+    /*
+    function checkSpecies(region,r,wr,regions,SelectedSpecies){
+        if (removefun == null) {
+            console.log("ok");
+            removefun= Array.from(region.listeners.remove)[0];
+        }
+        const value = region.content.querySelector('h3').textContent;
+        if (!SelectedSpecies.includes(value)) {
+            Array.from(region.listeners.remove).forEach(element => {
+                if(element.toString() == removefun.toString()){
+                    region.un('remove',element);
+                }
+            });
+
+            region.remove();
+
+        }
+    }*/
     function setupRegionEventListener(wr, ws){
 
         let activeRegion = null
@@ -96,19 +129,24 @@ document.addEventListener('DOMContentLoaded', function () {
                                     region.content.querySelector('p').textContent,true))
             });
             region.setOptions({ color: randomColor(), contentEditable:true});
-            console.log('content = ', region.content);
+            //console.log('content = ', region.content);
 
             let r = Object.assign({}, region);
             r.start = r.start + currentPosition;
             r.end = r.end + currentPosition;
             regions.push(r);
-        })
 
-        wr.on("region-removed", (region) => {
-            //console.log('region-removed', region)
-            regions = regions.filter(item => item.id !== region.id);
-            console.log("new regions", regions);
+            //checkSpecies(region,r,wr,regions,SelectedSpecies);
+
+
+
         })
+        wr.on("region-removed", (region) => {
+            console.log('region-removed', region)
+            regions = regions.filter(item => item.id !== region.id);
+            
+        })
+        
 
         wr.on("region-updated", (region) => {
             //console.log('region-updated', region)
@@ -191,7 +229,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
         if (wavesurfer) {
             // ICI tu fait un truc pour que il fasse plus qqchs on-delete
-            wsRegions.unAll();
+            if(wsRegions){
+            wsRegions.unAll();}
             
             wavesurfer.destroy();
         }
@@ -212,8 +251,8 @@ document.addEventListener('DOMContentLoaded', function () {
         wsRegions = wavesurfer.registerPlugin(WaveSurfer.Regions.create()) // Define wsRegions here
 
         wavesurfer.once('decode', async () => {
-            renderRegions(chunkLength,currentPosition,wsRegions,regions);
             setupRegionEventListener(wsRegions, wavesurfer);
+            renderRegions(chunkLength,currentPosition,wsRegions,regions,SelectedSpecies);
             
         });
         
@@ -234,6 +273,17 @@ document.addEventListener('DOMContentLoaded', function () {
                 minPxPerSec: 1000,
             }),
         )
+
+        /*
+
+        var sample = new Spectrogram(url, "#spectrovis", {
+            width: 600,
+            height: 300,
+            colorScheme: ['#440154', '#472877', '#3e4a89', '#31688d', '#26838e', '#1f9e89', '#36b778', '#6dcd59', '#b4dd2c', '#fde725']
+            });
+        
+        console.log("", sample);*/
+
         console.log('Current Position:', currentPosition);
     }
 
@@ -254,10 +304,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    fileInput.addEventListener('change', (event) => {
-
-
-        const selectedFile = event.target.files[0];
+    function fileSelected(selectedFile) {
         regions = [];
         annotation_name = fileInput.files[0].name.split('.')[0] + '.json'
         
@@ -298,6 +345,20 @@ document.addEventListener('DOMContentLoaded', function () {
             
         }
 
+    };
+
+
+    document.addEventListener('DOMContentLoaded', function () {
+        
+    });
+
+        
+    
+
+    fileInput.addEventListener('change', (event) => {
+        const selectedFile = event.target.files[0];
+        console.log("a",selectedFile)
+        fileSelected(selectedFile);
     });
     
     
@@ -364,6 +425,7 @@ document.addEventListener('DOMContentLoaded', function () {
         currentPosition += chunkLength;
         const file = fileInput.files[0];
         slider.value = currentPosition;
+        document.getElementById('secout').value = currentPosition + ' seconds'
 
         if (!file) {
             alert('Please select an audio file first.');
@@ -382,6 +444,7 @@ document.addEventListener('DOMContentLoaded', function () {
         currentPosition = Math.max(currentPosition - chunkLength, 0);
         const file = fileInput.files[0];
         slider.value = currentPosition;
+        document.getElementById('secout').value = currentPosition + ' seconds'
 
 
         if (!file) {
@@ -400,17 +463,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
     playButton.addEventListener('click', function () {
         if (wavesurfer) {
-            wavesurfer.play();
+            wavesurfer.playPause();
         }
     });
 
 
     
-    pauseButton.addEventListener('click', function () {
-        if (wavesurfer) {
-            wavesurfer.pause();
-        }
-    });
+  
 
     save.addEventListener('click', function () {
         saveAnnotationToServer(audioLength,annotation_name,fileInput,regions,userName);
@@ -440,17 +499,13 @@ document.addEventListener('DOMContentLoaded', function () {
         .then(response => response.json())
         .then(data => {
 
-            resultDiv.innerHTML = 'Result: ' + data.result;
-            timestepDiv.innerHTML = "Timestep: " + data.timestep;
-            probaDiv.innerHTML = "With probabilities: " + data.probability;
 
-            console.log('Result:', data.result);
-            console.log('Timestep:', data.timestep);
-            console.log("With probabilities:", data.probability);
+
+
 
             // start of interactive table with the results
              
-            /*var tableBody = document.querySelector('#myTable tbody');
+            var tableBody = document.querySelector('#myTable tbody');
             // Populate the table
             for (var i = 0; i < data.result.length; i++) {
                 var row = tableBody.insertRow();
@@ -476,12 +531,14 @@ document.addEventListener('DOMContentLoaded', function () {
                     // Example: Log values to console
                     console.log('Clicked Row:', value1, value2, value3);
                 });
-            }*/
+            }
 
             
-            console.log('ws1:', wsRegions);
+            //console.log('ws1:', wsRegions);
             data.timestep.forEach((timestamp, index) => {
-                console.log('Adding region:', timestamp);
+                //console.log('Adding region:', timestamp);
+                
+                /*
                 if (timestamp-currentPosition > 0 && timestamp-currentPosition < chunkLength) {
                     wsRegions.addRegion({
                         //start: Math.max(timestamp-0.5,0),
@@ -492,6 +549,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         content: createRegionContent(document,`${data.result[index]}` , "noteeee",true) ,
                         drag: false,
                         resize: false,
+                        
                     });
                 }
                 else {
@@ -499,15 +557,32 @@ document.addEventListener('DOMContentLoaded', function () {
                         id: `bat-${Math.random().toString(32).slice(2)}`,
                         start: timestamp-currentPosition,
                         end: timestamp-currentPosition,
-                        content: `${data.result[index]}`,
+                        content: createRegionContent(document,`${data.result[index]}` , "noteeee",true),
+                        color: randomColor(), 
                         drag: false,
                         resize: false,
                     })
                 }
+                */
+
+                regions.push({
+                    id: `bat-${Math.random().toString(32).slice(2)}`,
+                    start: timestamp-currentPosition,
+                    end: timestamp-currentPosition,
+                    content: createRegionContent(document,`${data.result[index]}` , "noteeee",true),
+                    color: randomColor(), 
+                    drag: false,
+                    resize: false,
+                })
 
                 
             });
-            console.log('ws2:', wsRegions);
+
+
+
+            console.log(regions);
+
+            //console.log('ws2:', wsRegions);
         
         })
         .catch(error => {
@@ -515,4 +590,24 @@ document.addEventListener('DOMContentLoaded', function () {
         });
 
     });
+
+    
+
+
+    function handleCB() { 
+        SelectedSpecies = [];     
+        checkBoxes.forEach((checkbox) => { 
+            if (checkbox.checked) { 
+                SelectedSpecies.push(checkbox.value); 
+            } 
+        }); 
+
+
+
+        console.log(SelectedSpecies)
+    } 
+    
+    checkBoxes.forEach((checkbox) => { 
+        checkbox.addEventListener('change', handleCB); 
+    }); 
 });

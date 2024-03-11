@@ -1,0 +1,20 @@
+[
+  {
+    "duration": 300,
+    "file": "sample-file-1.wav",
+    "start": 11.068837674584321,
+    "end": 15.629388819477432,
+    "label": "Myosp",
+    "note": "a",
+    "id": "region-1kprc6u5h3o"
+  },
+  {
+    "duration": 300,
+    "file": "sample-file-1.wav",
+    "start": 26.603215011876486,
+    "end": 31.923858014251792,
+    "label": "Envsp",
+    "note": "b",
+    "id": "region-iots53auheo"
+  }
+]

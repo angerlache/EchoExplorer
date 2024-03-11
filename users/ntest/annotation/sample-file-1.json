@@ -1,0 +1,20 @@
+[
+  {
+    "duration": 300,
+    "file": "sample-file-1.wav",
+    "start": 124.5,
+    "end": 126.09375,
+    "label": "Envsp",
+    "note": "Bonjour",
+    "id": "region-0ps8rtfi61"
+  },
+  {
+    "duration": 300,
+    "file": "sample-file-1.wav",
+    "start": 47.34375,
+    "end": 52,
+    "label": "Plesp",
+    "note": "aaah",
+    "id": "region-lep4ja326kg"
+  }
+]

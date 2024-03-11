@@ -70,23 +70,30 @@ export function getCurrRegions(chunkLength,currentPosition,wr,regions){
     }
 }
 
-export function renderRegions(chunkLength,currentPosition,wr,regions){
+
+export function renderRegions(chunkLength,currentPosition,wr,regions,SelectedSpecies){
     getCurrRegions(chunkLength,currentPosition,wr,regions).forEach(reg => {
-        console.log("region added",reg)
-        //console.log(reg)
-        wr.addRegion({
-            start: reg.start - currentPosition,
-            end: reg.end - currentPosition,
-            color: reg.color, 
-            content: reg.content,
-            drag: reg.drag,
-            resize: reg.resize,
-            id: reg.id,
-        });
+        //console.log("region added",reg)
+        console.log(reg)
+        if (SelectedSpecies.includes(reg.content.querySelector('h3').textContent)) {
+            wr.addRegion({
+                start: reg.start - currentPosition,
+                end: reg.end - currentPosition,
+                color: reg.color, 
+                content: reg.content,
+                drag: reg.drag,
+                resize: reg.resize,
+                id: reg.id,
+            });
+        }
     });
     
-
 }
+
+
+
+
+
 
 // same as renderRegions but with regions saved in the json of the file
 //export function loadRegions(document,chunkLength,currentPosition,wr,annotations,regions){
