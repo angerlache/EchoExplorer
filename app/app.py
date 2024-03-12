@@ -1,11 +1,14 @@
 from flask import Flask, render_template, request, jsonify,send_from_directory, url_for, redirect, flash, session
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.schema import PrimaryKeyConstraint
 from flask_login import UserMixin, login_user, LoginManager, login_required, logout_user, current_user
 from flask_wtf import FlaskForm
 from flask_login import current_user
 from flask_sslify import SSLify
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from sqlalchemy.orm import Session
+
 
 from wtforms import StringField, PasswordField, SubmitField
 from wtforms.validators import InputRequired, Length, ValidationError
@@ -54,6 +57,14 @@ class User(db.Model, UserMixin):
     password: Mapped[str] = mapped_column(nullable=False) # db.Column(db.String(80), nullable=False)
     isExpert: Mapped[bool] = mapped_column(default=False,nullable=False)
 
+class File(db.Model):
+    name: Mapped[str] = mapped_column(primary_key=True)
+    hashName: Mapped[str] = mapped_column(unique=True)
+    username: Mapped[str] = mapped_column(primary_key=True)
+
+    __table_args__ = (PrimaryKeyConstraint('name','username'),)
+
+
 db.init_app(app)
 
 login_manager = LoginManager()
@@ -69,6 +80,8 @@ def load_user(user_id):
 #    db.create_all()
 
 bcrypt = Bcrypt(app)
+
+
 
 
 class RegisterForm(FlaskForm): # FlaskForm/wtforms protects from CSRF attack thanks to StringField/PasswordField
@@ -104,11 +117,11 @@ def allowed_file(filename):
  
 @app.route('/')
 def index():
+    #result = Session.query(File).filter_by(name='name.wav').one()
+    #print(result)
     if current_user.is_authenticated:
-       print(current_user.username)
-       print(current_user.isExpert)
-       
-       return render_template('index.html',username=current_user.username,isExpert=current_user.isExpert)
+       files = [filename for filename in os.listdir(app.config['UPLOAD_FOLDER']) if filename.endswith('.wav')]       
+       return render_template('index.html',username=current_user.username,isExpert=current_user.isExpert,files=files)
     
     return render_template('index.html')
         
@@ -167,8 +180,18 @@ def process():
         return jsonify({'error': 'No selected file'})
     
     if file and allowed_file(file.filename):
+        # TODO : check if file already in server
+        print("144 : ", File.query.get(file.filename))
 
-        filename = secure_filename(file.filename) # protects from malicious input file
+        if File.query.get(file.filename) is None:
+
+            #filename = secure_filename(file.filename) # protects from malicious input file name
+            filename = str(hash(file.filename))+".wav" # protects from malicious input file name
+            new_file = File(name=filename)
+            db.session.add(new_file)
+            db.session.commit()
+        else:
+            filename = file.filename
 
         file_content = file.read()
 
@@ -177,42 +200,56 @@ def process():
         with open(filepath, 'wb') as f:
             f.write(file_content)
 
+        filepath = os.path.join("allAudios", filename)
+        with open(filepath, 'wb') as f:
+            f.write(file_content)
+
         # Save in the second directory
-        #alternate_filepath = os.path.join(app.config['ALTERNATE_UPLOAD_FOLDER'], filename)
-        #with open(alternate_filepath, 'wb') as f:
-        #    f.write(file_content)
+        alternate_filepath = os.path.join(app.config['ALTERNATE_UPLOAD_FOLDER'], filename)
+        with open(alternate_filepath, 'wb') as f:
+            f.write(file_content)
 
 
         # This is ZONE DE TEST removed AI pour le fun
 
-        """   
+        
         os.chdir('../AI')
         print(os.getcwd())
         os.system('{} {}'.format('python3', 'run_classifier.py'))
         os.chdir('../app')
-        """
+        
 
-            # Send a request to the second machine for processing (local testing)
+        print(filepath)
+        # Send a request to the second machine for processing (local testing)
         second_machine_url = 'http://localhost:5001/process_on_second_machine'
-        files = {'audio': open(filepath, 'rb')}  # Include the file in the request
-        response = requests.post(second_machine_url, files=files)
+        #files = {'audio': open(filepath, 'rb')}  # Include the file in the request
+        files = {'audio': ('testname.wav', open(filepath, 'rb'))}
+
+        data = {'message': 'Hello, second machine!'}
+        json_data = json.dumps(data)
+        headers = {'Content-Type': 'multipart/form-data'}
+        #response = requests.post('http://tfe-anthony-noam.info.ucl.ac.be/process_on_second_machine', files=files)
+        #response = requests.post('https://gotham.inl.ovh/process_on_second_machine', files=files)
+        #print("request posted !")
 
         # Process the response from the second machine (if needed)
-        result_data = response.json()
-        print(result_data)
-        print(response)
+        #result_data = response.json()
+        #print(result_data)
+        #print(response)
 
-        csv_response = requests.get('http://localhost:5001/send_csv')
+        #csv_response = requests.get('https://gotham.inl.ovh/send_csv')
+        #print('request recieved !')
 
         # Save the received CSV file on the first machine
-        with open('received_classification_result.csv', 'wb') as f:
-            f.write(csv_response.content)
+        #with open('received_classification_result.csv', 'wb') as f:
+        #    f.write(csv_response.content)
 
 
         # Process the file using your AI model function
         results = [[],[],[]]
-        #with open("../AI/results/classification_result.csv") as resultfile:
-        with open("received_classification_result.csv") as resultfile:
+        #with open("received_classification_result.csv") as resultfile:
+        with open("../AI/results/classification_result.csv") as resultfile:
+
             next(resultfile)
             for line in resultfile:
                 line = line.strip().split(',')
@@ -227,9 +264,9 @@ def process():
         print(results)
         
         #empty by deleting then 
-        #shutil.rmtree(ALTERNATE_UPLOAD_FOLDER) # delete the folder where AI is applied
+        shutil.rmtree(ALTERNATE_UPLOAD_FOLDER) # delete the folder where AI is applied
         #os.makedirs(app.config['ALTERNATE_UPLOAD_FOLDER'])
-        return jsonify({'result': results[1], 'timestep': results[0], 'probability':results[2]})
+        return jsonify({'result': results[1], 'timestep': results[0], 'probability':results[2], "new_filename":filename})
 
     return jsonify({'error': 'Invalid file format'})
 
@@ -253,14 +290,57 @@ def annotation(username,path):
             json.dump(data, f, indent=2)
         return 'ok'
     
+@app.route('/validated/<path:path>', methods=['POST'])
+def validate(path):
+
+    data = request.data
+    filename = path
+    #output_dir = os.path.join(work_dir, 'annotation')
+    output_dir = os.path.join(work_dir, 'validated')
+    os.makedirs(output_dir, exist_ok=True)
+    with open(os.path.join(output_dir, filename), 'w') as f:
+        data = data.decode('utf-8')
+        data = json.loads(data)
+        json.dump(data, f, indent=2)
+    return 'ok'
+
+@app.route('/uploads/<path:path>', methods=['POST'])
+def pending_audio(path):
+
+    data = request.data
+    filename = path
+    print("FILENAME = " + filename)
+    #output_dir = os.path.join(work_dir, 'annotation')
+    output_dir = os.path.join(work_dir, 'uploads')
+    os.makedirs(output_dir, exist_ok=True)
+    with open(os.path.join(output_dir, filename), 'w') as f:
+        data = data.decode('utf-8')
+        data = json.loads(data)   
+        json.dump(data, f, indent=2)
+    return 'ok'
+
+@app.route('/delete_file', methods=['POST'])
+def delete_file():
+    try:
+        filename = request.json['filename']  # Assuming you send the filename in the request body
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        os.remove(file_path)
+        os.remove(file_path[:-3] + 'json')
+        return jsonify({'success': True, 'message': 'File deleted successfully'})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)})
+    
+"""
 @app.route('/allAudios', methods=['GET', 'POST'])
 @login_required
 def allAudios():
-    files = os.listdir(app.config['UPLOAD_FOLDER'])
-    return render_template('allAudios.html',files=files)
+    files = [filename for filename in os.listdir(app.config['UPLOAD_FOLDER']) if filename.endswith('.wav')]
+    print(files)
+    return render_template('allAudios.html',files=files)"""
 
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):
+    print("11111 :" +filename)
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 
@@ -271,4 +351,5 @@ if __name__ == '__main__':
 
     if not os.path.exists(app.config['ALTERNATE_UPLOAD_FOLDER']):
         os.makedirs(app.config['ALTERNATE_UPLOAD_FOLDER'])
-    app.run(debug=True,host="0.0.0.0")
+    app.run(debug=True)
+    #app.run(debug=True,host="0.0.0.0",port=5000,ssl_context='adhoc')

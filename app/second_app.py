@@ -1,9 +1,11 @@
 from flask import Flask, request, jsonify, send_file
 from werkzeug.utils import secure_filename
+from flask_cors import CORS
 import os
 import shutil
 
 app = Flask(__name__)
+CORS(app, resources={r"/process_on_second_machine": {"origins": "http://tfe-anthony-noam.info.ucl.ac.be"}})
 app.config['UPLOAD_FOLDER'] = '../AI/data/samples'
 #app.config['ALTERNATE_UPLOAD_FOLDER'] = '/path/to/alternate/upload/folder'
 
@@ -16,13 +18,23 @@ def send_csv():
     return send_file(csv_filepath, as_attachment=True)
 
 
-@app.route('/process_on_second_machine', methods=['POST'])
+@app.route('/process_on_second_machine', methods=['POST','GET'])
 def process_on_second_machine():
+    print('hereeeeeeee')
+    print(request.args)
+    #data = request.json
+    #message = data.get('message', 'No message received')
+
+    #print('Received message:', message)
+
+    print('dans process audio second machine')
     if 'audio' not in request.files:
+        print('MERDE 1 !')
         return jsonify({'error': 'No file provided'})
 
     file = request.files['audio']
     if file.filename == '':
+        print('MERDE 2 !')
         return jsonify({'error': 'No selected file'})
 
     filename = secure_filename(file.filename)
@@ -41,4 +53,4 @@ def process_on_second_machine():
     return jsonify({'success': True})
 
 if __name__ == '__main__':
-    app.run(debug=True,host="0.0.0.0",port=5001)
+    app.run(debug=True,host="0.0.0.0")

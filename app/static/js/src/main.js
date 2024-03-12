@@ -19,6 +19,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const save = document.getElementById('save');
     const note = document.getElementById('note');
     const loadLabels = document.getElementById('loadLabels');
+    const validateButton = document.getElementById('validateButton');
+    const uploadButton = document.getElementById('uploadButton');
     const chunkLength = 60;
     let currentPosition = 0;
     let audioLength;
@@ -61,6 +63,7 @@ document.addEventListener('DOMContentLoaded', function () {
             regions.push(r);
             
             form.style.opacity = 0;
+            document.getElementById('myForm').style.display = 'none'
         };
         form.onreset = function () {
             form.style.opacity = 0;
@@ -81,7 +84,6 @@ document.addEventListener('DOMContentLoaded', function () {
             
             // set last arg of setContent to true and the content will show up only when mouse over region
             region.on('over', (e) => {
-                // todo show 
                 if (region.content !== undefined)
                     region.setContent(createRegionContent(document,region.content.querySelector('h3').textContent,
                                         region.content.querySelector('p').textContent,true))
@@ -90,7 +92,6 @@ document.addEventListener('DOMContentLoaded', function () {
             // set to false if you want to hide when mouse not over
             // if so, do it everywhere setContent is called
             region.on('leave', (e) => {
-                // todo hide 
                 if (region.content !== undefined)
                 region.setContent(createRegionContent(document,region.content.querySelector('h3').textContent,
                                     region.content.querySelector('p').textContent,true))
@@ -134,6 +135,7 @@ document.addEventListener('DOMContentLoaded', function () {
             if (e.ctrlKey) {
                 region.remove();
             } else if (e.shiftKey) {
+                document.getElementById('myForm').style.display = 'block'
 
                 if (region.content !== undefined) {
                     document.forms.edit.elements.note.value = region.content.textContent
@@ -256,12 +258,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
     fileInput.addEventListener('change', (event) => {
 
-
         const selectedFile = event.target.files[0];
         regions = [];
         annotation_name = fileInput.files[0].name.split('.')[0] + '.json'
         
         if (selectedFile) {
+            console.log('FILE = ', fileInput);
+            console.log('FILEee = ', fileInput.files);
             
             currentPosition = 0;
             maxFreq = 96000;
@@ -309,12 +312,11 @@ document.addEventListener('DOMContentLoaded', function () {
             alert('Please select an audio file first.');
             return;
         }
-
+        
         const reader = new FileReader();
 
         reader.onload = function (event) {
-            loadNextChunk(event)
-        
+            loadNextChunk(event)        
         }
 
         reader.readAsArrayBuffer(file);
@@ -361,6 +363,7 @@ document.addEventListener('DOMContentLoaded', function () {
     })
 
     next.addEventListener('click' ,function () {
+        console.log("merdeeeeeeeeeeee");
         currentPosition += chunkLength;
         const file = fileInput.files[0];
         slider.value = currentPosition;
@@ -413,7 +416,7 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     save.addEventListener('click', function () {
-        saveAnnotationToServer(audioLength,annotation_name,fileInput,regions,userName);
+        saveAnnotationToServer(audioLength,annotation_name,fileInput,regions,userName,'local');
     });
     
     /*document.getElementById('submitLabels').addEventListener('click', function () {
@@ -443,6 +446,15 @@ document.addEventListener('DOMContentLoaded', function () {
             resultDiv.innerHTML = 'Result: ' + data.result;
             timestepDiv.innerHTML = "Timestep: " + data.timestep;
             probaDiv.innerHTML = "With probabilities: " + data.probability;
+            //fileInput.files[0].name = data.new_filename;
+
+            const f = new File([arrayBuffer], data.new_filename,{ type: 'audio/x-wav' })
+            const fileList = new DataTransfer();
+            fileList.items.add(f);
+            const fileInput = document.getElementById('audioFile')
+            fileInput.files = fileList.files;
+            annotation_name = fileInput.files[0].name.split('.')[0] + '.json'
+
 
             console.log('Result:', data.result);
             console.log('Timestep:', data.timestep);
@@ -515,4 +527,109 @@ document.addEventListener('DOMContentLoaded', function () {
         });
 
     });
+
+    validateButton.addEventListener('click', function () {
+        saveAnnotationToServer(audioLength,annotation_name,fileInput,regions,userName,'validated');
+
+        const filenameToDelete = fileInput.files[0].name;  // Replace with the actual filename
+    
+        // Send a POST request to the Flask server to delete the file
+        fetch('/delete_file', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ filename: filenameToDelete }),
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                console.log(data.message);
+            } else {
+                console.error(data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+    });
+
+    uploadButton.addEventListener('click', function () {
+        saveAnnotationToServer(audioLength,annotation_name,fileInput,regions,userName,"other");
+
+    });
+
+
+
+    // Function to load waveform
+    window.changeAudio = function(filename) {
+        console.log("1111 ", '/uploads/' + filename);
+        
+        fetch('/uploads/' + filename)
+            .then(response => response.arrayBuffer())
+            .then(async arrayBuffer => {
+                // Load audio file
+                //wavesurfer.loadBlob(new Blob([arrayBuffer]));
+                /*console.log(arrayBuffer)
+
+                // Create a DataView to access the bytes
+                const dataView = new DataView(arrayBuffer);
+
+                // Read the sample rate from the WAV file header (at byte 24, little-endian)
+                const sampleRate = dataView.getUint32(24, true);
+
+                // Read the number of audio channels from the WAV file header (at byte 22, little-endian)
+                const numChannels = dataView.getUint16(22, true);
+
+                // Calculate the duration using the total number of audio samples and the sample rate
+                const totalAudioSamples = (arrayBuffer.byteLength - 44) / (numChannels * 2); // Each sample is 2 bytes
+                const durationInSeconds = totalAudioSamples / sampleRate;
+
+                console.log('Duration:', durationInSeconds, 'seconds');*/
+                //const wavBlob = new Blob([arrayBuffer], { type: 'audio/x-wav' });
+                //const f = new File([wavBlob], filename,{ type: 'audio/x-wav' })
+                const f = new File([arrayBuffer], filename,{ type: 'audio/x-wav' })
+                console.log(f);
+                const fileList = new DataTransfer();
+                fileList.items.add(f);
+                const fileInput = document.getElementById('audioFile')
+                fileInput.files = fileList.files;
+                
+                // Manually dispatch an input event
+                const inputEvent = new Event('change', {
+                    bubbles: true,
+                    cancelable: true,
+                });
+                
+                fileInput.dispatchEvent(inputEvent);
+
+                // Introduce a delay using setTimeout, because we need 'fileInput' listener has finished before starting
+                // 'visualizeButton' listener
+                setTimeout(() => {
+                    // Manually trigger the click event on the visualizeButton
+                    const clickEvent = new Event('click', {
+                        bubbles: true,
+                        cancelable: true,
+                    });
+
+                    document.getElementById('visualizeButton').dispatchEvent(clickEvent);
+                }, 200); // Adjust the delay (in milliseconds) as needed
+
+                try {
+                    const response = await fetch('uploads/' + annotation_name);
+                    const data = await response.json();
+                    loadRegions(document,data,regions);
+        
+                    // hide the button after user pushed it, so that cannot use it
+                    //loadLabels.style.visibility = 'hidden';
+                } catch (error) {
+                    console.error('Error fetching annotation:', error);
+                }
+            })
+            .catch(error => console.error('Error loading waveform:', error));
+
+
+
+
+    };
 });

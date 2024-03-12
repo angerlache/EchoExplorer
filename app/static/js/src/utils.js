@@ -109,7 +109,7 @@ export function loadRegions(document,annotations,regions){
  * upload to server
  * FROM : https://github.com/smart-audio/audio_diarization_annotation/tree/master
  */
-export function saveAnnotationToServer(audioLength,annotation_name,fileInput,regions,userName) {
+export function saveAnnotationToServer(audioLength,annotation_name,fileInput,regions,userName,destination) {
         // ! this saves also the response of the AI, maybe we should change this ?
         let data = JSON.stringify(
             Object.keys(regions).map(function (id) {
@@ -127,9 +127,13 @@ export function saveAnnotationToServer(audioLength,annotation_name,fileInput,reg
                 };
             })
         );
-        //console.log('path : ', "/users/" + userName + "/annotation/" + annotation_name);
-        //console.log('path : ', "/annotation/" + annotation_name);
-        fetch("/users/" + userName + "/annotation/" + annotation_name, {
+
+        let path;
+        if (destination == "validated") {path = "/validated/" + annotation_name;}
+        else if (destination == "local") { path = "/users/" + userName + "/annotation/" + annotation_name}
+        else {path = "/uploads/" + annotation_name}
+        
+        fetch(path, {
         //fetch("/annotation/" + annotation_name, {
             method: "POST",
             body: data
@@ -140,6 +144,8 @@ export function saveAnnotationToServer(audioLength,annotation_name,fileInput,reg
             console.log('Fetch Error :-S', err);
             alert('upload file error: ' + annotation_name)
         });
+            
+        
     }
 
 
