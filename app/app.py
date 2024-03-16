@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify,send_from_directory, url_for, redirect, flash, session
+from flask import Flask, render_template, request, jsonify,send_from_directory, url_for, redirect, flash, session, send_file
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.schema import PrimaryKeyConstraint
 from flask_login import UserMixin, login_user, LoginManager, login_required, logout_user, current_user
@@ -7,7 +7,12 @@ from flask_login import current_user
 from flask_sslify import SSLify
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from sqlalchemy import select,create_engine
 from sqlalchemy.orm import Session
+import sqlalchemy.orm.session
+import sqlite3
+from pydub import AudioSegment
+
 
 
 from wtforms import StringField, PasswordField, SubmitField
@@ -50,6 +55,9 @@ class Base(DeclarativeBase):
 
 
 db = SQLAlchemy(model_class=Base)
+#engine = create_engine('sqlite:///instance/database.db',echo=True)
+#Base.metadata.create_all(engine)
+#sess = Session(bind=engine)
 
 class User(db.Model, UserMixin):
     id: Mapped[int] = mapped_column(primary_key=True) #  db.Column(db.Integer,primary_key=True)
@@ -58,11 +66,11 @@ class User(db.Model, UserMixin):
     isExpert: Mapped[bool] = mapped_column(default=False,nullable=False)
 
 class File(db.Model):
-    name: Mapped[str] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(primary_key=True) # name on client's computer
     hashName: Mapped[str] = mapped_column(unique=True)
     username: Mapped[str] = mapped_column(primary_key=True)
 
-    __table_args__ = (PrimaryKeyConstraint('name','username'),)
+    __table_args__ = (PrimaryKeyConstraint('name','username'), )
 
 
 db.init_app(app)
@@ -117,8 +125,7 @@ def allowed_file(filename):
  
 @app.route('/')
 def index():
-    #result = Session.query(File).filter_by(name='name.wav').one()
-    #print(result)
+    
     if current_user.is_authenticated:
        files = [filename for filename in os.listdir(app.config['UPLOAD_FOLDER']) if filename.endswith('.wav')]       
        return render_template('index.html',username=current_user.username,isExpert=current_user.isExpert,files=files)
@@ -181,17 +188,25 @@ def process():
     
     if file and allowed_file(file.filename):
         # TODO : check if file already in server
-        print("144 : ", File.query.get(file.filename))
 
-        if File.query.get(file.filename) is None:
-
-            #filename = secure_filename(file.filename) # protects from malicious input file name
-            filename = str(hash(file.filename))+".wav" # protects from malicious input file name
-            new_file = File(name=filename)
+        if not current_user.is_authenticated:
+            return jsonify({'error': 'user not logged in'})
+        
+        query1 = File.query.filter_by(hashName=file.filename).first()
+        query2 = File.query.filter_by(name=file.filename, username=current_user.username).first()
+        if query1:
+            print('HASHNAME FOUND')
+            filename = query1.hashName
+        elif query2:
+            print('USERNAME AND NAME FOUND')
+            filename = query2.hashName
+        else:
+            print('FILE NOT FOUND IN DB')
+            filename = str(hash(file.filename))+".wav"
+            new_file = File(name=file.filename, hashName=filename, username=current_user.username)
             db.session.add(new_file)
             db.session.commit()
-        else:
-            filename = file.filename
+        
 
         file_content = file.read()
 
@@ -215,7 +230,7 @@ def process():
         
         os.chdir('../AI')
         print(os.getcwd())
-        os.system('{} {}'.format('python3', 'run_classifier.py'))
+        #os.system('{} {}'.format('python3', 'run_classifier.py'))
         os.chdir('../app')
         
 
@@ -259,13 +274,14 @@ def process():
                     results[2].append(line[3])
                 
         if os.path.exists("../AI/results/classification_result.csv"):
-            os.remove("../AI/results/classification_result.csv")
+            #os.remove("../AI/results/classification_result.csv")
+            pass
 
         print(results)
         
         #empty by deleting then 
         shutil.rmtree(ALTERNATE_UPLOAD_FOLDER) # delete the folder where AI is applied
-        #os.makedirs(app.config['ALTERNATE_UPLOAD_FOLDER'])
+        os.makedirs(app.config['ALTERNATE_UPLOAD_FOLDER'])
         return jsonify({'result': results[1], 'timestep': results[0], 'probability':results[2], "new_filename":filename})
 
     return jsonify({'error': 'Invalid file format'})
@@ -275,16 +291,19 @@ def process():
 @app.route('/users/<username>/annotation/<path:path>', methods=['GET', 'POST'])
 def annotation(username,path):
     if request.method == 'GET':
-        return send_from_directory(os.path.join(work_dir, 'users', username, 'annotation'), path)
+        hash_name = get_hashname(path+'.wav')
+        
+        return send_from_directory(os.path.join(work_dir, 'users', username, 'annotation'), hash_name[:-3]+'json')
         #return send_from_directory(os.path.join(work_dir, 'annotation'), path)
     
     else:
         data = request.data
-        filename = path
+        hash_name = get_hashname(path+'.wav')
+        
         #output_dir = os.path.join(work_dir, 'annotation')
         output_dir = os.path.join(work_dir, 'users', username, 'annotation')
         os.makedirs(output_dir, exist_ok=True)
-        with open(os.path.join(output_dir, filename), 'w') as f:
+        with open(os.path.join(output_dir, hash_name[:-3]+'json'), 'w') as f:
             data = data.decode('utf-8')
             data = json.loads(data)
             json.dump(data, f, indent=2)
@@ -292,57 +311,122 @@ def annotation(username,path):
     
 @app.route('/validated/<path:path>', methods=['POST'])
 def validate(path):
+    hash_name = get_hashname(path+'.wav')
 
     data = request.data
     filename = path
     #output_dir = os.path.join(work_dir, 'annotation')
     output_dir = os.path.join(work_dir, 'validated')
     os.makedirs(output_dir, exist_ok=True)
-    with open(os.path.join(output_dir, filename), 'w') as f:
+    with open(os.path.join(output_dir, hash_name[:-3]+'json'), 'w') as f:
         data = data.decode('utf-8')
         data = json.loads(data)
         json.dump(data, f, indent=2)
     return 'ok'
 
-@app.route('/uploads/<path:path>', methods=['POST'])
+@app.route('/uploads/<path:path>', methods=['POST','GET'])
 def pending_audio(path):
 
-    data = request.data
-    filename = path
-    print("FILENAME = " + filename)
-    #output_dir = os.path.join(work_dir, 'annotation')
-    output_dir = os.path.join(work_dir, 'uploads')
-    os.makedirs(output_dir, exist_ok=True)
-    with open(os.path.join(output_dir, filename), 'w') as f:
-        data = data.decode('utf-8')
-        data = json.loads(data)   
-        json.dump(data, f, indent=2)
-    return 'ok'
+    if request.method == 'GET':
+        hash_name = get_hashname(path+'.wav')
+        
+        return send_from_directory(os.path.join(work_dir, 'uploads'), hash_name[:-3]+'json')
+        #return send_from_directory(os.path.join(work_dir, 'annotation'), path)
+    
+    elif request.method == 'POST':
+        hash_name = get_hashname(path+'.wav')
+
+        data = request.data
+        filename = path
+        #output_dir = os.path.join(work_dir, 'annotation')
+        output_dir = os.path.join(work_dir, 'uploads')
+        os.makedirs(output_dir, exist_ok=True)
+        with open(os.path.join(output_dir, hash_name[:-3]+'json'), 'w') as f:
+            data = data.decode('utf-8')
+            data = json.loads(data)   
+            json.dump(data, f, indent=2)
+        return 'ok'
 
 @app.route('/delete_file', methods=['POST'])
 def delete_file():
     try:
         filename = request.json['filename']  # Assuming you send the filename in the request body
-        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        os.remove(file_path)
-        os.remove(file_path[:-3] + 'json')
+        hash_name = get_hashname(filename)
+
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], hash_name[:-3])
+        os.remove(file_path + 'wav')
+
+        # TODO : handle if json file has not been saved in "uploads", currently, it logs an error in js.
+        os.remove(file_path + 'json')
         return jsonify({'success': True, 'message': 'File deleted successfully'})
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)})
     
-"""
-@app.route('/allAudios', methods=['GET', 'POST'])
-@login_required
-def allAudios():
-    files = [filename for filename in os.listdir(app.config['UPLOAD_FOLDER']) if filename.endswith('.wav')]
-    print(files)
-    return render_template('allAudios.html',files=files)"""
 
-@app.route('/uploads/<filename>')
+
+@app.route('/reload/<filename>')
 def uploaded_file(filename):
     print("11111 :" +filename)
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
+def get_hashname(filename):
+    query1 = File.query.filter_by(hashName=filename).first()
+    query2 = File.query.filter_by(name=filename, username=current_user.username).first()
+    if query2:
+        hash_name = query2.hashName
+    elif query1:
+        hash_name = query1.hashName
+    else:
+        pass
+        # TODO ?
+    return hash_name
+
+@app.route('/split')
+def split():
+    return render_template('split.html')
+
+@app.route('/split_audio', methods=['POST'])
+def split_audio():
+    if 'wav_file' not in request.files:
+        return 'No file part'
+
+    file = request.files['wav_file']
+
+    if file.filename == '':
+        return 'No selected file'
+
+    if file and file.filename.endswith('.wav'):
+        # Save the uploaded file
+        filename = file.filename
+        file.save(filename)
+
+        # Split the WAV file into 1-minute chunks
+        audio = AudioSegment.from_wav(filename)
+        chunk_length_ms = 60 * 1000  # 1 minute in milliseconds
+        chunks = [audio[i:i+chunk_length_ms] for i in range(0, len(audio), chunk_length_ms)]
+
+        # Save each chunk as a separate file
+        output_files = []
+        for i, chunk in enumerate(chunks):
+            output_file = f'{os.path.splitext(filename)[0]}_chunk_{i+1}.wav'
+            chunk.export(output_file, format='wav')
+            output_files.append(output_file)
+
+        # Clean up the original file
+        os.remove(filename)
+
+        # Zip the output files
+        zip_filename = f'{os.path.splitext(filename)[0]}_chunks.zip'
+        os.system(f'zip -j {zip_filename} {" ".join(output_files)}')
+
+        # Clean up the individual chunk files
+        for output_file in output_files:
+            os.remove(output_file)
+
+        # Send the zip file to the client for download
+        return send_file(zip_filename, as_attachment=True)
+
+    return 'Invalid file format'
 
 
 if __name__ == '__main__':

@@ -11,25 +11,30 @@ document.addEventListener('DOMContentLoaded', function () {
     const timestepDiv = document.getElementById('timestep');
     const probaDiv = document.getElementById('probability');
     //const slider = document.querySelector('input[type="range"]');
-    const slider = document.getElementById('slider');
-    const sliderContainer = document.getElementById('slider-container');
-    const sliderFreq = document.getElementById('maxFreq');
-    const next = document.getElementById('next');
-    const prec = document.getElementById('prec');
+    const slider = document.getElementById('slider'); slider.disabled = true;
+    const sliderContainer = document.getElementById('slider-container'); sliderContainer.disabled = true;
+    const sliderFreq = document.getElementById('maxFreq'); 
+    const next = document.getElementById('next'); next.disabled = true;
+    const prec = document.getElementById('prec'); prec.disabled = true;
     const save = document.getElementById('save');
     const note = document.getElementById('note');
     const loadLabels = document.getElementById('loadLabels');
     const validateButton = document.getElementById('validateButton');
     const uploadButton = document.getElementById('uploadButton');
+    uploadButton.disabled = true;
     const chunkLength = 60;
     let currentPosition = 0;
     let audioLength;
     let sR = 44100; 
 
+    console.log('AAAAAAAAAAAAA = ', isLoggedIn);
+
+
 
     let wavesurfer;
     let wsRegions; // Define wsRegions here
     let regions = [];
+    let unremovableRegions = []
     let annotation_name;
     let maxFreq = 96000;
     let arrayBuffer;
@@ -61,6 +66,13 @@ document.addEventListener('DOMContentLoaded', function () {
             r.start = r.start + currentPosition;
             r.end = r.end + currentPosition;
             regions.push(r);
+            if (isExpert=='True' || region.drag) {
+                unremovableRegions = unremovableRegions.filter(item => item.id !== region.id);
+                unremovableRegions.push(r);
+            }
+
+            
+
             
             form.style.opacity = 0;
             document.getElementById('myForm').style.display = 'none'
@@ -103,22 +115,33 @@ document.addEventListener('DOMContentLoaded', function () {
             r.start = r.start + currentPosition;
             r.end = r.end + currentPosition;
             regions.push(r);
+            unremovableRegions.push(r)
         })
 
         wr.on("region-removed", (region) => {
             //console.log('region-removed', region)
             regions = regions.filter(item => item.id !== region.id);
+            // if drag==true => region does not come from AI, so user can delete it
+            // isExpert is a string because comes from index.html
+            if (isExpert=='True' || region.drag) {
+                console.log("expert and drag = ", isExpert, region.drag);
+                unremovableRegions = unremovableRegions.filter(item => item.id !== region.id);
+            }
+            
             console.log("new regions", regions);
+            console.log("new regions", unremovableRegions);
         })
 
         wr.on("region-updated", (region) => {
-            //console.log('region-updated', region)
+            console.log('region-updated', region)
             regions = regions.filter(item => item.id !== region.id);
+            if (isExpert=='True' || region.drag) {unremovableRegions = unremovableRegions.filter(item => item.id !== region.id);}
             let r = Object.assign({}, region);
             r.start = r.start + currentPosition;
             r.end = r.end + currentPosition;
             r.content = region.content
             regions.push(r);
+            unremovableRegions.push(r);
         })
                 
         wr.on('region-out', (region) => {
@@ -134,6 +157,7 @@ document.addEventListener('DOMContentLoaded', function () {
             activeRegion = region
             if (e.ctrlKey) {
                 region.remove();
+                
             } else if (e.shiftKey) {
                 document.getElementById('myForm').style.display = 'block'
 
@@ -214,6 +238,7 @@ document.addEventListener('DOMContentLoaded', function () {
         wsRegions = wavesurfer.registerPlugin(WaveSurfer.Regions.create()) // Define wsRegions here
 
         wavesurfer.once('decode', async () => {
+            console.log('rendering DONE');
             renderRegions(chunkLength,currentPosition,wsRegions,regions);
             setupRegionEventListener(wsRegions, wavesurfer);
             
@@ -248,9 +273,10 @@ document.addEventListener('DOMContentLoaded', function () {
             const response = await fetch('users/' + userName + '/annotation/' + annotation_name);
             const data = await response.json();
             loadRegions(document,data,regions);
+            loadRegions(document,data,unremovableRegions);
 
             // hide the button after user pushed it, so that cannot use it
-            loadLabels.style.visibility = 'hidden';
+            //loadLabels.disabled = true;
         } catch (error) {
             console.error('Error fetching annotation:', error);
         }
@@ -260,11 +286,14 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const selectedFile = event.target.files[0];
         regions = [];
-        annotation_name = fileInput.files[0].name.split('.')[0] + '.json'
+        unremovableRegions = [];
+        annotation_name = fileInput.files[0].name.split('.')[0] //+ '.json'
+        processButton.disabled = false;
         
         if (selectedFile) {
             console.log('FILE = ', fileInput);
             console.log('FILEee = ', fileInput.files);
+            uploadButton.disabled = true;
             
             currentPosition = 0;
             maxFreq = 96000;
@@ -273,7 +302,8 @@ document.addEventListener('DOMContentLoaded', function () {
             audioElement.src = URL.createObjectURL(selectedFile);
 
             // if another file, let access to the button
-            loadLabels.style.visibility = 'visible';
+            if (isLoggedIn) {loadLabels.disabled = false; save.disabled = false;}
+            
         
             audioElement.addEventListener('loadedmetadata', () => {
                 const durationInSeconds = audioElement.duration;
@@ -286,15 +316,15 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 console.log('Audio duration:', durationInSeconds, 'seconds');
                 if (durationInSeconds < chunkLength) {
-                    prec.style.visibility = 'hidden';
-                    next.style.visibility = 'hidden';
-                    slider.style.visibility = 'hidden';
-                    sliderContainer.style.visibility = 'hidden'
+                    prec.disabled = true;
+                    next.disabled = true;
+                    slider.disabled = true;
+                    sliderContainer.disabled = true
                 } else {
-                    prec.style.visibility = 'visible';
-                    next.style.visibility = 'visible';
-                    slider.style.visibility = 'visible';
-                    sliderContainer.style.visibility = 'visible'
+                    prec.disabled = false;
+                    next.disabled = false;
+                    slider.disabled = false;
+                    sliderContainer.disabled = false
                 }
             });
 
@@ -303,9 +333,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     });
     
-    
-
-    visualizeButton.addEventListener('click', function () {
+    function updateWaveform() {
         const file = fileInput.files[0];
 
         if (!file) {
@@ -320,6 +348,11 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         reader.readAsArrayBuffer(file);
+    }
+    
+
+    visualizeButton.addEventListener('click', function () {
+        updateWaveform()
     });
 
 
@@ -328,76 +361,27 @@ document.addEventListener('DOMContentLoaded', function () {
         const val = e.target.valueAsNumber;
         maxFreq = val;
 
-        const file = fileInput.files[0];
-
-        if (!file) {
-            alert('Please select an audio file first.');
-            return;
-        }
-
-        const reader = new FileReader();
-
-        reader.onload = function (event) {
-            loadNextChunk(event)
-        }
-        reader.readAsArrayBuffer(file);
+        updateWaveform()
     });
 
     slider.addEventListener('change', (e) => {
         const val = e.target.valueAsNumber
         currentPosition = val
-        const file = fileInput.files[0];
-
-        if (!file) {
-            alert('Please select an audio file first.');
-            return;
-        }
-
-        const reader = new FileReader();
-
-        reader.onload = function (event) {
-            loadNextChunk(event)
-        }
-        reader.readAsArrayBuffer(file);
+        updateWaveform()
 
     })
 
     next.addEventListener('click' ,function () {
-        console.log("merdeeeeeeeeeeee");
         currentPosition += chunkLength;
-        const file = fileInput.files[0];
         slider.value = currentPosition;
 
-        if (!file) {
-            alert('Please select an audio file first.');
-            return;
-        }
-
-        const reader = new FileReader();
-
-        reader.onload = function (event) {
-            loadNextChunk(event)
-        }
-        reader.readAsArrayBuffer(file);
+        updateWaveform()
     });
 
     prec.addEventListener('click' ,function () {
         currentPosition = Math.max(currentPosition - chunkLength, 0);
         const file = fileInput.files[0];
-        slider.value = currentPosition;
-
-
-        if (!file) {
-            alert('Please select an audio file first.');
-            return;
-        }
-
-        const reader = new FileReader();
-
-        reader.onload = function (event) {
-            loadNextChunk(event)
-        }
-        reader.readAsArrayBuffer(file);
+        updateWaveform()
     });
     
 
@@ -408,7 +392,6 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
 
-    
     pauseButton.addEventListener('click', function () {
         if (wavesurfer) {
             wavesurfer.pause();
@@ -419,19 +402,14 @@ document.addEventListener('DOMContentLoaded', function () {
         saveAnnotationToServer(audioLength,annotation_name,fileInput,regions,userName,'local');
     });
     
-    /*document.getElementById('submitLabels').addEventListener('click', function () {
-
-    });*/
 
     processButton.addEventListener('click', function () {
         const file = fileInput.files[0];
-        
 
         if (!file) {
             alert('Please select an audio file first.');
             return;
         }
-
 
         const formData = new FormData();
         formData.append('audio', file);
@@ -447,15 +425,9 @@ document.addEventListener('DOMContentLoaded', function () {
             timestepDiv.innerHTML = "Timestep: " + data.timestep;
             probaDiv.innerHTML = "With probabilities: " + data.probability;
             //fileInput.files[0].name = data.new_filename;
-
-            const f = new File([arrayBuffer], data.new_filename,{ type: 'audio/x-wav' })
-            const fileList = new DataTransfer();
-            fileList.items.add(f);
-            const fileInput = document.getElementById('audioFile')
-            fileInput.files = fileList.files;
-            annotation_name = fileInput.files[0].name.split('.')[0] + '.json'
-
-
+            if (userName) {uploadButton.disabled = false;}
+            processButton.disabled = true;
+            
             console.log('Result:', data.result);
             console.log('Timestep:', data.timestep);
             console.log("With probabilities:", data.probability);
@@ -494,27 +466,37 @@ document.addEventListener('DOMContentLoaded', function () {
             console.log('ws1:', wsRegions);
             data.timestep.forEach((timestamp, index) => {
                 console.log('Adding region:', timestamp);
+                
+                
                 if (timestamp-currentPosition > 0 && timestamp-currentPosition < chunkLength) {
                     wsRegions.addRegion({
                         //start: Math.max(timestamp-0.5,0),
                         start: timestamp-currentPosition,
-                        //end: (timestamp + 0.5),
                         color: randomColor(), 
-                        //content: `${data.result[index]} ${index+1}`,
                         content: createRegionContent(document,`${data.result[index]}` , "noteeee",true) ,
                         drag: false,
                         resize: false,
                     });
                 }
                 else {
+                    var id = `bat-${Math.random().toString(32).slice(2)}`
                     regions.push({
-                        id: `bat-${Math.random().toString(32).slice(2)}`,
+                        id: id,
                         start: timestamp-currentPosition,
                         end: timestamp-currentPosition,
-                        content: `${data.result[index]}`,
+                        content: createRegionContent(document,`${data.result[index]}` , "noteeee",true),
                         drag: false,
                         resize: false,
                     })
+                    unremovableRegions.push({
+                        id: id,
+                        start: timestamp-currentPosition,
+                        end: timestamp-currentPosition,
+                        content: createRegionContent(document,`${data.result[index]}` , "noteeee",true),
+                        drag: false,
+                        resize: false,
+                    })
+            
                 }
 
                 
@@ -529,9 +511,11 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     validateButton.addEventListener('click', function () {
-        saveAnnotationToServer(audioLength,annotation_name,fileInput,regions,userName,'validated');
+        //saveAnnotationToServer(audioLength,annotation_name,fileInput,regions,userName,'validated');
+        // in isExpert case : regions==unremovableRegions
+        saveAnnotationToServer(audioLength,annotation_name,fileInput,unremovableRegions,userName,'validated');
 
-        const filenameToDelete = fileInput.files[0].name;  // Replace with the actual filename
+        const filenameToDelete = fileInput.files[0].name;  
     
         // Send a POST request to the Flask server to delete the file
         fetch('/delete_file', {
@@ -555,7 +539,8 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     uploadButton.addEventListener('click', function () {
-        saveAnnotationToServer(audioLength,annotation_name,fileInput,regions,userName,"other");
+        //saveAnnotationToServer(audioLength,annotation_name,fileInput,regions,userName,"other");
+        saveAnnotationToServer(audioLength,annotation_name,fileInput,unremovableRegions,userName,"other");
 
     });
 
@@ -563,29 +548,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Function to load waveform
     window.changeAudio = function(filename) {
-        console.log("1111 ", '/uploads/' + filename);
+        console.log("1111 ", '/reload/' + filename);
         
-        fetch('/uploads/' + filename)
+        fetch('/reload/' + filename)
             .then(response => response.arrayBuffer())
             .then(async arrayBuffer => {
                 // Load audio file
-                //wavesurfer.loadBlob(new Blob([arrayBuffer]));
-                /*console.log(arrayBuffer)
-
-                // Create a DataView to access the bytes
-                const dataView = new DataView(arrayBuffer);
-
-                // Read the sample rate from the WAV file header (at byte 24, little-endian)
-                const sampleRate = dataView.getUint32(24, true);
-
-                // Read the number of audio channels from the WAV file header (at byte 22, little-endian)
-                const numChannels = dataView.getUint16(22, true);
-
-                // Calculate the duration using the total number of audio samples and the sample rate
-                const totalAudioSamples = (arrayBuffer.byteLength - 44) / (numChannels * 2); // Each sample is 2 bytes
-                const durationInSeconds = totalAudioSamples / sampleRate;
-
-                console.log('Duration:', durationInSeconds, 'seconds');*/
+                
                 //const wavBlob = new Blob([arrayBuffer], { type: 'audio/x-wav' });
                 //const f = new File([wavBlob], filename,{ type: 'audio/x-wav' })
                 const f = new File([arrayBuffer], filename,{ type: 'audio/x-wav' })
@@ -602,6 +571,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 });
                 
                 fileInput.dispatchEvent(inputEvent);
+                uploadButton.disabled = true;
+                loadLabels.disabled = true;
 
                 // Introduce a delay using setTimeout, because we need 'fileInput' listener has finished before starting
                 // 'visualizeButton' listener
@@ -619,17 +590,14 @@ document.addEventListener('DOMContentLoaded', function () {
                     const response = await fetch('uploads/' + annotation_name);
                     const data = await response.json();
                     loadRegions(document,data,regions);
+                    loadRegions(document,data,unremovableRegions);
         
-                    // hide the button after user pushed it, so that cannot use it
-                    //loadLabels.style.visibility = 'hidden';
                 } catch (error) {
                     console.error('Error fetching annotation:', error);
                 }
             })
             .catch(error => console.error('Error loading waveform:', error));
 
-
-
-
     };
+
 });

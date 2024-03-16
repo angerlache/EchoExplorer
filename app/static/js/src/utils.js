@@ -15,12 +15,10 @@ export function generateColorMap() {
     return colorMap;
 }
 
-export function containsObject(obj, list) {
+export function containsRegion(obj, list) {
     var i;
     for (i = 0; i < list.length; i++) {
-        if (obj.start === list[i].start && obj.end === list[i].end && 
-            obj.label === list[i].content.querySelector('h3').textContent &&
-            obj.note === list[i].content.querySelector('p').textContent) {
+        if (obj.id === list[i].id) {
             return true;
         }
         
@@ -95,11 +93,13 @@ export function loadRegions(document,annotations,regions){
     // todo: check if the id is present in the list, so that
     // if user repush on the button, the regions are not duplicated
     annotations.forEach(region => {
-        regions.push({
-            start: region.start,
-            end: region.end,
-            id: region.id,
-            content: createRegionContent(document,region.label,region.note,true)})
+        if (!containsRegion(region, regions)) {
+            regions.push({
+                start: region.start,
+                end: region.end,
+                id: region.id,
+                content: createRegionContent(document,region.label,region.note,true)})
+        }
     });
 
 

@@ -59,6 +59,8 @@
         <!-- Show the button only if the user is logged in -->
         <a href="{{url_for('dashboard')}}">Logout Page</a>
     {% endif %}
+    <a href="{{url_for('split')}}">Split Audio</a>
+    
     <br>
     
 
@@ -90,8 +92,8 @@
     <li class="nav-item dropdown">
         <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Labels</a>
         <ul class="dropdown-menu">
-            <li><button class="dropdown-item" id="loadLabels" {% if not session['is_logged_in'] %}style="display: none;"{% endif %}>Load Local</button></li>
-            <li><button class="dropdown-item" id="save" {% if not session['is_logged_in'] %}style="display: none;"{% endif %}>Save Local</button></li>
+            <li><button class="dropdown-item" id="loadLabels" disabled>Load Local</button></li>
+            <li><button class="dropdown-item" id="save" disabled>Save Local</button></li>
             <li><button class="dropdown-item" id="uploadButton">Save Upload</button></li>
             <!--li><button class="dropdown-item" id="discussButton" {% if not isExpert %}style="display: none;"{% endif %}>Discussed</button></li-->
             <li><button class="dropdown-item" id="validateButton" {% if not isExpert %}style="display: none;"{% endif %}>Validated</button></li>
@@ -205,7 +207,9 @@
     </form>
 
     <script>
-        var userName = "{{username}}";
+        var userName = "{{ username }}";
+        var isLoggedIn = "{{ session['is_logged_in'] }}"
+        var isExpert = "{{ isExpert }}"
     </script>
 
     <script src="{{ url_for('static', filename='js/src/main.js') }}" type="module"></script>
