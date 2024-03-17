@@ -71,10 +71,12 @@ export function getCurrRegions(chunkLength,currentPosition,wr,regions){
 }
 
 
+
+
 export function renderRegions(chunkLength,currentPosition,wr,regions,SelectedSpecies){
     getCurrRegions(chunkLength,currentPosition,wr,regions).forEach(reg => {
         //console.log("region added",reg)
-        console.log(reg)
+        console.log("a",reg)
         if (SelectedSpecies.includes(reg.content.querySelector('h3').textContent)) {
             wr.addRegion({
                 start: reg.start - currentPosition,
@@ -95,22 +97,6 @@ export function renderRegions(chunkLength,currentPosition,wr,regions,SelectedSpe
 
 
 
-// same as renderRegions but with regions saved in the json of the file
-//export function loadRegions(document,chunkLength,currentPosition,wr,annotations,regions){
-export function loadRegions(document,annotations,regions){
-
-    // todo: check if the id is present in the list, so that
-    // if user repush on the button, the regions are not duplicated
-    annotations.forEach(region => {
-        regions.push({
-            start: region.start,
-            end: region.end,
-            id: region.id,
-            content: createRegionContent(document,region.label,region.note,true)})
-    });
-
-
-}
 
 /**
  * upload to server
@@ -152,3 +138,4 @@ export function saveAnnotationToServer(audioLength,annotation_name,fileInput,reg
 
 
 
+ 
