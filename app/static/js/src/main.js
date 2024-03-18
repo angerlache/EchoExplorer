@@ -201,7 +201,12 @@ document.addEventListener('DOMContentLoaded', function () {
             region.setOptions({ color: randomColor(), contentEditable:true});
             //console.log('content = ', region.content);
 
-        
+            /*let r = Object.assign({}, region);
+            r.start = r.start + currentPosition;
+            r.end = r.end + currentPosition;
+            regions.push(r);
+            unremovableRegions.push(r)*/
+
             //If created region is new, add it to the list.
             if(!regions.some(item => item.id === region.id)){
                 region.content = createRegionContent(document,"Region", "",false);
@@ -215,6 +220,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
                 else{
                     regions.push(r);
+                    unremovableRegions.push(r);
                     var row = Dtable.row.add([
                         "hand-added Region",
                         r.start,
@@ -239,14 +245,10 @@ document.addEventListener('DOMContentLoaded', function () {
             region.on('leave', (e) => {
                 if (region.content !== undefined) 
                 region.setContent(createRegionContent(document,region.content.querySelector('h3').textContent,
-                                    region.content.querySelector('p').textContent,false))
+                                    region.content.querySelector('p').textContent,true))
             });
 
-            let r = Object.assign({}, region);
-            r.start = r.start + currentPosition;
-            r.end = r.end + currentPosition;
-            regions.push(r);
-            unremovableRegions.push(r)
+
         })
 
 
@@ -284,7 +286,7 @@ document.addEventListener('DOMContentLoaded', function () {
         wr.on("region-updated", (region) => {
             console.log('region-updated', region)
             regions = regions.filter(item => item.id !== region.id);
-            if (isExpert=='True' || region.drag) {unremovableRegions = unremovableRegions.filter(item => item.id !== region.id);}
+            
             let r = Object.assign({}, region);
             r.start = r.start + currentPosition;
             r.end = r.end + currentPosition;
@@ -293,7 +295,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 console.log("updaled")
             }
             regions.push(r);
-            unremovableRegions.push(r);
+            if (isExpert=='True' || region.drag) {
+                unremovableRegions = unremovableRegions.filter(item => item.id !== region.id);
+                unremovableRegions.push(r);
+            }
 
             Dtable.rows().every(function() {
                 var rowData = this.data();
@@ -380,7 +385,8 @@ document.addEventListener('DOMContentLoaded', function () {
         if (wavesurfer) {
             // ICI tu fait un truc pour que il fasse plus qqchs on-delete
             if(wsRegions){
-            wsRegions.unAll();}
+                wsRegions.unAll();
+            }
             
             wavesurfer.destroy();
         }
@@ -592,11 +598,11 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
 
-    pauseButton.addEventListener('click', function () {
+    /*pauseButton.addEventListener('click', function () {
         if (wavesurfer) {
             wavesurfer.pause();
         }
-    });
+    });*/
 
     save.addEventListener('click', function () {
         saveAnnotationToServer(audioLength,annotation_name,fileInput,regions,userName,'local');
