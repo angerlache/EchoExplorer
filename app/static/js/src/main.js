@@ -4,11 +4,14 @@ import { generateColorMap,appendBuffer,renderRegions,saveAnnotationToServer, cre
 document.addEventListener('DOMContentLoaded', function () {
     const fileInput = document.getElementById('audioFile');
     const processButton = document.getElementById('processButton');
+    const processButton2 = document.getElementById('processButton2');
+    const startAI = document.getElementById('startAI');
     const visualizeButton = document.getElementById('visualizeButton');
     const playButton = document.getElementById('playButton');
     const pauseButton = document.getElementById('pauseButton');
     const resultDiv = document.getElementById('result');
-    const timestepDiv = document.getElementById('timestep');
+    const startDiv = document.getElementById('start');
+    const endDiv = document.getElementById('end');
     const probaDiv = document.getElementById('probability');
     //const slider = document.querySelector('input[type="range"]');
     const slider = document.getElementById('slider'); slider.disabled = true;
@@ -26,10 +29,7 @@ document.addEventListener('DOMContentLoaded', function () {
     let currentPosition = 0;
     let audioLength;
     let sR = 44100; 
-
-    console.log('AAAAAAAAAAAAA = ', isLoggedIn);
-
-
+    
 
     let wavesurfer;
     let wsRegions; // Define wsRegions here
@@ -45,16 +45,34 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
 
+    // Get references to the select element and the custom option
+    const customOption = document.getElementById('customOption');
+    let customChoice = null;
+    // Add event listener to the custom option
+    customOption.addEventListener('click', function() {
+        // Show a prompt to the user to enter their custom choice
+        customChoice = prompt('Enter your custom choice:');
+
+    });
 
     // FROM : https://github.com/smart-audio/audio_diarization_annotation/tree/master
     function editAnnotation(region) {
         let form = document.forms.edit;
         form.style.opacity = 1;
+        ////////////////////////////////////////////////
+
+        ////////////////////////////////////////////////
         form.onsubmit = function (e) {
             e.preventDefault();
-            
+            console.log('lhtmrlthlhththm222 : ' + form.elements.choiceSelector.value);
             //console.log('eeefff',region.content)
-            var regionContent = createRegionContent(document,form.elements.choiceSelector.value, form.elements.note.value,true)
+            if (customChoice !== null) {
+                var regionContent = createRegionContent(document,customChoice, form.elements.note.value,true)
+                customChoice = null;
+            } else {
+                var regionContent = createRegionContent(document,form.elements.choiceSelector.value, form.elements.note.value,true)
+
+            }
             region.setContent(regionContent);
             //region.setContent(form.elements.choiceSelector.value);
             console.log('eeefff',region.content)
@@ -76,6 +94,7 @@ document.addEventListener('DOMContentLoaded', function () {
             
             form.style.opacity = 0;
             document.getElementById('myForm').style.display = 'none'
+            //form.style.opacity = 0;
         };
         form.onreset = function () {
             form.style.opacity = 0;
@@ -83,6 +102,13 @@ document.addEventListener('DOMContentLoaded', function () {
         };
         form.dataset.region = region.id;
     }
+    document.getElementById('closeForm').addEventListener('click', function() {
+        document.getElementById('myForm').style.opacity = 0;
+        document.getElementById('myForm').style.display = 'none';
+    });
+
+
+
 
     
     function setupRegionEventListener(wr, ws){
@@ -162,7 +188,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 document.getElementById('myForm').style.display = 'block'
 
                 if (region.content !== undefined) {
-                    document.forms.edit.elements.note.value = region.content.textContent
+                    //document.forms.edit.elements.note.value = region.content.textContent
                     document.forms.edit.elements.note.value = region.content.querySelector('p').textContent;
                     document.forms.edit.elements.choiceSelector.value = region.content.querySelector('h3').textContent;
                 }
@@ -229,6 +255,7 @@ document.addEventListener('DOMContentLoaded', function () {
             sampleRate: maxFreq * 2,
             //minPxPerSec: 500,
             dragToSeek: true,
+            //plugins: [WaveSurfer.Timeline.create()],
         });
 
         // Load the next chunk into wavesurfer
@@ -244,7 +271,7 @@ document.addEventListener('DOMContentLoaded', function () {
             
         });
         
-        
+        wavesurfer.registerPlugin(WaveSurfer.Timeline.create())
 
         wavesurfer.registerPlugin(
             WaveSurfer.Spectrogram.create({
@@ -288,7 +315,7 @@ document.addEventListener('DOMContentLoaded', function () {
         regions = [];
         unremovableRegions = [];
         annotation_name = fileInput.files[0].name.split('.')[0] //+ '.json'
-        processButton.disabled = false;
+        startAI.disabled = false;
         
         if (selectedFile) {
             console.log('FILE = ', fileInput);
@@ -402,18 +429,7 @@ document.addEventListener('DOMContentLoaded', function () {
         saveAnnotationToServer(audioLength,annotation_name,fileInput,regions,userName,'local');
     });
     
-
-    processButton.addEventListener('click', function () {
-        const file = fileInput.files[0];
-
-        if (!file) {
-            alert('Please select an audio file first.');
-            return;
-        }
-
-        const formData = new FormData();
-        formData.append('audio', file);
-
+    function processRequest(formData) {
         fetch('/process', {
             method: 'POST',
             body: formData
@@ -422,15 +438,13 @@ document.addEventListener('DOMContentLoaded', function () {
         .then(data => {
 
             resultDiv.innerHTML = 'Result: ' + data.result;
-            timestepDiv.innerHTML = "Timestep: " + data.timestep;
+            startDiv.innerHTML = "Start: " + data.start;
+            endDiv.innerHTML = "End: " + data.end;
             probaDiv.innerHTML = "With probabilities: " + data.probability;
             //fileInput.files[0].name = data.new_filename;
             if (userName) {uploadButton.disabled = false;}
-            processButton.disabled = true;
+            startAI.disabled = true;
             
-            console.log('Result:', data.result);
-            console.log('Timestep:', data.timestep);
-            console.log("With probabilities:", data.probability);
 
             // start of interactive table with the results
              
@@ -464,16 +478,16 @@ document.addEventListener('DOMContentLoaded', function () {
 
             
             console.log('ws1:', wsRegions);
-            data.timestep.forEach((timestamp, index) => {
-                console.log('Adding region:', timestamp);
+            data.start.forEach((start, index) => {
+                console.log('Adding region:', start);
                 
                 
-                if (timestamp-currentPosition > 0 && timestamp-currentPosition < chunkLength) {
+                if (start-currentPosition >= 0 && start-currentPosition <= chunkLength) {
                     wsRegions.addRegion({
-                        //start: Math.max(timestamp-0.5,0),
-                        start: timestamp-currentPosition,
+                        start: start-currentPosition,
+                        end: data.end[index]-currentPosition,
                         color: randomColor(), 
-                        content: createRegionContent(document,`${data.result[index]}` , "noteeee",true) ,
+                        content: createRegionContent(document,`${data.result[index]}` , "Confidence : " + `${data.probability[index]}`,true) ,
                         drag: false,
                         resize: false,
                     });
@@ -482,23 +496,22 @@ document.addEventListener('DOMContentLoaded', function () {
                     var id = `bat-${Math.random().toString(32).slice(2)}`
                     regions.push({
                         id: id,
-                        start: timestamp-currentPosition,
-                        end: timestamp-currentPosition,
-                        content: createRegionContent(document,`${data.result[index]}` , "noteeee",true),
+                        start: start,
+                        end: data.end[index],
+                        content: createRegionContent(document,`${data.result[index]}` , "Confidence : " + `${data.probability[index]}`,true),
                         drag: false,
                         resize: false,
                     })
                     unremovableRegions.push({
                         id: id,
-                        start: timestamp-currentPosition,
-                        end: timestamp-currentPosition,
-                        content: createRegionContent(document,`${data.result[index]}` , "noteeee",true),
+                        start: start,
+                        end: data.end[index],
+                        content: createRegionContent(document,`${data.result[index]}` , "Confidence : " + `${data.probability[index]}`,true),
                         drag: false,
                         resize: false,
                     })
             
                 }
-
                 
             });
             console.log('ws2:', wsRegions);
@@ -507,7 +520,37 @@ document.addEventListener('DOMContentLoaded', function () {
         .catch(error => {
             console.error('Error:', error);
         });
+    }
 
+    processButton.addEventListener('click', function () {
+        const file = fileInput.files[0];
+
+        if (!file) {
+            alert('Please select an audio file first.');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('audio', file);
+        formData.append('chosenAI', 'bats');
+
+        processRequest(formData)
+
+    });
+
+    processButton2.addEventListener('click', function () {
+        const file = fileInput.files[0];
+
+        if (!file) {
+            alert('Please select an audio file first.');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('audio', file);
+        formData.append('chosenAI', 'birds');
+
+        processRequest(formData);
     });
 
     validateButton.addEventListener('click', function () {

@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 import sqlalchemy.orm.session
 import sqlite3
 from pydub import AudioSegment
-
+import boto3
 
 
 from wtforms import StringField, PasswordField, SubmitField
@@ -127,8 +127,14 @@ def allowed_file(filename):
 def index():
     
     if current_user.is_authenticated:
-       files = [filename for filename in os.listdir(app.config['UPLOAD_FOLDER']) if filename.endswith('.wav')]       
-       return render_template('index.html',username=current_user.username,isExpert=current_user.isExpert,files=files)
+        # retrieve filenames from s3
+        s3 = boto3.client('s3')
+
+        # List objects in the bucket and filter by files with a .wav extension
+        #response = s3.list_objects_v2(Bucket='BUCKET_NAME', Prefix='')
+        #files = [obj['Key'] for obj in response.get('Contents', []) if obj['Key'].endswith('.wav')]
+        files = [filename for filename in os.listdir(app.config['UPLOAD_FOLDER']) if filename.endswith('.wav')]       
+        return render_template('index.html',username=current_user.username,isExpert=current_user.isExpert,files=files)
     
     return render_template('index.html')
         
@@ -182,6 +188,7 @@ def process():
         return jsonify({'error': 'No file provided'})
 
     file = request.files['audio']
+    session['AI'] = request.form.get('chosenAI')
 
     if file.filename == '':
         return jsonify({'error': 'No selected file'})
@@ -192,6 +199,8 @@ def process():
         if not current_user.is_authenticated:
             return jsonify({'error': 'user not logged in'})
         
+        #bucket_name = "bucket_name"
+        #region = "region"
         query1 = File.query.filter_by(hashName=file.filename).first()
         query2 = File.query.filter_by(name=file.filename, username=current_user.username).first()
         if query1:
@@ -206,6 +215,9 @@ def process():
             new_file = File(name=file.filename, hashName=filename, username=current_user.username)
             db.session.add(new_file)
             db.session.commit()
+
+            #s3 = boto3.client('s3')
+            #s3.upload_fileobj(file, bucket_name, filename)
         
 
         file_content = file.read()
@@ -227,11 +239,23 @@ def process():
 
         # This is ZONE DE TEST removed AI pour le fun
 
-        
-        os.chdir('../AI')
-        print(os.getcwd())
-        #os.system('{} {}'.format('python3', 'run_classifier.py'))
-        os.chdir('../app')
+
+        if session['AI'] == 'bats':
+            result_path = "../AI/results/classification_result.csv"
+            os.chdir('../AI')
+            os.system('{} {}'.format('python3', 'run_classifier.py'))
+            os.remove("data/samples/" + filename)
+            os.chdir('../app')
+        elif session['AI'] == 'birds':
+            result_path = "../BirdNET/results/classification_result.csv"
+            alternate_filepath = os.path.join('../BirdNET/samples', filename)
+            with open(alternate_filepath, 'wb') as f:
+                f.write(file_content)
+            os.chdir('../BirdNET')
+            os.system('{} {} {} {} {} {} {} {}'.format("python3", "analyze.py", "--i", "samples/", '--o', 'results/', '--rtype', 'csv'))
+            os.remove("samples/" + filename)
+            os.chdir('../app')
+
         
 
         print(filepath)
@@ -240,8 +264,8 @@ def process():
         #files = {'audio': open(filepath, 'rb')}  # Include the file in the request
         files = {'audio': ('testname.wav', open(filepath, 'rb'))}
 
-        data = {'message': 'Hello, second machine!'}
-        json_data = json.dumps(data)
+        data = {'message': filename}
+        #json_data = json.dumps(data)
         headers = {'Content-Type': 'multipart/form-data'}
         #response = requests.post('http://tfe-anthony-noam.info.ucl.ac.be/process_on_second_machine', files=files)
         #response = requests.post('https://gotham.inl.ovh/process_on_second_machine', files=files)
@@ -261,28 +285,29 @@ def process():
 
 
         # Process the file using your AI model function
-        results = [[],[],[]]
+        results = [[],[],[],[]]
         #with open("received_classification_result.csv") as resultfile:
-        with open("../AI/results/classification_result.csv") as resultfile:
-
+            
+        with open(result_path) as resultfile:
             next(resultfile)
             for line in resultfile:
                 line = line.strip().split(',')
-                if float(line[3]) > 0.8: # keep label only if 80% sure
+                if float(line[4]) > 0.5: # keep label only if 80% sure
                     results[0].append(line[1])
                     results[1].append(line[2])
                     results[2].append(line[3])
+                    results[3].append(line[4])
                 
-        if os.path.exists("../AI/results/classification_result.csv"):
-            #os.remove("../AI/results/classification_result.csv")
+        if os.path.exists(result_path):
+            #os.remove(result_path)
             pass
 
         print(results)
         
         #empty by deleting then 
-        shutil.rmtree(ALTERNATE_UPLOAD_FOLDER) # delete the folder where AI is applied
-        os.makedirs(app.config['ALTERNATE_UPLOAD_FOLDER'])
-        return jsonify({'result': results[1], 'timestep': results[0], 'probability':results[2], "new_filename":filename})
+        #shutil.rmtree(ALTERNATE_UPLOAD_FOLDER) # delete the folder where AI is applied
+        #os.makedirs(app.config['ALTERNATE_UPLOAD_FOLDER'])
+        return jsonify({'result': results[2], 'start': results[0], 'end': results[1], 'probability':results[3]})
 
     return jsonify({'error': 'Invalid file format'})
 
@@ -353,6 +378,7 @@ def delete_file():
         filename = request.json['filename']  # Assuming you send the filename in the request body
         hash_name = get_hashname(filename)
 
+        # remove here for s3
         file_path = os.path.join(app.config['UPLOAD_FOLDER'], hash_name[:-3])
         os.remove(file_path + 'wav')
 
@@ -366,8 +392,16 @@ def delete_file():
 
 @app.route('/reload/<filename>')
 def uploaded_file(filename):
-    print("11111 :" +filename)
-    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+    #return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+    
+    # TODO : retrieve from s3 here
+    """s3 = boto3.client('s3')
+    with open(filename, "rb") as f:
+        s3.download_fileobj('BUCKET_NAME', filename, f)
+        f.seek(0)
+        return send_file(f, as_attachment=True)"""
+
+    return send_file(app.config['UPLOAD_FOLDER'] + '/' + filename, as_attachment=True)
 
 def get_hashname(filename):
     query1 = File.query.filter_by(hashName=filename).first()
@@ -427,6 +461,7 @@ def split_audio():
         return send_file(zip_filename, as_attachment=True)
 
     return 'Invalid file format'
+
 
 
 if __name__ == '__main__':

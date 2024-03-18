@@ -3,6 +3,8 @@ from werkzeug.utils import secure_filename
 from flask_cors import CORS
 import os
 import shutil
+import json
+import boto3
 
 app = Flask(__name__)
 CORS(app, resources={r"/process_on_second_machine": {"origins": "http://tfe-anthony-noam.info.ucl.ac.be"}})
@@ -27,18 +29,13 @@ def process_on_second_machine():
 
     #print('Received message:', message)
 
-    print('dans process audio second machine')
-    if 'audio' not in request.files:
-        print('MERDE 1 !')
-        return jsonify({'error': 'No file provided'})
+    filename = json.loads(request.json)["message"]
+    path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    with open(path, 'wb') as f:
+        s3 = boto3.client('s3')
+        s3.download_fileobj('BUCKET_NAME', filename, f)
 
-    file = request.files['audio']
-    if file.filename == '':
-        print('MERDE 2 !')
-        return jsonify({'error': 'No selected file'})
-
-    filename = secure_filename(file.filename)
-    file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+    #file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
 
     os.chdir('../AI')
     print(os.getcwd())

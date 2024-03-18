@@ -16,7 +16,7 @@ def save_to_txt(op_file, results):
     """
 
     with open(op_file, 'w') as file:
-        head_str = 'file_name,predicted_time,predicted_species,predicted_prob'
+        head_str = 'file_name,start,end,predicted_species,predicted_prob'
         file.write(head_str + '\n')
         for ii in range(len(results)):
             for jj in range(len(results[ii]['prob'])):
@@ -24,7 +24,7 @@ def save_to_txt(op_file, results):
                 tm = round(results[ii]['time'][jj],3)
                 pr = round(results[ii]['prob'][jj],3)
                 sp = results[ii]['pred_classes'][jj]
-                row_str += str(tm) + ',' +str(sp) + ',' + str(pr)
+                row_str += str(tm) + ',' + str(tm) + ',' + str(sp) + ',' + str(pr)
                 file.write(row_str + '\n')
 
 
