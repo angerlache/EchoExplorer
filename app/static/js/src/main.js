@@ -83,7 +83,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 start: region.start,
                 end: region.end,
                 id: region.id,
-                content: createRegionContent(document,region.label,region.note,true)})
+                content: createRegionContent(document,region.label,region.note,false)})
 
             var row = Dtable.row.add([
                 region.label,
@@ -681,7 +681,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 //Populate DataTable
                 var row = Dtable.row.add([
                     data.result[index],
-                    data.timestep[index],
+                    data.start[index],
                     data.probability[index],
                     idn,
                 ]).draw().node();
@@ -691,7 +691,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 reader.onload = function (event) {
                     loadNextChunk(event)
                 }
-                reader.readAsArrayBuffer(file);
+                reader.readAsArrayBuffer(fileInput.files[0]);
                 
             })
         
