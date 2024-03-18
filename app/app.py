@@ -243,7 +243,7 @@ def process():
         if session['AI'] == 'bats':
             result_path = "../AI/results/classification_result.csv"
             os.chdir('../AI')
-            os.system('{} {}'.format('python3', 'run_classifier.py'))
+            #os.system('{} {}'.format('python3', 'run_classifier.py'))
             os.remove("data/samples/" + filename)
             os.chdir('../app')
         elif session['AI'] == 'birds':

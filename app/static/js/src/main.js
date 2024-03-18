@@ -34,7 +34,7 @@ document.addEventListener('DOMContentLoaded', function () {
     let sR = 44100; 
     
     const checkBoxes = document.querySelectorAll('.dropdown-menu input[type="checkbox"]'); 
-    let SelectedSpecies = ['Barbarg', 'Envsp', 'Myosp', 'Pip35', 'Pip50', 'Plesp', 'Rhisp','Region']; 
+    let SelectedSpecies = ['Barbarg', 'Envsp', 'Myosp', 'Pip35', 'Pip50', 'Plesp', 'Rhisp','Region','other']; 
 
     let removefun;
 
@@ -110,7 +110,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             const reader = new FileReader();
             reader.onload = function (event) {
-                //loadNextChunk(event)
+                loadNextChunk(event)
             }
             reader.readAsArrayBuffer(file);
             // Example: Log values to console
@@ -623,15 +623,6 @@ document.addEventListener('DOMContentLoaded', function () {
             if (userName) {uploadButton.disabled = false;}
             startAI.disabled = true;
 
-            regions.push({
-                start: 1, //timestamp-currentPosition,
-                end: 5, //timestamp-currentPosition,
-                //end: data.end[index], //timestamp-currentPosition,
-                content: createRegionContent(document,"test" , "Confidence : ",true),
-                color: randomColor(), 
-                drag: false,
-                resize: false,
-            })
             
             console.log('ws1:', wsRegions);
             data.start.forEach((start, index) => {
@@ -690,6 +681,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     resize: false,
                 })
                 //Populate DataTable
+                
                 var row = Dtable.row.add([
                     data.result[index],
                     data.start[index],
@@ -698,11 +690,11 @@ document.addEventListener('DOMContentLoaded', function () {
                 ]).draw().node();
                 addRowListener(row,fileInput.files[0]);
 
-                const reader = new FileReader();
+                /*const reader = new FileReader();
                 reader.onload = function (event) {
                     loadNextChunk(event)
                 }
-                reader.readAsArrayBuffer(fileInput.files[0]);
+                reader.readAsArrayBuffer(fileInput.files[0]);*/
                 
             })
         

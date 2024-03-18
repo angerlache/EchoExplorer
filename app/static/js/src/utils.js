@@ -75,7 +75,8 @@ export function renderRegions(chunkLength,currentPosition,wr,regions,SelectedSpe
     getCurrRegions(chunkLength,currentPosition,wr,regions).forEach(reg => {
         //console.log("region added",reg)
         console.log("a",reg)
-        if (SelectedSpecies.includes(reg.content.querySelector('h3').textContent)) {
+        console.log(SelectedSpecies);
+        if (SelectedSpecies.includes(reg.content.querySelector('h3').textContent) || SelectedSpecies.includes('other')) {
             wr.addRegion({
                 start: reg.start - currentPosition,
                 end: reg.end - currentPosition,
@@ -85,7 +86,7 @@ export function renderRegions(chunkLength,currentPosition,wr,regions,SelectedSpe
                 resize: reg.resize,
                 id: reg.id,
             });
-        }
+        } 
     });
     
 }
