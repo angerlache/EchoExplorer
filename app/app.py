@@ -286,8 +286,8 @@ def process():
 
         # Process the file using your AI model function
         results = [[],[],[],[]]
+        
         #with open("received_classification_result.csv") as resultfile:
-            
         with open(result_path) as resultfile:
             next(resultfile)
             for line in resultfile:

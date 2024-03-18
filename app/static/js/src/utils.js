@@ -68,22 +68,26 @@ export function getCurrRegions(chunkLength,currentPosition,wr,regions){
     }
 }
 
-export function renderRegions(chunkLength,currentPosition,wr,regions){
+
+
+
+export function renderRegions(chunkLength,currentPosition,wr,regions,SelectedSpecies){
     getCurrRegions(chunkLength,currentPosition,wr,regions).forEach(reg => {
-        console.log("region added",reg)
-        //console.log(reg)
-        wr.addRegion({
-            start: reg.start - currentPosition,
-            end: reg.end - currentPosition,
-            color: reg.color, 
-            content: reg.content,
-            drag: reg.drag,
-            resize: reg.resize,
-            id: reg.id,
-        });
+        //console.log("region added",reg)
+        console.log("a",reg)
+        if (SelectedSpecies.includes(reg.content.querySelector('h3').textContent)) {
+            wr.addRegion({
+                start: reg.start - currentPosition,
+                end: reg.end - currentPosition,
+                color: reg.color, 
+                content: reg.content,
+                drag: reg.drag,
+                resize: reg.resize,
+                id: reg.id,
+            });
+        }
     });
     
-
 }
 
 // same as renderRegions but with regions saved in the json of the file
@@ -101,53 +105,53 @@ export function loadRegions(document,annotations,regions){
                 content: createRegionContent(document,region.label,region.note,true)})
         }
     });
-
-
 }
+
 
 /**
  * upload to server
  * FROM : https://github.com/smart-audio/audio_diarization_annotation/tree/master
  */
 export function saveAnnotationToServer(audioLength,annotation_name,fileInput,regions,userName,destination) {
-        // ! this saves also the response of the AI, maybe we should change this ?
-        let data = JSON.stringify(
-            Object.keys(regions).map(function (id) {
-                var region = regions[id];
-                return {
-                    duration: audioLength,
-                    file: fileInput.files[0].name,
-                    start: region.start,
-                    end: region.end,
-                    //content: region.content,
-                    label: region.content.querySelector('h3').textContent,
-                    note: region.content.querySelector('p').textContent,
-                    id: region.id
-                    
-                };
-            })
-        );
+    // ! this saves also the response of the AI, maybe we should change this ?
+    let data = JSON.stringify(
+        Object.keys(regions).map(function (id) {
+            var region = regions[id];
+            return {
+                duration: audioLength,
+                file: fileInput.files[0].name,
+                start: region.start,
+                end: region.end,
+                //content: region.content,
+                label: region.content.querySelector('h3').textContent,
+                note: region.content.querySelector('p').textContent,
+                id: region.id
+                
+            };
+        })
+    );
 
-        let path;
-        if (destination == "validated") {path = "/validated/" + annotation_name;}
-        else if (destination == "local") { path = "/users/" + userName + "/annotation/" + annotation_name}
-        else {path = "/uploads/" + annotation_name}
+    let path;
+    if (destination == "validated") {path = "/validated/" + annotation_name;}
+    else if (destination == "local") { path = "/users/" + userName + "/annotation/" + annotation_name}
+    else {path = "/uploads/" + annotation_name}
+    
+    fetch(path, {
+    //fetch("/annotation/" + annotation_name, {
+        method: "POST",
+        body: data
+    }).then(res => {
+        if (!res.ok) throw res;
+        console.log("upload complete", annotation_name, res);
+    }).catch(function (err) {
+        console.log('Fetch Error :-S', err);
+        alert('upload file error: ' + annotation_name)
+    });
         
-        fetch(path, {
-        //fetch("/annotation/" + annotation_name, {
-            method: "POST",
-            body: data
-        }).then(res => {
-            if (!res.ok) throw res;
-            console.log("upload complete", annotation_name, res);
-        }).catch(function (err) {
-            console.log('Fetch Error :-S', err);
-            alert('upload file error: ' + annotation_name)
-        });
-            
-        
-    }
+    
+}
 
 
 
 
+ 

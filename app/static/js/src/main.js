@@ -1,5 +1,7 @@
-import { generateColorMap,appendBuffer,renderRegions,saveAnnotationToServer, createRegionContent, loadRegions } from './utils.js';
+import { generateColorMap,appendBuffer,renderRegions,saveAnnotationToServer,createRegionContent } from './utils.js';
 'use strict';
+
+
 
 document.addEventListener('DOMContentLoaded', function () {
     const fileInput = document.getElementById('audioFile');
@@ -13,6 +15,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const startDiv = document.getElementById('start');
     const endDiv = document.getElementById('end');
     const probaDiv = document.getElementById('probability');
+    
     //const slider = document.querySelector('input[type="range"]');
     const slider = document.getElementById('slider'); slider.disabled = true;
     const sliderContainer = document.getElementById('slider-container'); sliderContainer.disabled = true;
@@ -30,20 +33,90 @@ document.addEventListener('DOMContentLoaded', function () {
     let audioLength;
     let sR = 44100; 
     
+    const checkBoxes = document.querySelectorAll('.dropdown-menu input[type="checkbox"]'); 
+    let SelectedSpecies = ['Barbarg', 'Envsp', 'Myosp', 'Pip35', 'Pip50', 'Plesp', 'Rhisp','Region']; 
+
+    let removefun;
 
     let wavesurfer;
+    
     let wsRegions; // Define wsRegions here
     let regions = [];
     let unremovableRegions = []
     let annotation_name;
     let maxFreq = 96000;
     let arrayBuffer;
+    
+
+    //temporary init
+    wavesurfer = WaveSurfer.create({
+        container: '#waveform',
+        waveColor: 'black',
+        progressColor: 'red',
+        sampleRate: maxFreq * 2,
+        //minPxPerSec: 500,
+        dragToSeek: true,
+    });
+    wavesurfer.registerPlugin(WaveSurfer.Timeline.create());
+    
+
+    const Dtable = new DataTable('#myTable',{order: [[1, 'asc']]});   
+    Dtable.column(3).visible(false);
+    
+
+
 
     // Give regions a random color when they are created
     const random = (min, max) => Math.random() * (max - min) + min
     const randomColor = () => `rgba(${random(0, 255)}, ${random(0, 255)}, ${random(0, 255)}, 0.5)`
 
 
+    // same as renderRegions but with regions saved in the json of the file
+    //export function loadRegions(document,chunkLength,currentPosition,wr,annotations,regions){
+    function loadRegions(document,annotations,regions){
+
+        // todo: check if the id is present in the list, so that
+        // if user repush on the button, the regions are not duplicated
+    
+        annotations.forEach(region => {
+            regions.push({
+                start: region.start,
+                end: region.end,
+                id: region.id,
+                content: createRegionContent(document,region.label,region.note,true)})
+
+            var row = Dtable.row.add([
+                region.label,
+                region.start,
+                "-",
+                region.id
+            ]).draw().node();
+            addRowListener(row,fileInput.files[0]);
+            
+        });
+    
+    
+    }
+    function addRowListener(row, file) {
+        // Add click event to each row
+        row.addEventListener('click', function (event) {         
+            // Handle the click event here
+            var clickedRow = event.currentTarget;
+            var cells = clickedRow.getElementsByTagName('td');
+            
+            var time = cells[1].innerHTML;
+
+            currentPosition = Math.floor(Math.max(0,time-30));
+
+            const reader = new FileReader();
+            reader.onload = function (event) {
+                loadNextChunk(event)
+            }
+            reader.readAsArrayBuffer(file);
+            // Example: Log values to console
+            console.log('Clicked Row:', time);
+        });
+    }
 
     // Get references to the select element and the custom option
     const customOption = document.getElementById('customOption');
@@ -54,6 +127,7 @@ document.addEventListener('DOMContentLoaded', function () {
         customChoice = prompt('Enter your custom choice:');
 
     });
+
 
     // FROM : https://github.com/smart-audio/audio_diarization_annotation/tree/master
     function editAnnotation(region) {
@@ -83,6 +157,9 @@ document.addEventListener('DOMContentLoaded', function () {
             let r = Object.assign({}, region);
             r.start = r.start + currentPosition;
             r.end = r.end + currentPosition;
+            if (r.content == undefined) {
+                console.log("edaled")
+            }
             regions.push(r);
             if (isExpert=='True' || region.drag) {
                 unremovableRegions = unremovableRegions.filter(item => item.id !== region.id);
@@ -110,7 +187,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
 
-    
+
     function setupRegionEventListener(wr, ws){
 
         let activeRegion = null
@@ -120,6 +197,36 @@ document.addEventListener('DOMContentLoaded', function () {
         })
         wr.on("region-created", (region) => {
             
+            
+            region.setOptions({ color: randomColor(), contentEditable:true});
+            //console.log('content = ', region.content);
+
+        
+            //If created region is new, add it to the list.
+            if(!regions.some(item => item.id === region.id)){
+                region.content = createRegionContent(document,"Region", "",false);
+                let r = Object.assign({}, region);
+                r.start = r.start + currentPosition;
+                r.end = r.end + currentPosition;
+                
+
+                if (r.content == undefined) {
+                    console.log("crealed")
+                }
+                else{
+                    regions.push(r);
+                    var row = Dtable.row.add([
+                        "hand-added Region",
+                        r.start,
+                        "-",
+                        r.id
+                    ]).draw().node();
+                    addRowListener(row,fileInput.files[0]);
+                }
+                
+                
+            }
+
             // set last arg of setContent to true and the content will show up only when mouse over region
             region.on('over', (e) => {
                 if (region.content !== undefined)
@@ -130,12 +237,10 @@ document.addEventListener('DOMContentLoaded', function () {
             // set to false if you want to hide when mouse not over
             // if so, do it everywhere setContent is called
             region.on('leave', (e) => {
-                if (region.content !== undefined)
+                if (region.content !== undefined) 
                 region.setContent(createRegionContent(document,region.content.querySelector('h3').textContent,
-                                    region.content.querySelector('p').textContent,true))
+                                    region.content.querySelector('p').textContent,false))
             });
-            region.setOptions({ color: randomColor(), contentEditable:true});
-            console.log('content = ', region.content);
 
             let r = Object.assign({}, region);
             r.start = r.start + currentPosition;
@@ -144,8 +249,25 @@ document.addEventListener('DOMContentLoaded', function () {
             unremovableRegions.push(r)
         })
 
+
+
         wr.on("region-removed", (region) => {
-            //console.log('region-removed', region)
+
+            var r = null;
+            Dtable.rows().every(function() {
+                var rowData = this.data();
+                if (rowData[3] === region.id) {
+                    r = this;
+                }
+            });
+            if(!(r==null)){
+                r.remove(); // Remove the row
+                Dtable.draw();
+            }
+            
+
+
+            console.log('region-removed', region)
             regions = regions.filter(item => item.id !== region.id);
             // if drag==true => region does not come from AI, so user can delete it
             // isExpert is a string because comes from index.html
@@ -157,6 +279,7 @@ document.addEventListener('DOMContentLoaded', function () {
             console.log("new regions", regions);
             console.log("new regions", unremovableRegions);
         })
+        
 
         wr.on("region-updated", (region) => {
             console.log('region-updated', region)
@@ -165,9 +288,23 @@ document.addEventListener('DOMContentLoaded', function () {
             let r = Object.assign({}, region);
             r.start = r.start + currentPosition;
             r.end = r.end + currentPosition;
-            r.content = region.content
+            r.content = region.content;
+            if (r.content == undefined) {
+                console.log("updaled")
+            }
             regions.push(r);
             unremovableRegions.push(r);
+
+            Dtable.rows().every(function() {
+                var rowData = this.data();
+                if (rowData[3] === region.id) {
+                    rowData[1] = r.start;
+                    this.data(rowData);
+
+                }
+            });
+
+
         })
                 
         wr.on('region-out', (region) => {
@@ -214,11 +351,11 @@ document.addEventListener('DOMContentLoaded', function () {
     // Function to load the next chunk
     function loadNextChunk(event) {
         // Check if the entire audio has been processed
+        console.log(regions);
         if (currentPosition >= audioLength) {
             //alert('Audio fully processed.');
             return;
         }
-
         arrayBuffer = event.target.result;
         const metaData = arrayBuffer.slice(0,44); //44
         let start = currentPosition;
@@ -235,7 +372,6 @@ document.addEventListener('DOMContentLoaded', function () {
         } else {
             data = arrayBuffer.slice(start * sR * 4, end * sR * 4);
         }
-
         const buff = appendBuffer(metaData,data);
 
         const blob = new Blob([buff])
@@ -243,7 +379,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
         if (wavesurfer) {
             // ICI tu fait un truc pour que il fasse plus qqchs on-delete
-            wsRegions.unAll();
+            if(wsRegions){
+            wsRegions.unAll();}
             
             wavesurfer.destroy();
         }
@@ -255,8 +392,22 @@ document.addEventListener('DOMContentLoaded', function () {
             sampleRate: maxFreq * 2,
             //minPxPerSec: 500,
             dragToSeek: true,
-            //plugins: [WaveSurfer.Timeline.create()],
         });
+
+        wavesurfer.registerPlugin(WaveSurfer.Timeline.create({
+            formatTimeCallback: (seconds) => {
+                seconds = seconds + currentPosition;
+              if (seconds / 60 > 1) {
+                // calculate minutes and seconds from seconds count
+                const minutes = Math.floor(seconds / 60)
+                seconds = Math.round(seconds % 60)
+                const paddedSeconds = `${seconds < 10 ? '0' : ''}${seconds}`
+                return `${minutes}:${paddedSeconds}`
+              }
+              const rounded = Math.round(seconds * 1000) / 1000
+              return `${rounded}`
+            },
+        }));
 
         // Load the next chunk into wavesurfer
         wavesurfer.load(url);
@@ -266,12 +417,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
         wavesurfer.once('decode', async () => {
             console.log('rendering DONE');
-            renderRegions(chunkLength,currentPosition,wsRegions,regions);
+            //renderRegions(chunkLength,currentPosition,wsRegions,regions);
             setupRegionEventListener(wsRegions, wavesurfer);
+            renderRegions(chunkLength,currentPosition,wsRegions,regions,SelectedSpecies);
             
         });
         
-        wavesurfer.registerPlugin(WaveSurfer.Timeline.create())
 
         wavesurfer.registerPlugin(
             WaveSurfer.Spectrogram.create({
@@ -288,6 +439,17 @@ document.addEventListener('DOMContentLoaded', function () {
                 minPxPerSec: 1000,
             }),
         )
+
+        /*
+
+        var sample = new Spectrogram(url, "#spectrovis", {
+            width: 600,
+            height: 300,
+            colorScheme: ['#440154', '#472877', '#3e4a89', '#31688d', '#26838e', '#1f9e89', '#36b778', '#6dcd59', '#b4dd2c', '#fde725']
+            });
+        
+        console.log("", sample);*/
+
         console.log('Current Position:', currentPosition);
     }
 
@@ -312,6 +474,7 @@ document.addEventListener('DOMContentLoaded', function () {
     fileInput.addEventListener('change', (event) => {
 
         const selectedFile = event.target.files[0];
+        //function fileSelected(selectedFile) //{
         regions = [];
         unremovableRegions = [];
         annotation_name = fileInput.files[0].name.split('.')[0] //+ '.json'
@@ -359,6 +522,15 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
     });
+
+        
+    
+
+    /*fileInput.addEventListener('change', (event) => {
+        const selectedFile = event.target.files[0];
+        console.log("a",selectedFile)
+        fileSelected(selectedFile);
+    });*/
     
     function updateWaveform() {
         const file = fileInput.files[0];
@@ -401,6 +573,7 @@ document.addEventListener('DOMContentLoaded', function () {
     next.addEventListener('click' ,function () {
         currentPosition += chunkLength;
         slider.value = currentPosition;
+        document.getElementById('secout').value = currentPosition + ' seconds'
 
         updateWaveform()
     });
@@ -414,7 +587,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     playButton.addEventListener('click', function () {
         if (wavesurfer) {
-            wavesurfer.play();
+            wavesurfer.playPause();
         }
     });
 
@@ -441,53 +614,20 @@ document.addEventListener('DOMContentLoaded', function () {
             startDiv.innerHTML = "Start: " + data.start;
             endDiv.innerHTML = "End: " + data.end;
             probaDiv.innerHTML = "With probabilities: " + data.probability;
-            //fileInput.files[0].name = data.new_filename;
             if (userName) {uploadButton.disabled = false;}
             startAI.disabled = true;
-            
-
-            // start of interactive table with the results
-             
-            /*var tableBody = document.querySelector('#myTable tbody');
-            // Populate the table
-            for (var i = 0; i < data.result.length; i++) {
-                var row = tableBody.insertRow();
-                var cell1 = row.insertCell(0);
-                var cell2 = row.insertCell(1);
-                var cell3 = row.insertCell(2);
-            
-                cell1.innerHTML = data.result[i];
-                cell2.innerHTML = data.timestep[i];
-                cell3.innerHTML = data.probability[i];
-            
-                // Add click event to each row
-                row.addEventListener('click', function (event) {
-                    // Handle the click event here
-                    var clickedRow = event.currentTarget;
-                    var cells = clickedRow.getElementsByTagName('td');
-                    
-                    // Access values in each cell
-                    var value1 = cells[0].innerHTML;
-                    var value2 = cells[1].innerHTML;
-                    var value3 = cells[2].innerHTML;
-                
-                    // Example: Log values to console
-                    console.log('Clicked Row:', value1, value2, value3);
-                });
-            }*/
 
             
             console.log('ws1:', wsRegions);
             data.start.forEach((start, index) => {
                 console.log('Adding region:', start);
                 
-                
-                if (start-currentPosition >= 0 && start-currentPosition <= chunkLength) {
+                /*if (start-currentPosition >= 0 && start-currentPosition <= chunkLength) {
                     wsRegions.addRegion({
                         start: start-currentPosition,
                         end: data.end[index]-currentPosition,
                         color: randomColor(), 
-                        content: createRegionContent(document,`${data.result[index]}` , "Confidence : " + `${data.probability[index]}`,true) ,
+                        content: createRegionContent(document,`${data.result[index]}` , "Confidence : " + `${data.probability[index]}`,true),
                         drag: false,
                         resize: false,
                     });
@@ -511,10 +651,43 @@ document.addEventListener('DOMContentLoaded', function () {
                         resize: false,
                     })
             
+                }*/
+
+                var idn = `bat-${Math.random().toString(32).slice(2)}`
+                regions.push({
+                    id: idn,
+                    start: start, //timestamp-currentPosition,
+                    end: data.end[index], //timestamp-currentPosition,
+                    content: createRegionContent(document,`${data.result[index]}` , "Confidence : " + `${data.probability[index]}`,true),
+                    color: randomColor(), 
+                    drag: false,
+                    resize: false,
+                })
+                unremovableRegions.push({
+                    id: idn,
+                    start: start,
+                    end: data.end[index],
+                    content: createRegionContent(document,`${data.result[index]}` , "Confidence : " + `${data.probability[index]}`,true),
+                    color: randomColor(), 
+                    drag: false,
+                    resize: false,
+                })
+                //Populate DataTable
+                var row = Dtable.row.add([
+                    data.result[index],
+                    data.timestep[index],
+                    data.probability[index],
+                    idn,
+                ]).draw().node();
+                addRowListener(row,fileInput.files[0]);
+
+                const reader = new FileReader();
+                reader.onload = function (event) {
+                    loadNextChunk(event)
                 }
+                reader.readAsArrayBuffer(file);
                 
-            });
-            console.log('ws2:', wsRegions);
+            })
         
         })
         .catch(error => {
@@ -642,5 +815,22 @@ document.addEventListener('DOMContentLoaded', function () {
             .catch(error => console.error('Error loading waveform:', error));
 
     };
+
+    
+
+
+    function handleCB() { 
+        SelectedSpecies = [];     
+        checkBoxes.forEach((checkbox) => { 
+            if (checkbox.checked) { 
+                SelectedSpecies.push(checkbox.value); 
+            } 
+        }); 
+        console.log(SelectedSpecies)
+    } 
+    
+    checkBoxes.forEach((checkbox) => { 
+        checkbox.addEventListener('change', handleCB); 
+    }); 
 
 });
