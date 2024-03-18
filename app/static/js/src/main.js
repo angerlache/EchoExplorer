@@ -110,7 +110,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             const reader = new FileReader();
             reader.onload = function (event) {
-                loadNextChunk(event)
+                //loadNextChunk(event)
             }
             reader.readAsArrayBuffer(file);
             // Example: Log values to console
@@ -623,6 +623,15 @@ document.addEventListener('DOMContentLoaded', function () {
             if (userName) {uploadButton.disabled = false;}
             startAI.disabled = true;
 
+            regions.push({
+                start: 1, //timestamp-currentPosition,
+                end: 5, //timestamp-currentPosition,
+                //end: data.end[index], //timestamp-currentPosition,
+                content: createRegionContent(document,"test" , "Confidence : ",true),
+                color: randomColor(), 
+                drag: false,
+                resize: false,
+            })
             
             console.log('ws1:', wsRegions);
             data.start.forEach((start, index) => {
@@ -663,6 +672,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 regions.push({
                     id: idn,
                     start: start, //timestamp-currentPosition,
+                    //end: start+1, //timestamp-currentPosition,
                     end: data.end[index], //timestamp-currentPosition,
                     content: createRegionContent(document,`${data.result[index]}` , "Confidence : " + `${data.probability[index]}`,true),
                     color: randomColor(), 
@@ -672,7 +682,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 unremovableRegions.push({
                     id: idn,
                     start: start,
-                    end: data.end[index],
+                    //end: start+1, //timestamp-currentPosition,
+                    end: data.end[index], //timestamp-currentPosition,
                     content: createRegionContent(document,`${data.result[index]}` , "Confidence : " + `${data.probability[index]}`,true),
                     color: randomColor(), 
                     drag: false,
