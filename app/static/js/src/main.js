@@ -60,10 +60,10 @@ document.addEventListener('DOMContentLoaded', function () {
     wavesurfer.registerPlugin(WaveSurfer.Timeline.create());
     
 
+    // add this in fileInput listener to have new table when new audio ?
+    // or when audio chosen from allAudios
     const Dtable = new DataTable('#myTable',{order: [[1, 'asc']]});   
     Dtable.column(3).visible(false);
-    
-
 
 
     // Give regions a random color when they are created
@@ -73,25 +73,46 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // same as renderRegions but with regions saved in the json of the file
     //export function loadRegions(document,chunkLength,currentPosition,wr,annotations,regions){
-    function loadRegions(document,annotations,regions){
+    function loadRegions(document,annotations,regions,addRow){
 
         // todo: check if the id is present in the list, so that
         // if user repush on the button, the regions are not duplicated
     
         annotations.forEach(region => {
-            regions.push({
-                start: region.start,
-                end: region.end,
-                id: region.id,
-                content: createRegionContent(document,region.label,region.note,false)})
+            if (region.proba !== undefined) {
+                regions.push({
+                    start: region.start,
+                    end: region.end,
+                    id: region.id,
+                    content: createRegionContent(document,region.label,region.note,true),
+                    proba: region.proba,
+                });
+            } else {
+                regions.push({
+                    start: region.start,
+                    end: region.end,
+                    id: region.id,
+                    content: createRegionContent(document,region.label,region.note,true),
+                });
+            }
 
-            var row = Dtable.row.add([
-                region.label,
-                region.start,
-                "-",
-                region.id
-            ]).draw().node();
-            addRowListener(row,fileInput.files[0]);
+            if (addRow && region.proba !== undefined) {
+                var row = Dtable.row.add([
+                    region.label,
+                    region.start,
+                    region.proba,
+                    region.id
+                ]).draw().node();
+                addRowListener(row,fileInput.files[0]);
+            } else if (addRow) {
+                var row = Dtable.row.add([
+                    region.label,
+                    region.start,
+                    "-",
+                    region.id
+                ]).draw().node();
+                addRowListener(row,fileInput.files[0]);
+            }
             
         });
     
@@ -149,14 +170,18 @@ document.addEventListener('DOMContentLoaded', function () {
             }
             region.setContent(regionContent);
             //region.setContent(form.elements.choiceSelector.value);
-            console.log('eeefff',region.content)
+            console.log('eeefff',region)
             //console.log(region.content.querySelector('p').textContent,region.content.innerText)
 
-
+            let toRemove = regions.filter(item => item.id === region.id)[0]
+            console.log('toRemove = ', toRemove);
             regions = regions.filter(item => item.id !== region.id);
             let r = Object.assign({}, region);
             r.start = r.start + currentPosition;
             r.end = r.end + currentPosition;
+            if (toRemove.proba !== undefined) {
+                r.proba = toRemove.proba;
+            }
             if (r.content == undefined) {
                 console.log("edaled")
             }
@@ -291,6 +316,7 @@ document.addEventListener('DOMContentLoaded', function () {
             r.start = r.start + currentPosition;
             r.end = r.end + currentPosition;
             r.content = region.content;
+            console.log('PROBA : ', region.proba);
             if (r.content == undefined) {
                 console.log("updaled")
             }
@@ -467,8 +493,8 @@ document.addEventListener('DOMContentLoaded', function () {
         try {
             const response = await fetch('users/' + userName + '/annotation/' + annotation_name);
             const data = await response.json();
-            loadRegions(document,data,regions);
-            loadRegions(document,data,unremovableRegions);
+            loadRegions(document,data,regions,true);
+            loadRegions(document,data,unremovableRegions,false);
 
             // hide the button after user pushed it, so that cannot use it
             //loadLabels.disabled = true;
@@ -483,6 +509,7 @@ document.addEventListener('DOMContentLoaded', function () {
         //function fileSelected(selectedFile) //{
         regions = [];
         unremovableRegions = [];
+        Dtable.clear().draw();
         annotation_name = fileInput.files[0].name.split('.')[0] //+ '.json'
         startAI.disabled = false;
         
@@ -669,6 +696,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     color: randomColor(), 
                     drag: false,
                     resize: false,
+                    proba: data.probability[index],
                 })
                 unremovableRegions.push({
                     id: idn,
@@ -679,6 +707,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     color: randomColor(), 
                     drag: false,
                     resize: false,
+                    proba: data.probability[index],
                 })
                 //Populate DataTable
                 
@@ -814,8 +843,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 try {
                     const response = await fetch('uploads/' + annotation_name);
                     const data = await response.json();
-                    loadRegions(document,data,regions);
-                    loadRegions(document,data,unremovableRegions);
+                    loadRegions(document,data,regions,true);
+                    loadRegions(document,data,unremovableRegions,false);
         
                 } catch (error) {
                     console.error('Error fetching annotation:', error);

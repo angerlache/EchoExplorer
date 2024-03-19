@@ -141,13 +141,21 @@ def index():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    print(1)
     form = LoginForm()
+    print(2)
 
     if form.validate_on_submit():
+        print(3)
         user = User.query.filter_by(username=form.username.data).first()
+        print(4)
         if user:
             if bcrypt.check_password_hash(user.password, form.password.data):
+                print(5)
+
                 login_user(user)
+                print(6)
+
                 session['is_logged_in'] = True
 
                 return redirect(url_for('index'))
@@ -254,6 +262,7 @@ def process():
             os.chdir('../BirdNET')
             os.system('{} {} {} {} {} {} {} {}'.format("python3", "analyze.py", "--i", "samples/", '--o', 'results/', '--rtype', 'csv'))
             os.remove("samples/" + filename)
+            os.remove("results/" + filename[:-3] + "BirdNET.results.csv")
             os.chdir('../app')
 
         

@@ -118,17 +118,30 @@ export function saveAnnotationToServer(audioLength,annotation_name,fileInput,reg
     let data = JSON.stringify(
         Object.keys(regions).map(function (id) {
             var region = regions[id];
-            return {
-                duration: audioLength,
-                file: fileInput.files[0].name,
-                start: region.start,
-                end: region.end,
-                //content: region.content,
-                label: region.content.querySelector('h3').textContent,
-                note: region.content.querySelector('p').textContent,
-                id: region.id
-                
-            };
+            if (region.proba !== undefined) {
+                return {
+                    duration: audioLength,
+                    file: fileInput.files[0].name,
+                    start: region.start,
+                    end: region.end,
+                    //content: region.content,
+                    label: region.content.querySelector('h3').textContent,
+                    note: region.content.querySelector('p').textContent,
+                    id: region.id,
+                    proba: region.proba,
+                };
+            } else {
+                return {
+                    duration: audioLength,
+                    file: fileInput.files[0].name,
+                    start: region.start,
+                    end: region.end,
+                    //content: region.content,
+                    label: region.content.querySelector('h3').textContent,
+                    note: region.content.querySelector('p').textContent,
+                    id: region.id,
+                }
+            }
         })
     );
 
