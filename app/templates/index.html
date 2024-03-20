@@ -168,6 +168,17 @@
                         
                     {% endfor %}
                 </ul>
+                My audios:
+                <ul>
+                    {% for filename in userfiles %}
+                        <li>
+                            <a href="#" onclick="changeAudio('{{ filename }}')">{{ filename }}</a>
+                            <div id="buttons-container-{{ filename }}"></div>
+                        </li>
+                        
+                    {% endfor %}
+                </ul>
+
                 <div id="waveform-container"></div>
             
                 </div>

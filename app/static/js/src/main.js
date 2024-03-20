@@ -388,7 +388,7 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
         arrayBuffer = event.target.result;
-        const metaData = arrayBuffer.slice(0,44); //44
+        const metaData = arrayBuffer.slice(0,90); //44
         let start = currentPosition;
         const end = Math.min(currentPosition + chunkLength, audioLength);
         let data;
@@ -399,7 +399,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
         if (start == 0) {
-            data = arrayBuffer.slice(44, end * sR * 4);
+            data = arrayBuffer.slice(90, end * sR * 4);
         } else {
             data = arrayBuffer.slice(start * sR * 4, end * sR * 4);
         }
@@ -407,6 +407,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const blob = new Blob([buff])
         const url = URL.createObjectURL(blob);
+
+        //const slicedBlob = blob.slice(0, 10 * 44100 * 4);
 
         if (wavesurfer) {
             // ICI tu fait un truc pour que il fasse plus qqchs on-delete
@@ -424,6 +426,7 @@ document.addEventListener('DOMContentLoaded', function () {
             sampleRate: maxFreq * 2,
             //minPxPerSec: 500,
             dragToSeek: true,
+            backend: 'MediaElement',
         });
 
         wavesurfer.registerPlugin(WaveSurfer.Timeline.create({
@@ -530,7 +533,6 @@ document.addEventListener('DOMContentLoaded', function () {
         
             audioElement.addEventListener('loadedmetadata', () => {
                 const durationInSeconds = audioElement.duration;
-                console.log(audioElement.sampleRate, "sample rate here")
 
                 audioLength = durationInSeconds;
                 slider.max = Math.ceil(durationInSeconds);
@@ -642,6 +644,7 @@ document.addEventListener('DOMContentLoaded', function () {
         })
         .then(response => response.json())
         .then(data => {
+            console.log(data);
 
             resultDiv.innerHTML = 'Result: ' + data.result;
             startDiv.innerHTML = "Start: " + data.start;
@@ -726,6 +729,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 reader.readAsArrayBuffer(fileInput.files[0]);*/
                 
             })
+            saveAnnotationToServer(audioLength,annotation_name,fileInput,regions,userName,'local');
         
         })
         .catch(error => {
