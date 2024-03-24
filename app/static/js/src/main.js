@@ -23,6 +23,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const next = document.getElementById('next'); next.disabled = true;
     const prec = document.getElementById('prec'); prec.disabled = true;
     const save = document.getElementById('save');
+    const csv = document.getElementById('csv');
     const note = document.getElementById('note');
     const loadLabels = document.getElementById('loadLabels');
     const validateButton = document.getElementById('validateButton');
@@ -528,7 +529,7 @@ document.addEventListener('DOMContentLoaded', function () {
             audioElement.src = URL.createObjectURL(selectedFile);
 
             // if another file, let access to the button
-            if (isLoggedIn) {loadLabels.disabled = false; save.disabled = false;}
+            if (isLoggedIn) {loadLabels.disabled = false; save.disabled = false; csv.disabled = false;}
             
         
             audioElement.addEventListener('loadedmetadata', () => {
@@ -858,7 +859,63 @@ document.addEventListener('DOMContentLoaded', function () {
 
     };
 
-    
+    csv.addEventListener('click', function () {
+        // Make a POST request to the server
+
+        let data = JSON.stringify(
+            Object.keys(regions).map(function (id) {
+                var region = regions[id];
+                if (region.proba !== undefined) {
+                    return {
+                        duration: audioLength,
+                        file: fileInput.files[0].name,
+                        start: region.start,
+                        end: region.end,
+                        //content: region.content,
+                        label: region.content.querySelector('h3').textContent,
+                        note: region.content.querySelector('p').textContent,
+                        id: region.id,
+                        proba: region.proba,
+                    };
+                } else {
+                    return {
+                        duration: audioLength,
+                        file: fileInput.files[0].name,
+                        start: region.start,
+                        end: region.end,
+                        //content: region.content,
+                        label: region.content.querySelector('h3').textContent,
+                        note: region.content.querySelector('p').textContent,
+                        id: region.id,
+                        proba: 0,
+                    }
+                }
+            })
+        );
+
+        fetch('/download_csv', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data) // Convert the data to JSON format
+        }).then(response => response.blob())
+                .then(blob => {
+                    // Create a temporary link
+                    const url = window.URL.createObjectURL(new Blob([blob]));
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.setAttribute('download', 'data.csv');
+
+                    // Simulate click on the link to trigger download
+                    document.body.appendChild(link);
+                    link.click();
+
+                    // Clean up
+                    document.body.removeChild(link);
+                    window.URL.revokeObjectURL(url);
+                });
+    });    
 
 
     function handleCB() { 

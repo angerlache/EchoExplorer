@@ -124,6 +124,7 @@
         <button type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown">Labels</button>
         <div class="dropdown-menu">
             <button class="dropdown-item" id="loadLabels" disabled>Load Local</button>
+            <button class="dropdown-item" id="csv" disabled>Download csv</button>
             <button class="dropdown-item" id="save" disabled>Save Local</button>
             <button class="dropdown-item" id="uploadButton">Save Upload</button>
             <!--button class="dropdown-item" id="discussButton" {% if not isExpert %}style="display: none;"{% endif %}>Discussed</button-->
@@ -163,7 +164,6 @@
                     {% for filename in files %}
                         <li>
                             <a href="#" onclick="changeAudio('{{ filename }}')">{{ filename }}</a>
-                            <div id="buttons-container-{{ filename }}"></div>
                         </li>
                         
                     {% endfor %}
@@ -173,7 +173,6 @@
                     {% for filename in userfiles %}
                         <li>
                             <a href="#" onclick="changeAudio('{{ filename }}')">{{ filename }}</a>
-                            <div id="buttons-container-{{ filename }}"></div>
                         </li>
                         
                     {% endfor %}

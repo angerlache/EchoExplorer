@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify,send_from_directory, url_for, redirect, flash, session, send_file
+from flask import Flask, render_template, request, jsonify,send_from_directory, url_for, redirect, flash, session, send_file, make_response
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.schema import PrimaryKeyConstraint
 from flask_login import UserMixin, login_user, LoginManager, login_required, logout_user, current_user
@@ -471,7 +471,47 @@ def split_audio():
 
     return 'Invalid file format'
 
+@app.route('/download_csv', methods=['POST','GET'])
+def download_csv():
+    data = request.json
+    print('Received data:', data)
+    print('-----------')
+    print(type(data))
+    print(type(list(eval(data))))
+    print(list(eval(data)))
+    
+    # Create a CSV string from the sample data
+    #csv_content = generate_csv_string(list(eval(data)))
+    to_csv = list(eval(data))
+    keys = to_csv[0].keys()
 
+    output = StringIO()
+
+    #with open('people.csv', 'w') as output_file:
+    dict_writer = csv.DictWriter(output, keys)
+    dict_writer.writeheader()
+    dict_writer.writerows(to_csv)
+    
+    csv_data = output.getvalue()
+
+    # Create response with CSV data
+    response = make_response(csv_data)
+    response.headers['Content-Disposition'] = 'attachment; filename=data.csv'
+    response.headers['Content-type'] = 'text/csv'
+
+    return response
+
+
+import csv
+from io import StringIO
+
+def generate_csv_string(data):
+    # Create a CSV string using the csv module
+    output = []
+    csv_writer = csv.DictWriter(output, fieldnames=data[0].keys())
+    csv_writer.writeheader()
+    csv_writer.writerows(data)
+    return ''.join(output)
 
 if __name__ == '__main__':
     if not os.path.exists(app.config['UPLOAD_FOLDER']):
