@@ -22,11 +22,14 @@ from flask_bcrypt import Bcrypt
 from sqlalchemy.orm import DeclarativeBase,Mapped, mapped_column
 from sqlalchemy import Integer, String
 import os
+import io
 from werkzeug.utils import secure_filename
 import shutil
 import json
 import uuid
 import requests
+
+os.environ['NO_PROXY'] = 'https://gotham.inl.ovh'
 
 app = Flask(__name__)
 sslify = SSLify(app)
@@ -84,8 +87,8 @@ def load_user(user_id):
     return User.query.get(int(user_id))
 
 # executes this once to set up the database
-#with app.app_context():
-#    db.create_all()
+with app.app_context():
+    db.create_all()
 
 bcrypt = Bcrypt(app)
 
@@ -128,13 +131,22 @@ def index():
     
     if current_user.is_authenticated:
         # retrieve filenames from s3
-        s3 = boto3.client('s3')
+        s3 = boto3.resource('s3', endpoint_url='https://ceph-gw1.info.ucl.ac.be')
+        files2 = []
+        userfiles = []
+        for obj in s3.Bucket('biodiversity-lauzelle').objects.all():
+            files2.append(obj.key)
+            print(obj.key)
 
-        # List objects in the bucket and filter by files with a .wav extension
-        #response = s3.list_objects_v2(Bucket='BUCKET_NAME', Prefix='')
-        #files = [obj['Key'] for obj in response.get('Contents', []) if obj['Key'].endswith('.wav')]
+        print('########')
+        for obj in s3.Bucket('biodiversity-lauzelle').objects.filter(Prefix=current_user.username+'/'):
+            userfiles.append(obj.key)
+            print(obj.key)
+
+        
         files = [filename for filename in os.listdir(app.config['UPLOAD_FOLDER']) if filename.endswith('.wav')]       
-        return render_template('index.html',username=current_user.username,isExpert=current_user.isExpert,files=files)
+        print(files)
+        return render_template('index.html',username=current_user.username,isExpert=current_user.isExpert,files=files2,userfiles=userfiles)
     
     return render_template('index.html')
         
@@ -207,10 +219,12 @@ def process():
         if not current_user.is_authenticated:
             return jsonify({'error': 'user not logged in'})
         
-        #bucket_name = "bucket_name"
-        #region = "region"
+        bucket_name = "biodiversity-lauzelle"
+        print('filename = ' + file.filename)
         query1 = File.query.filter_by(hashName=file.filename).first()
         query2 = File.query.filter_by(name=file.filename, username=current_user.username).first()
+        print(query1)
+        print(query2)
         if query1:
             print('HASHNAME FOUND')
             filename = query1.hashName
@@ -224,14 +238,24 @@ def process():
             db.session.add(new_file)
             db.session.commit()
 
+        s3 = boto3.resource('s3', endpoint_url='https://ceph-gw1.info.ucl.ac.be')
+            #print(s3.list_objects_v2(Bucket=bucket_name))
+        s3.Bucket(bucket_name).put_object(Key=current_user.username+'/'+filename,Body=file)
+
             #s3 = boto3.client('s3')
             #s3.upload_fileobj(file, bucket_name, filename)
+        
+        """response = s3.list_objects_v2(Bucket=bucket_name)
+        print(response)
+        s3.upload_fileobj(file, bucket_name, filename)
+        response = s3.list_objects_v2(Bucket=bucket_name)
+        print(response)"""
         
 
         file_content = file.read()
 
         # Save in the first directory
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        """filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         with open(filepath, 'wb') as f:
             f.write(file_content)
 
@@ -239,10 +263,16 @@ def process():
         with open(filepath, 'wb') as f:
             f.write(file_content)
 
+        with open("allAudios/"+filename, 'rb') as data:
+            s3 = boto3.resource('s3', endpoint_url='https://ceph-gw1.info.ucl.ac.be')
+            #print(s3.list_objects_v2(Bucket=bucket_name))
+            s3.Bucket(bucket_name).put_object(Key=current_user.username+'/'+filename,Body=data)
+          
+
         # Save in the second directory
         alternate_filepath = os.path.join(app.config['ALTERNATE_UPLOAD_FOLDER'], filename)
         with open(alternate_filepath, 'wb') as f:
-            f.write(file_content)
+            f.write(file_content)"""
 
 
         # This is ZONE DE TEST removed AI pour le fun
@@ -252,52 +282,47 @@ def process():
             result_path = "../AI/results/classification_result.csv"
             os.chdir('../AI')
             #os.system('{} {}'.format('python3', 'run_classifier.py'))
-            os.remove("data/samples/" + filename)
+            #os.remove("data/samples/" + filename)
             os.chdir('../app')
         elif session['AI'] == 'birds':
-            result_path = "../BirdNET/results/classification_result.csv"
-            alternate_filepath = os.path.join('../BirdNET/samples', filename)
-            with open(alternate_filepath, 'wb') as f:
-                f.write(file_content)
+            #result_path = "../BirdNET/results/classification_result.csv"
+            #alternate_filepath = os.path.join('../BirdNET/samples', filename)
+            #with open(alternate_filepath, 'wb') as f:
+             #   f.write(file_content)
             os.chdir('../BirdNET')
-            os.system('{} {} {} {} {} {} {} {}'.format("python3", "analyze.py", "--i", "samples/", '--o', 'results/', '--rtype', 'csv'))
-            os.remove("samples/" + filename)
-            os.remove("results/" + filename[:-3] + "BirdNET.results.csv")
+            #os.system('{} {} {} {} {} {} {} {}'.format("python3", "analyze.py", "--i", "samples/", '--o', 'results/', '--rtype', 'csv'))
+            #os.remove("samples/" + filename)
+            #os.remove("results/" + filename[:-3] + "BirdNET.results.csv")
             os.chdir('../app')
 
-        
 
-        print(filepath)
-        # Send a request to the second machine for processing (local testing)
-        second_machine_url = 'http://localhost:5001/process_on_second_machine'
-        #files = {'audio': open(filepath, 'rb')}  # Include the file in the request
-        files = {'audio': ('testname.wav', open(filepath, 'rb'))}
-
-        data = {'message': filename}
-        #json_data = json.dumps(data)
+        data = {'message': current_user.username+'/'+filename, 'AI': session['AI']}
+        json_data = json.dumps(data)
         headers = {'Content-Type': 'multipart/form-data'}
         #response = requests.post('http://tfe-anthony-noam.info.ucl.ac.be/process_on_second_machine', files=files)
-        #response = requests.post('https://gotham.inl.ovh/process_on_second_machine', files=files)
-        #print("request posted !")
+        print('ici')
+        response = requests.post('https://gotham.inl.ovh/process_on_second_machine', data=json_data)
+        print("request posted !")
+        print(response)
 
         # Process the response from the second machine (if needed)
         #result_data = response.json()
         #print(result_data)
         #print(response)
 
-        #csv_response = requests.get('https://gotham.inl.ovh/send_csv')
-        #print('request recieved !')
+        #csv_response = requests.get('https://gotham.inl.ovh/send_csv',timeout=180)
+        print('request recieved !')
 
         # Save the received CSV file on the first machine
-        #with open('received_classification_result.csv', 'wb') as f:
-        #    f.write(csv_response.content)
+        with open('received_classification_result_' + current_user.username + '.csv', 'wb') as f:
+            f.write(response.content)
 
 
         # Process the file using your AI model function
         results = [[],[],[],[]]
         
-        #with open("received_classification_result.csv") as resultfile:
-        with open(result_path) as resultfile:
+        with open('received_classification_result_' + current_user.username + '.csv') as resultfile:
+        #with open(result_path) as resultfile:
             next(resultfile)
             for line in resultfile:
                 line = line.strip().split(',')
@@ -324,6 +349,7 @@ def process():
 #@app.route('/annotation/<path:path>', methods=['GET', 'POST'])
 @app.route('/users/<username>/annotation/<path:path>', methods=['GET', 'POST'])
 def annotation(username,path):
+    print('annotation path = ' + path)
     if request.method == 'GET':
         hash_name = get_hashname(path+'.wav')
         
@@ -358,9 +384,9 @@ def validate(path):
         json.dump(data, f, indent=2)
     return 'ok'
 
-@app.route('/uploads/<path:path>', methods=['POST','GET'])
+@app.route('/uploads/<path>', methods=['POST','GET'])
 def pending_audio(path):
-
+    print('path = '+path)
     if request.method == 'GET':
         hash_name = get_hashname(path+'.wav')
         
@@ -399,18 +425,19 @@ def delete_file():
     
 
 
-@app.route('/reload/<filename>')
-def uploaded_file(filename):
+@app.route('/reload/<user>/<filename>',methods=['POST','GET'])
+def uploaded_file(filename,user):
     #return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
-    
     # TODO : retrieve from s3 here
-    """s3 = boto3.client('s3')
-    with open(filename, "rb") as f:
-        s3.download_fileobj('BUCKET_NAME', filename, f)
-        f.seek(0)
-        return send_file(f, as_attachment=True)"""
+    s3 = boto3.client('s3', endpoint_url='https://ceph-gw1.info.ucl.ac.be')
+     
+    f = io.BytesIO()
+    print('file to reload = ' + filename)
+    s3.download_fileobj('biodiversity-lauzelle', user + '/' + filename, f)
+    f.seek(0)
+    return send_file(f, as_attachment=True,mimetype='audio/wav',download_name='file_send.wav')
 
-    return send_file(app.config['UPLOAD_FOLDER'] + '/' + filename, as_attachment=True)
+    #return send_file(app.config['UPLOAD_FOLDER'] + '/' + filename, as_attachment=True)
 
 def get_hashname(filename):
     query1 = File.query.filter_by(hashName=filename).first()
@@ -479,5 +506,7 @@ if __name__ == '__main__':
 
     if not os.path.exists(app.config['ALTERNATE_UPLOAD_FOLDER']):
         os.makedirs(app.config['ALTERNATE_UPLOAD_FOLDER'])
-    app.run(debug=True)
+    #app.run(debug=True,threaded=False, processes=3)
+    app.run(debug=True,threaded=True)
+
     #app.run(debug=True,host="0.0.0.0",port=5000,ssl_context='adhoc')

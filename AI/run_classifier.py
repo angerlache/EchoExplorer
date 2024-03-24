@@ -324,3 +324,4 @@ if __name__ == "__main__":
         wo.save_to_txt(classification_result_file, results)
     else:
         print('no detections to save')
+        wo.save_to_txt(classification_result_file, results)

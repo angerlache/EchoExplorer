@@ -528,7 +528,7 @@ document.addEventListener('DOMContentLoaded', function () {
             audioElement.src = URL.createObjectURL(selectedFile);
 
             // if another file, let access to the button
-            if (isLoggedIn) {loadLabels.disabled = false; save.disabled = false;}
+            if (isLoggedIn) {console.log('logged in'); loadLabels.disabled = false; save.disabled = false;}
             
         
             audioElement.addEventListener('loadedmetadata', () => {
@@ -730,7 +730,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 
             })
             saveAnnotationToServer(audioLength,annotation_name,fileInput,regions,userName,'local');
-        
+            saveAnnotationToServer(audioLength,annotation_name,fileInput,unremovableRegions,userName,'other'); 
         })
         .catch(error => {
             console.error('Error:', error);
@@ -815,7 +815,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 
                 //const wavBlob = new Blob([arrayBuffer], { type: 'audio/x-wav' });
                 //const f = new File([wavBlob], filename,{ type: 'audio/x-wav' })
-                const f = new File([arrayBuffer], filename,{ type: 'audio/x-wav' })
+                const f = new File([arrayBuffer], filename.split('/')[1],{ type: 'audio/x-wav' })
                 console.log(f);
                 const fileList = new DataTransfer();
                 fileList.items.add(f);
@@ -845,7 +845,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 }, 200); // Adjust the delay (in milliseconds) as needed
 
                 try {
-                    const response = await fetch('uploads/' + annotation_name);
+                    const response = await fetch('/uploads/' + annotation_name);
                     const data = await response.json();
                     loadRegions(document,data,regions,true);
                     loadRegions(document,data,unremovableRegions,false);

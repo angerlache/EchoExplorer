@@ -624,7 +624,7 @@ if __name__ == "__main__":
         cfg.OUTPUT_FILE = args.output_file
     else:
         #cfg.OUTPUT_FILE = None
-        cfg.OUTPUT_FILE = "classification_result.csv"
+        cfg.OUTPUT_FILE = "classification_result_" + sys.argv[1] + ".csv"
 
     # Set number of threads
     if os.path.isdir(cfg.INPUT_PATH):
