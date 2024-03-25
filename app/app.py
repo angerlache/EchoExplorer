@@ -332,9 +332,9 @@ def process():
                     results[2].append(line[3])
                     results[3].append(line[4])
                 
-        if os.path.exists(result_path):
+        #if os.path.exists(result_path):
             #os.remove(result_path)
-            pass
+            #pass
 
         print(results)
         
