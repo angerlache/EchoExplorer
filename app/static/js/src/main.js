@@ -222,7 +222,7 @@ document.addEventListener('DOMContentLoaded', function () {
             color: 'rgba(255, 0, 0, 0.1)',
         })
         wr.on("region-created", (region) => {
-            
+            console.log('REGION CREE !');
             
             //console.log('content = ', region.content);
 
@@ -260,7 +260,7 @@ document.addEventListener('DOMContentLoaded', function () {
             if (clickedrowId === null) {
                 region.setOptions({ color: randomColor(), contentEditable:true});
             }
-
+            
             else{
                 if (region.id === clickedrowId) {
                     console.log(region.id);
@@ -721,7 +721,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     //end: start+1, //timestamp-currentPosition,
                     end: data.end[index], //timestamp-currentPosition,
                     content: createRegionContent(document,`${data.result[index]}` , "Confidence : " + `${data.probability[index]}`,true),
-                    color: randomColor(), 
+                    //color: randomColor(), 
                     drag: false,
                     resize: false,
                     proba: data.probability[index],
@@ -732,7 +732,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     //end: start+1, //timestamp-currentPosition,
                     end: data.end[index], //timestamp-currentPosition,
                     content: createRegionContent(document,`${data.result[index]}` , "Confidence : " + `${data.probability[index]}`,true),
-                    color: randomColor(), 
+                    //color: randomColor(), 
                     drag: false,
                     resize: false,
                     proba: data.probability[index],
