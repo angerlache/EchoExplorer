@@ -12,7 +12,7 @@ import numpy as np
 import audio
 import config as cfg
 import utils
-from typing import List
+from typing import List,Dict
 
 # Set numpy random seed
 np.random.seed(cfg.RANDOM_SEED)
@@ -86,7 +86,7 @@ def parseFiles(flist: List[dict], max_segments=100):
     Returns:
         TODO @kahst
     """
-    species_segments: dict[str, list] = {}
+    species_segments: Dict[str, list] = {}
 
     for f in flist:
         # Paths
@@ -109,7 +109,7 @@ def parseFiles(flist: List[dict], max_segments=100):
         species_segments[s] = species_segments[s][:max_segments]
 
     # Make dict of segments per audio file
-    segments: dict[str, list] = {}
+    segments: Dict[str, list] = {}
     seg_cnt = 0
 
     for s in species_segments:

@@ -6,6 +6,7 @@ import shutil
 import json
 import boto3
 import time
+import subprocess
 
 app = Flask(__name__)
 CORS(app, resources={r"/process_on_second_machine": {"origins": "http://tfe-anthony-noam.info.ucl.ac.be"}})
@@ -54,8 +55,9 @@ def process_on_second_machine():
         s3.Bucket('biodiversity-lauzelle').download_file(message,'../AI/data/samples/'+message) # has .wav
         os.chdir('../AI')
         print(os.getcwd())
-        os.system('{} {} {}'.format('python3', 'run_classifier.py', username))
-        os.system('rm -rf data/samples/'+username)
+        #os.system('{} {} {}'.format('python3', 'run_classifier.py', username))
+        subprocess.run('{} {} {}'.format('python3', 'run_classifier.py', username) + " && rm -rf data/samples/" + username,shell=True,check=True)
+        #os.system('rm -rf data/samples/'+username)
         print("---------------------------------------------------")
         os.chdir('../app')
         csv_filepath = '../AI/results/classification_result_' + username + '.csv'
@@ -65,9 +67,11 @@ def process_on_second_machine():
             os.mkdir('../BirdNET/samples/' + username)
         s3.Bucket('biodiversity-lauzelle').download_file(message,'../BirdNET/samples/'+message) # has .wav
         os.chdir('../BirdNET')
-        os.system('{} {} {} {} {} {} {} {} {}'.format("python3", "analyze.py", username, "--i", "samples/"+username+'/', '--o', 'results/', '--rtype', 'csv'))
+        subprocess.run("source /home/batmen/anthony/myenv/bin/activate && {} {} {} {} {} {} {} {} {} {}".format("python3", "analyze.py", "--user", username, "--i", "samples/"+username+'/', '--o', 'results/', '--rtype', 'csv'), shell=True, check=True)
+        #os.system('{} {} {} {} {} {} {} {} {} {}'.format("python3", "analyze.py", "--user", username, "--i", "samples/"+username+'/', '--o', 'results/', '--rtype', 'csv'))
+        #os.system('deactivate')
         os.system('rm -rf samples/'+username)
-        #os.remove("results/" + filename[:-3] + "BirdNET.results.csv")
+        os.remove("results/" + filename[:-3] + "BirdNET.results.csv")
         os.chdir('../app')
         csv_filepath = '../BirdNET/results/classification_result_' + username + '.csv'
 
