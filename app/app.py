@@ -264,6 +264,16 @@ def process():
             os.remove("samples/" + filename)
             os.remove("results/" + filename[:-3] + "BirdNET.results.csv")
             os.chdir('../app')
+        elif session['AI'] == 'battybirds':
+            result_path = "../BattyBirdNET/results/classification_result.csv"
+            alternate_filepath = os.path.join('../BattyBirdNET/samples', filename)
+            with open(alternate_filepath, 'wb') as f:
+                f.write(file_content)
+            os.chdir('../BattyBirdNET')
+            os.system('{} {} {} {} {} {} {} {}'.format("python3", "analyze.py", "--i", "samples/", '--o', 'results/', '--rtype', 'csv'))
+            os.remove("samples/" + filename)
+            os.remove("results/" + filename[:-3] + "BirdNET.results.csv")
+            os.chdir('../app')
 
         
 
