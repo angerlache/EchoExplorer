@@ -16,7 +16,7 @@ import config as cfg
 import model
 import species
 import utils
-
+from typing import Dict
 
 def loadCodes():
     """Loads the eBird codes.
@@ -30,7 +30,7 @@ def loadCodes():
     return codes
 
 
-def saveResultFile(r: dict[str, list], path: str, afile_path: str):
+def saveResultFile(r: Dict[str, list], path: str, afile_path: str):
     """Saves the results to the hard drive.
 
     Args:
@@ -277,7 +277,7 @@ def combineResults(folder: str, output_file: str):
                     utils.writeErrorLog(ex)       
 
 
-def getSortedTimestamps(results: dict[str, list]):
+def getSortedTimestamps(results: Dict[str, list]):
     """Sorts the results based on the segments.
 
     Args:
@@ -301,11 +301,12 @@ def getRawAudioFromFile(fpath: str, offset, duration):
         The signal split into a list of chunks.
     """
     # Open file
+    print('merde1111')
     sig, rate = audio.openAudioFile(fpath, cfg.SAMPLE_RATE, offset, duration, cfg.BANDPASS_FMIN, cfg.BANDPASS_FMAX)
-
+    print('merde22222')
     # Split into raw audio chunks
     chunks = audio.splitSignal(sig, rate, cfg.SIG_LENGTH, cfg.SIG_OVERLAP, cfg.SIG_MINLEN)
-
+    print('merde3333')
     return chunks
 
 
@@ -321,11 +322,9 @@ def predict(samples):
     # Prepare sample and pass through model
     data = np.array(samples, dtype="float32")
     prediction = model.predict(data)
-
     # Logits or sigmoid activations?
     if cfg.APPLY_SIGMOID:
         prediction = model.flat_sigmoid(np.array(prediction), sensitivity=-cfg.SIGMOID_SENSITIVITY)
-
     return prediction
 
 
@@ -361,12 +360,10 @@ def analyzeFile(item):
             chunks = getRawAudioFromFile(fpath, offset, duration)
             samples = []
             timestamps = []
-
             for chunk_index, chunk in enumerate(chunks):
                 # Add to batch
                 samples.append(chunk)
                 timestamps.append([start, end])
-
                 # Advance start and end
                 start += cfg.SIG_LENGTH - cfg.SIG_OVERLAP
                 end = start + cfg.SIG_LENGTH
@@ -374,7 +371,6 @@ def analyzeFile(item):
                 # Check if batch is full or last chunk
                 if len(samples) < cfg.BATCH_SIZE and chunk_index < len(chunks) - 1:
                     continue
-
                 # Predict
                 p = predict(samples)
 
@@ -404,6 +400,7 @@ def analyzeFile(item):
         # Write error log
         print(f"Error: Cannot analyze audio file {fpath}.\n", flush=True)
         utils.writeErrorLog(ex)
+        print(ex)
 
         return False
 
@@ -449,6 +446,7 @@ if __name__ == "__main__":
 
     # Parse arguments
     parser = argparse.ArgumentParser(description="Analyze audio files with BirdNET")
+    parser.add_argument("--user")
     parser.add_argument(
         "--i", default="example/", help="Path to input file or folder. If this is a file, --o needs to be a file too."
     )
@@ -624,7 +622,7 @@ if __name__ == "__main__":
         cfg.OUTPUT_FILE = args.output_file
     else:
         #cfg.OUTPUT_FILE = None
-        cfg.OUTPUT_FILE = "classification_result_" + sys.argv[1] + ".csv"
+        cfg.OUTPUT_FILE = "classification_result_" + args.user + ".csv"
 
     # Set number of threads
     if os.path.isdir(cfg.INPUT_PATH):
@@ -642,9 +640,10 @@ if __name__ == "__main__":
     # support fork() and thus each process has to
     # have its own config. USE LINUX!
     flist = [(f, cfg.getConfig()) for f in cfg.FILE_LIST]
-
+    #print(flist)
+    print(cfg.FILE_LIST)
     # Analyze files
-    if cfg.CPU_THREADS < 2:
+    if cfg.CPU_THREADS < 2: # should not be a "not" !!!!
         for entry in flist:
             analyzeFile(entry)
     else:
@@ -652,8 +651,8 @@ if __name__ == "__main__":
             # Map analyzeFile function to each entry in flist
             results = p.map_async(analyzeFile, flist)
             # Wait for all tasks to complete
-            results.wait()            
-            
+            results.wait()
+
     # Combine results?
     if not cfg.OUTPUT_FILE is None:
         print("Combining results into {}...\n".format(cfg.OUTPUT_FILE), end='', flush=True)
