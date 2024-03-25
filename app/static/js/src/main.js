@@ -7,6 +7,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const fileInput = document.getElementById('audioFile');
     const processButton = document.getElementById('processButton');
     const processButton2 = document.getElementById('processButton2');
+    const processButton3 = document.getElementById('processButton3');
     const startAI = document.getElementById('startAI');
     const visualizeButton = document.getElementById('visualizeButton');
     const playButton = document.getElementById('playButton');
@@ -764,6 +765,22 @@ document.addEventListener('DOMContentLoaded', function () {
         const formData = new FormData();
         formData.append('audio', file);
         formData.append('chosenAI', 'birds');
+
+        processRequest(formData);
+    });
+
+
+    processButton3.addEventListener('click', function () {
+        const file = fileInput.files[0];
+
+        if (!file) {
+            alert('Please select an audio file first.');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('audio', file);
+        formData.append('chosenAI', 'battybirds');
 
         processRequest(formData);
     });
