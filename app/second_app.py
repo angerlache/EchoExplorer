@@ -55,9 +55,7 @@ def process_on_second_machine():
         s3.Bucket('biodiversity-lauzelle').download_file(message,'../AI/data/samples/'+message) # has .wav
         os.chdir('../AI')
         print(os.getcwd())
-        #os.system('{} {} {}'.format('python3', 'run_classifier.py', username))
         subprocess.run('{} {} {}'.format('python3', 'run_classifier.py', username) + " && rm -rf data/samples/" + username,shell=True,check=True)
-        #os.system('rm -rf data/samples/'+username)
         print("---------------------------------------------------")
         os.chdir('../app')
         csv_filepath = '../AI/results/classification_result_' + username + '.csv'
@@ -65,28 +63,33 @@ def process_on_second_machine():
     elif AI == 'birds':
         if not os.path.exists('../BirdNET/samples/' + username):
             os.mkdir('../BirdNET/samples/' + username)
+        if not os.path.exists('../BirdNET/results/' + username):
+            os.mkdir('../BirdNET/results/' + username)
+
         s3.Bucket('biodiversity-lauzelle').download_file(message,'../BirdNET/samples/'+message) # has .wav
         os.chdir('../BirdNET')
-        subprocess.run("source /home/batmen/anthony/myenv/bin/activate && {} {} {} {} {} {} {} {} {} {}".format("python3", "analyze.py", "--user", username, "--i", "samples/"+username+'/', '--o', 'results/', '--rtype', 'csv'), shell=True, check=True)
+        subprocess.run("source /home/batmen/anthony/myenv/bin/activate && {} {} {} {} {} {} {} {} {} {} && rm -rf samples/{}/ && rm results/{}".format("python3", "analyze.py", "--user", username, "--i", "samples/"+username+'/', '--o', 'results/'+username+'/', '--rtype', 'csv',username,username + '/' + filename[:-3] + "BirdNET.results.csv"), shell=True, check=True)
         #os.system('{} {} {} {} {} {} {} {} {} {}'.format("python3", "analyze.py", "--user", username, "--i", "samples/"+username+'/', '--o', 'results/', '--rtype', 'csv'))
-        #os.system('deactivate')
-        os.system('rm -rf samples/'+username)
-        os.remove("results/" + filename[:-3] + "BirdNET.results.csv")
+        #os.system('rm -rf samples/'+username)
+        #os.remove("results/" + filename[:-3] + "BirdNET.results.csv")
         os.chdir('../app')
-        csv_filepath = '../BirdNET/results/classification_result_' + username + '.csv'
+        csv_filepath = '../BirdNET/results/'+username+'/classification_result_' + username + '.csv'
 
     elif AI == 'battybirds':
         if not os.path.exists('../BattyBirdNET/samples/' + username):
             os.mkdir('../BattyBirdNET/samples/' + username)
+        if not os.path.exists('../BattyBirdNET/results/' + username):
+            os.mkdir('../BattyBirdNET/results/' + username)
+
         s3.Bucket('biodiversity-lauzelle').download_file(message,'../BattyBirdNET/samples/'+message) # has .wav
         os.chdir('../BattyBirdNET')
-        subprocess.run("source /home/batmen/anthony/myenv/bin/activate && {} {} {} {} {} {} {} {} {} {}".format("python3", "analyze.py", "--user", username, "--i", "samples/"+username+'/', '--o', 'results/', '--rtype', 'csv'), shell=True, check=True)
+        subprocess.run("source /home/batmen/anthony/myenv/bin/activate && {} {} {} {} {} {} {} {} {} {} && rm -rf samples/{}/ && rm results/{}".format("python3", "analyze.py", "--user", username, "--i", "samples/"+username+'/', '--o', 'results/'+username+'/', '--rtype', 'csv',username, username+'/'+filename[:-3]+"BirdNET.results.csv"), shell=True, check=True)
         #os.system('{} {} {} {} {} {} {} {} {} {}'.format("python3", "analyze.py", "--user", username, "--i", "samples/"+username+'/', '--o', 'results/', '--rtype', 'csv'))
         #os.system('deactivate')
-        os.system('rm -rf samples/'+username)
-        os.remove("results/" + filename[:-3] + "BirdNET.results.csv")
+        #os.system('rm -rf samples/'+username)
+        #os.remove("results/" + filename[:-3] + "BirdNET.results.csv")
         os.chdir('../app')
-        csv_filepath = '../BattyBirdNET/results/classification_result_' + username + '.csv'
+        csv_filepath = '../BattyBirdNET/results/'+username+'/classification_result_' + username + '.csv'
 
 
 
