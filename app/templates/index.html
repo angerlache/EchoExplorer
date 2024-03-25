@@ -45,7 +45,9 @@
 
     <!-- Include jquery and css for data table -->
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
-    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/2.0.3/css/dataTables.dataTables.css" />
+  
+    <script src="https://cdn.datatables.net/2.0.3/js/dataTables.js"></script>
 
 </head>
 <body>
@@ -196,10 +198,7 @@
 
 
     
-    <div id="result"></div>
-    <div id="start"></div>
-    <div id="end"></div>
-    <div id="probability"></div>
+
     <div id="spectrogram"></div>
 
     <!--<div id="spectrovis" class="spectrogram"></div>-->
@@ -249,7 +248,9 @@
                 <li> <label> <input type="checkbox" value="Region" checked> Hand-made Region </label> </li> 
             </ul> 
         </div> 
-
+    <label id="proba-container">
+        Classification probability: <input type="range" id="proba-slider" min="0" max="100" value="80"  oninput="this.nextElementSibling.value = this.value + ' %'" /> <output id="probaout">80 %</output>
+    </label> 
  
 
     <table id="myTable", class="display" style="width:100%">
@@ -266,8 +267,7 @@
     </table>
     
     
-    <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.js"></script>
-    
+       
 
     <script>
         var userName = "{{ username }}";

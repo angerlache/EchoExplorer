@@ -74,8 +74,6 @@ export function getCurrRegions(chunkLength,currentPosition,wr,regions){
 export function renderRegions(chunkLength,currentPosition,wr,regions,SelectedSpecies){
     getCurrRegions(chunkLength,currentPosition,wr,regions).forEach(reg => {
         //console.log("region added",reg)
-        console.log("a",reg)
-        console.log(SelectedSpecies);
         if (SelectedSpecies.includes(reg.content.querySelector('h3').textContent) || SelectedSpecies.includes('other')) {
             wr.addRegion({
                 start: reg.start - currentPosition,
