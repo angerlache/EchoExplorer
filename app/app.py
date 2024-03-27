@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify,send_from_directory, url_for, redirect, flash, session, send_file
+from flask import Flask, render_template, request, jsonify,send_from_directory, url_for, redirect, flash, session, send_file, make_response
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.schema import PrimaryKeyConstraint
 from flask_login import UserMixin, login_user, LoginManager, login_required, logout_user, current_user
@@ -239,17 +239,7 @@ def process():
             db.session.commit()
 
         s3 = boto3.resource('s3', endpoint_url='https://ceph-gw1.info.ucl.ac.be')
-            #print(s3.list_objects_v2(Bucket=bucket_name))
         s3.Bucket(bucket_name).put_object(Key=current_user.username+'/'+filename,Body=file)
-
-            #s3 = boto3.client('s3')
-            #s3.upload_fileobj(file, bucket_name, filename)
-        
-        """response = s3.list_objects_v2(Bucket=bucket_name)
-        print(response)
-        s3.upload_fileobj(file, bucket_name, filename)
-        response = s3.list_objects_v2(Bucket=bucket_name)
-        print(response)"""
         
 
         file_content = file.read()
@@ -294,35 +284,37 @@ def process():
             #os.remove("samples/" + filename)
             #os.remove("results/" + filename[:-3] + "BirdNET.results.csv")
             os.chdir('../app')
+        elif session['AI'] == 'battybirds':
+            #result_path = "../BattyBirdNET/results/classification_result.csv"
+            #alternate_filepath = os.path.join('../BattyBirdNET/samples', filename)
+            #with open(alternate_filepath, 'wb') as f:
+            #    f.write(file_content)
+            os.chdir('../BattyBirdNET')
+            #os.system('{} {} {} {} {} {} {} {}'.format("python3", "analyze.py", "--i", "samples/", '--o', 'results/', '--rtype', 'csv'))
+            #os.remove("samples/" + filename)
+            #os.remove("results/" + filename[:-3] + "BirdNET.results.csv")
+            os.chdir('../app')
 
 
         data = {'message': current_user.username+'/'+filename, 'AI': session['AI']}
         json_data = json.dumps(data)
-        headers = {'Content-Type': 'multipart/form-data'}
-        #response = requests.post('http://tfe-anthony-noam.info.ucl.ac.be/process_on_second_machine', files=files)
-        print('ici')
-        response = requests.post('https://gotham.inl.ovh/process_on_second_machine', data=json_data)
         print("request posted !")
+
+        ###""" comment this block for testing locally because s3 not available with localhost
+        ###### and use the csv fake_labels.csv with fake labels
+        response = requests.post('https://gotham.inl.ovh/process_on_second_machine', data=json_data)
         print(response)
-
-        # Process the response from the second machine (if needed)
-        #result_data = response.json()
-        #print(result_data)
-        #print(response)
-
-        #csv_response = requests.get('https://gotham.inl.ovh/send_csv',timeout=180)
         print('request recieved !')
-
         # Save the received CSV file on the first machine
         with open('received_classification_result_' + current_user.username + '.csv', 'wb') as f:
             f.write(response.content)
-
+        ###"""
 
         # Process the file using your AI model function
         results = [[],[],[],[]]
         
         with open('received_classification_result_' + current_user.username + '.csv') as resultfile:
-        #with open(result_path) as resultfile:
+        #with open('fake_labels.csv') as resultfile:
             next(resultfile)
             for line in resultfile:
                 line = line.strip().split(',')
@@ -332,15 +324,9 @@ def process():
                     results[2].append(line[3])
                     results[3].append(line[4])
                 
-        #if os.path.exists(result_path):
-            #os.remove(result_path)
-            #pass
 
         print(results)
         
-        #empty by deleting then 
-        #shutil.rmtree(ALTERNATE_UPLOAD_FOLDER) # delete the folder where AI is applied
-        #os.makedirs(app.config['ALTERNATE_UPLOAD_FOLDER'])
         return jsonify({'result': results[2], 'start': results[0], 'end': results[1], 'probability':results[3]})
 
     return jsonify({'error': 'Invalid file format'})
@@ -498,7 +484,47 @@ def split_audio():
 
     return 'Invalid file format'
 
+@app.route('/download_csv', methods=['POST','GET'])
+def download_csv():
+    data = request.json
+    print('Received data:', data)
+    print('-----------')
+    print(type(data))
+    print(type(list(eval(data))))
+    print(list(eval(data)))
+    
+    # Create a CSV string from the sample data
+    #csv_content = generate_csv_string(list(eval(data)))
+    to_csv = list(eval(data))
+    keys = to_csv[0].keys()
 
+    output = StringIO()
+
+    #with open('people.csv', 'w') as output_file:
+    dict_writer = csv.DictWriter(output, keys)
+    dict_writer.writeheader()
+    dict_writer.writerows(to_csv)
+    
+    csv_data = output.getvalue()
+
+    # Create response with CSV data
+    response = make_response(csv_data)
+    response.headers['Content-Disposition'] = 'attachment; filename=data.csv'
+    response.headers['Content-type'] = 'text/csv'
+
+    return response
+
+
+import csv
+from io import StringIO
+
+def generate_csv_string(data):
+    # Create a CSV string using the csv module
+    output = []
+    csv_writer = csv.DictWriter(output, fieldnames=data[0].keys())
+    csv_writer.writeheader()
+    csv_writer.writerows(data)
+    return ''.join(output)
 
 if __name__ == '__main__':
     if not os.path.exists(app.config['UPLOAD_FOLDER']):

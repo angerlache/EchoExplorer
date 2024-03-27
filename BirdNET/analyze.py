@@ -447,6 +447,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Analyze audio files with BirdNET")
     parser.add_argument("--user")
     parser.add_argument(
+        "--user"
+    )
+    parser.add_argument(
         "--i", default="example/", help="Path to input file or folder. If this is a file, --o needs to be a file too."
     )
     parser.add_argument(
@@ -622,6 +625,7 @@ if __name__ == "__main__":
     else:
         #cfg.OUTPUT_FILE = None
         cfg.OUTPUT_FILE = "classification_result_" + args.user + ".csv"
+        #cfg.OUTPUT_FILE = "classification_result.csv"
 
     # Set number of threads
     if os.path.isdir(cfg.INPUT_PATH):

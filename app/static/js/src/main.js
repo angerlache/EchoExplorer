@@ -12,18 +12,17 @@ document.addEventListener('DOMContentLoaded', function () {
     const visualizeButton = document.getElementById('visualizeButton');
     const playButton = document.getElementById('playButton');
     const pauseButton = document.getElementById('pauseButton');
-    const resultDiv = document.getElementById('result');
-    const startDiv = document.getElementById('start');
-    const endDiv = document.getElementById('end');
-    const probaDiv = document.getElementById('probability');
+   
     
     //const slider = document.querySelector('input[type="range"]');
     const slider = document.getElementById('slider'); slider.disabled = true;
     const sliderContainer = document.getElementById('slider-container'); sliderContainer.disabled = true;
     const sliderFreq = document.getElementById('maxFreq'); 
+    const sliderProba = document.getElementById('proba-slider');
     const next = document.getElementById('next'); next.disabled = true;
     const prec = document.getElementById('prec'); prec.disabled = true;
     const save = document.getElementById('save');
+    const csv = document.getElementById('csv');
     const note = document.getElementById('note');
     const loadLabels = document.getElementById('loadLabels');
     const validateButton = document.getElementById('validateButton');
@@ -32,6 +31,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const chunkLength = 60;
     let currentPosition = 0;
     let audioLength;
+    let minProba = 80;
     let sR = 44100; 
     
     const checkBoxes = document.querySelectorAll('.dropdown-menu input[type="checkbox"]'); 
@@ -65,7 +65,28 @@ document.addEventListener('DOMContentLoaded', function () {
     // or when audio chosen from allAudios
     const Dtable = new DataTable('#myTable',{order: [[1, 'asc']]});   
     Dtable.column(3).visible(false);
+    Dtable.search.fixed('range', function (searchStr, data, index) {
+        var proba = parseFloat(data[2]) || 1; // use data for the age column
+        if ((minProba <= (proba*100))) {
+            return true;
+        }
+        return false;
+    });
 
+    Dtable.on('click', 'tbody tr', function () {
+        let data = Dtable.row(this).data();
+        var time = data[1];
+        currentPosition = Math.floor(Math.max(0,time-30));
+
+        const reader = new FileReader();
+        reader.onload = function (event) {
+            loadNextChunk(event,data[3])
+        }
+        var file = fileInput.files[0];
+        reader.readAsArrayBuffer(file);
+        // Example: Log values to console
+        console.log('Clicked Row:', time);
+    });
 
     // Give regions a random color when they are created
     const random = (min, max) => Math.random() * (max - min) + min
@@ -104,7 +125,6 @@ document.addEventListener('DOMContentLoaded', function () {
                     region.proba,
                     region.id
                 ]).draw().node();
-                addRowListener(row,fileInput.files[0]);
             } else if (addRow) {
                 var row = Dtable.row.add([
                     region.label,
@@ -112,33 +132,13 @@ document.addEventListener('DOMContentLoaded', function () {
                     "-",
                     region.id
                 ]).draw().node();
-                addRowListener(row,fileInput.files[0]);
             }
             
         });
     
     
     }
-    function addRowListener(row, file) {
-        // Add click event to each row
-        row.addEventListener('click', function (event) {         
-            // Handle the click event here
-            var clickedRow = event.currentTarget;
-            var cells = clickedRow.getElementsByTagName('td');
-            
-            var time = cells[1].innerHTML;
 
-            currentPosition = Math.floor(Math.max(0,time-30));
-
-            const reader = new FileReader();
-            reader.onload = function (event) {
-                loadNextChunk(event)
-            }
-            reader.readAsArrayBuffer(file);
-            // Example: Log values to console
-            console.log('Clicked Row:', time);
-        });
-    }
 
     // Get references to the select element and the custom option
     const customOption = document.getElementById('customOption');
@@ -214,17 +214,16 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
 
-    function setupRegionEventListener(wr, ws){
-
+    function setupRegionEventListener(wr, ws, clickedrowId){
+        clickedrowId = clickedrowId || null;
         let activeRegion = null
 
         wr.enableDragSelection({
             color: 'rgba(255, 0, 0, 0.1)',
         })
         wr.on("region-created", (region) => {
+            console.log('REGION CREE !');
             
-            
-            region.setOptions({ color: randomColor(), contentEditable:true});
             //console.log('content = ', region.content);
 
             /*let r = Object.assign({}, region);
@@ -253,11 +252,30 @@ document.addEventListener('DOMContentLoaded', function () {
                         "-",
                         r.id
                     ]).draw().node();
-                    addRowListener(row,fileInput.files[0]);
                 }
                 
                 
             }
+            
+            if (clickedrowId === null) {
+                region.setOptions({ color: randomColor(), contentEditable:true});
+            }
+            
+            else{
+                if (region.id === clickedrowId) {
+                    console.log(region.id);
+                    region.setOptions({ color: "red", contentEditable:true});
+                    region.setContent(createRegionContent(document,region.content.querySelector('h3').textContent,
+                                        region.content.querySelector('p').textContent,true))
+                }
+                else{
+                    console.log(region.id);
+                    region.setOptions({ color: "gray", contentEditable:true})
+                    region.setContent(createRegionContent(document,region.content.querySelector('h3').textContent,
+                                        region.content.querySelector('p').textContent,false));
+                }
+            }
+            console.log(region);
 
             // set last arg of setContent to true and the content will show up only when mouse over region
             region.on('over', (e) => {
@@ -271,7 +289,7 @@ document.addEventListener('DOMContentLoaded', function () {
             region.on('leave', (e) => {
                 if (region.content !== undefined) 
                 region.setContent(createRegionContent(document,region.content.querySelector('h3').textContent,
-                                    region.content.querySelector('p').textContent,true))
+                                    region.content.querySelector('p').textContent,((clickedrowId === null) | (region.id === clickedrowId))))
             });
 
 
@@ -381,7 +399,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
     // Function to load the next chunk
-    function loadNextChunk(event) {
+    function loadNextChunk(event,clickedId) {
+        clickedId = clickedId || null;
         // Check if the entire audio has been processed
         console.log(regions);
         if (currentPosition >= audioLength) {
@@ -454,7 +473,7 @@ document.addEventListener('DOMContentLoaded', function () {
         wavesurfer.once('decode', async () => {
             console.log('rendering DONE');
             //renderRegions(chunkLength,currentPosition,wsRegions,regions);
-            setupRegionEventListener(wsRegions, wavesurfer);
+            setupRegionEventListener(wsRegions, wavesurfer, clickedId);
             renderRegions(chunkLength,currentPosition,wsRegions,regions,SelectedSpecies);
             
         });
@@ -529,8 +548,7 @@ document.addEventListener('DOMContentLoaded', function () {
             audioElement.src = URL.createObjectURL(selectedFile);
 
             // if another file, let access to the button
-            if (isLoggedIn) {console.log('logged in'); loadLabels.disabled = false; save.disabled = false;}
-            
+            if (isLoggedIn) {loadLabels.disabled = false; save.disabled = false; csv.disabled = false;}
         
             audioElement.addEventListener('loadedmetadata', () => {
                 const durationInSeconds = audioElement.duration;
@@ -599,6 +617,14 @@ document.addEventListener('DOMContentLoaded', function () {
         updateWaveform()
     });
 
+    sliderProba.addEventListener('change', (e) => {
+        const val = e.target.valueAsNumber;
+        minProba = val;
+        Dtable.draw();
+
+
+    });
+
     slider.addEventListener('change', (e) => {
         const val = e.target.valueAsNumber
         currentPosition = val
@@ -647,10 +673,7 @@ document.addEventListener('DOMContentLoaded', function () {
         .then(data => {
             console.log(data);
 
-            resultDiv.innerHTML = 'Result: ' + data.result;
-            startDiv.innerHTML = "Start: " + data.start;
-            endDiv.innerHTML = "End: " + data.end;
-            probaDiv.innerHTML = "With probabilities: " + data.probability;
+
             if (userName) {uploadButton.disabled = false;}
             startAI.disabled = true;
 
@@ -697,7 +720,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     //end: start+1, //timestamp-currentPosition,
                     end: data.end[index], //timestamp-currentPosition,
                     content: createRegionContent(document,`${data.result[index]}` , "Confidence : " + `${data.probability[index]}`,true),
-                    color: randomColor(), 
+                    //color: randomColor(), 
                     drag: false,
                     resize: false,
                     proba: data.probability[index],
@@ -708,7 +731,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     //end: start+1, //timestamp-currentPosition,
                     end: data.end[index], //timestamp-currentPosition,
                     content: createRegionContent(document,`${data.result[index]}` , "Confidence : " + `${data.probability[index]}`,true),
-                    color: randomColor(), 
+                    //color: randomColor(), 
                     drag: false,
                     resize: false,
                     proba: data.probability[index],
@@ -721,7 +744,6 @@ document.addEventListener('DOMContentLoaded', function () {
                     data.probability[index],
                     idn,
                 ]).draw().node();
-                addRowListener(row,fileInput.files[0]);
 
                 /*const reader = new FileReader();
                 reader.onload = function (event) {
@@ -875,7 +897,63 @@ document.addEventListener('DOMContentLoaded', function () {
 
     };
 
-    
+    csv.addEventListener('click', function () {
+        // Make a POST request to the server
+
+        let data = JSON.stringify(
+            Object.keys(regions).map(function (id) {
+                var region = regions[id];
+                if (region.proba !== undefined) {
+                    return {
+                        duration: audioLength,
+                        file: fileInput.files[0].name,
+                        start: region.start,
+                        end: region.end,
+                        //content: region.content,
+                        label: region.content.querySelector('h3').textContent,
+                        note: region.content.querySelector('p').textContent,
+                        id: region.id,
+                        proba: region.proba,
+                    };
+                } else {
+                    return {
+                        duration: audioLength,
+                        file: fileInput.files[0].name,
+                        start: region.start,
+                        end: region.end,
+                        //content: region.content,
+                        label: region.content.querySelector('h3').textContent,
+                        note: region.content.querySelector('p').textContent,
+                        id: region.id,
+                        proba: 0,
+                    }
+                }
+            })
+        );
+
+        fetch('/download_csv', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data) // Convert the data to JSON format
+        }).then(response => response.blob())
+                .then(blob => {
+                    // Create a temporary link
+                    const url = window.URL.createObjectURL(new Blob([blob]));
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.setAttribute('download', 'data.csv');
+
+                    // Simulate click on the link to trigger download
+                    document.body.appendChild(link);
+                    link.click();
+
+                    // Clean up
+                    document.body.removeChild(link);
+                    window.URL.revokeObjectURL(url);
+                });
+    });    
 
 
     function handleCB() { 
@@ -886,6 +964,7 @@ document.addEventListener('DOMContentLoaded', function () {
             } 
         }); 
         console.log(SelectedSpecies)
+        Dtable.columns(0).search(SelectedSpecies.join('|'), true, false).draw();
     } 
     
     checkBoxes.forEach((checkbox) => { 
