@@ -57,23 +57,18 @@
     </button-->
 
     <!-- JavaScript function to open the pop-up window -->
-    <script>
-        function openPopUpWindow() {
-            // Specify the URL of the page you want to load in the pop-up window
-            var popUpUrl = "{{ url_for('species') }}";
+    <script>function openPopUpWindow(page) {
+                // Specify the properties of the pop-up window
+                var popUpProperties = "width=800,height=600,scrollbars=yes,resizable=yes";
 
-            // Specify the properties of the pop-up window
-            var popUpProperties = "width=800,height=600,scrollbars=yes,resizable=yes";
-
-            // Open the pop-up window
-            window.open(popUpUrl, "Pop-up Window", popUpProperties);
-        }
-    </script>
+                if (page === 'species'){window.open("{{ url_for('species') }}", "Pop-up Window", popUpProperties);}
+                else if (page === 'tips') {window.open("{{ url_for('tips') }}", "Pop-up Window", popUpProperties);}
+            }</script>
 
 
     <nav class="navbar navbar-dark bg-dark">
     <a class="navbar-brand" href="#"> EchoExplorer </a> <!-- Or other application name -->
-    <a class="navbar-brand" onclick="openPopUpWindow()">See all species</a>
+    <a class="navbar-brand" href="#" onclick="openPopUpWindow('species')">Species description</a>
     <!--a class="navbar-brand" href="{{url_for('species')}}" onclick="openPopUpWindow()">See all species</a-->
     <a class="navbar-brand" href="{{url_for('login')}}">Login Page</a>
     <a class="navbar-brand" href="{{url_for('register')}}">Register Page</a>
@@ -83,6 +78,7 @@
         
     {% endif %}
     <!--a class="navbar-brand" href="{{url_for('split')}}" aria-disabled="true">Split Audio</a-->
+    <a class="navbar-brand" href="#" onclick="openPopUpWindow('tips')">Usage Tips</a>
     <a class="navbar-brand" href="{{url_for('about')}}">About Us</a>
     <br>
     </nav>
@@ -97,20 +93,28 @@
     <div class="btn-group">
         <button type="button" id="startAI" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown" {% if not is_logged_in %} disabled {% endif %}>Process Audio</button>
         <div class="dropdown-menu">
-            <button id="processButton">AI Bats</button>
-            <button id="processButton2">AI Birds</button>
-            <button id="processButton3">Batty Birds</button>
+            <button id="processButton">BatML</button>
+            <button id="processButton2">BirdNET</button>
+            <button id="processButton3">BattyBirdNET</button>
         </div>
-
-        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#myModal">
-            All audios
-        </button>
-
         
     </div>
 
-    <!--button id="visualizeButton"  type="button" class="btn btn-primary">Visualize Audio</button>
-    <button id="processButton"  type="button" class="btn btn-primary">Process Audio</button-->
+    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#myModal">
+        All audios
+    </button>
+
+    <div class="btn-group">
+        <button type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown">Labels</button>
+        <div class="dropdown-menu">
+            <button class="dropdown-item" id="loadLabels" disabled>Load Local</button>
+            <button class="dropdown-item" id="csv" disabled>Download csv</button>
+            <button class="dropdown-item" id="save" disabled>Save Local</button>
+            <button class="dropdown-item" id="uploadButton">Share it</button>
+            <!--button class="dropdown-item" id="discussButton" {% if not isExpert %}style="display: none;"{% endif %}>Discussed</button-->
+            <button class="dropdown-item" id="validateButton" {% if not isExpert %}style="display: none;"{% endif %}>Validated</button>
+        </div>
+    </div>
 
     <div id="waveform"></div>
     <div id="wave-timeline"></div>
@@ -126,22 +130,6 @@
     <label id="slider-container">
         Timestep: <input type="range" id="slider" min="1" max="300" value="1"  oninput="this.nextElementSibling.value = this.value + ' seconds'" /> <output id="secout">0 seconds</output>
     </label>
-
-    
-
-    <div class="btn-group">
-        <button type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown">Labels</button>
-        <div class="dropdown-menu">
-            <button class="dropdown-item" id="loadLabels" disabled>Load Local</button>
-            <button class="dropdown-item" id="csv" disabled>Download csv</button>
-            <button class="dropdown-item" id="save" disabled>Save Local</button>
-            <button class="dropdown-item" id="uploadButton">Save Upload</button>
-            <!--button class="dropdown-item" id="discussButton" {% if not isExpert %}style="display: none;"{% endif %}>Discussed</button-->
-            <button class="dropdown-item" id="validateButton" {% if not isExpert %}style="display: none;"{% endif %}>Validated</button>
-        </div>
-    </div>
-    
-
 
     
 
@@ -199,14 +187,9 @@
         </div>
     </div>
     
-    <!--div id="waveform"></div-->
-
-
-    
 
     <div id="spectrogram"></div>
 
-    <!--<div id="spectrovis" class="spectrogram"></div>-->
 
     <label>
         Max Freq: <input type="range" id="maxFreq" min="1000" max="96000" value="96000"  oninput="this.nextElementSibling.value = this.value + 'KHz'" /> <output id="freqout"> 96000 KHz</output>
@@ -254,7 +237,7 @@
             </ul> 
         </div> 
     <label id="proba-container">
-        Classification probability: <input type="range" id="proba-slider" min="0" max="100" value="80"  oninput="this.nextElementSibling.value = this.value + ' %'" /> <output id="probaout">80 %</output>
+        Classification probability: <input type="range" id="proba-slider" min="0" max="100" value="50"  oninput="this.nextElementSibling.value = this.value + ' %'" /> <output id="probaout">50 %</output>
     </label> 
  
 

@@ -52,9 +52,6 @@
 </head>
 <body>
 
-    <!--button type="button"  onclick="openPopUpWindow()">
-        See all species
-    </button-->
 
     <!-- JavaScript function to open the pop-up window -->
     <script>
@@ -72,8 +69,8 @@
 
 
     <nav class="navbar navbar-dark bg-dark">
-    <a class="navbar-brand" href="#"> EchoExplorer </a> <!-- Or other application name -->
-    <a class="navbar-brand" onclick="openPopUpWindow()">See all species</a>
+    <a class="navbar-brand" href="{{url_for('index')}}"> EchoExplorer </a> <!-- Or other application name -->
+    <a class="navbar-brand" onclick="openPopUpWindow()">Species description</a>
     <!--a class="navbar-brand" href="{{url_for('species')}}" onclick="openPopUpWindow()">See all species</a-->
     <a class="navbar-brand" href="{{url_for('login')}}">Login Page</a>
     <a class="navbar-brand" href="{{url_for('register')}}">Register Page</a>

@@ -181,6 +181,9 @@ def dashboard():
 def species():
     return render_template('species.html')
 
+@app.route('/tips', methods=['GET', 'POST'])
+def tips():
+    return render_template('tips.html')
 
 @app.route('/about', methods=['GET', 'POST'])
 def about():
@@ -290,7 +293,7 @@ def process():
             next(resultfile)
             for line in resultfile:
                 line = line.strip().split(',')
-                if float(line[4]) > 0.5: # keep label only if 80% sure
+                if float(line[4]) > 0.5: 
                     results[0].append(line[1])
                     results[1].append(line[2])
                     results[2].append(line[3])

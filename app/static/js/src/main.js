@@ -223,9 +223,6 @@ document.addEventListener('DOMContentLoaded', function () {
             color: 'rgba(255, 0, 0, 0.1)',
         })
         wr.on("region-created", (region) => {
-            console.log('REGION CREE !');
-            
-            //console.log('content = ', region.content);
 
             /*let r = Object.assign({}, region);
             r.start = r.start + currentPosition;
@@ -329,6 +326,7 @@ document.addEventListener('DOMContentLoaded', function () {
         
 
         wr.on("region-updated", (region) => {
+
             console.log('region-updated', region)
             regions = regions.filter(item => item.id !== region.id);
             
@@ -662,10 +660,11 @@ document.addEventListener('DOMContentLoaded', function () {
     });*/
 
     save.addEventListener('click', function () {
-        saveAnnotationToServer(audioLength,annotation_name,fileInput,regions,userName,'local');
+        saveAnnotationToServer(audioLength,annotation_name,fileInput.files[0].name,regions,userName,'local');
     });
     
     function processRequest(formData) {
+        let filename = fileInput.files[0].name
         fetch('/process', {
             method: 'POST',
             body: formData
@@ -676,7 +675,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
             if (userName) {uploadButton.disabled = false;}
-            startAI.disabled = true;
+            //startAI.disabled = true;
 
             
             console.log('ws1:', wsRegions);
@@ -720,7 +719,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     start: start, //timestamp-currentPosition,
                     //end: start+1, //timestamp-currentPosition,
                     end: data.end[index], //timestamp-currentPosition,
-                    content: createRegionContent(document,`${data.result[index]}` , "Confidence : " + `${data.probability[index]}`,true),
+                    content: createRegionContent(document,`${data.result[index]}` , "note here",true),
                     //color: randomColor(), 
                     drag: false,
                     resize: false,
@@ -731,7 +730,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     start: start,
                     //end: start+1, //timestamp-currentPosition,
                     end: data.end[index], //timestamp-currentPosition,
-                    content: createRegionContent(document,`${data.result[index]}` , "Confidence : " + `${data.probability[index]}`,true),
+                    content: createRegionContent(document,`${data.result[index]}` , "note here",true),
                     //color: randomColor(), 
                     drag: false,
                     resize: false,
@@ -753,8 +752,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 reader.readAsArrayBuffer(fileInput.files[0]);*/
                 
             })
-            saveAnnotationToServer(audioLength,annotation_name,fileInput,regions,userName,'local');
-            saveAnnotationToServer(audioLength,annotation_name,fileInput,unremovableRegions,userName,'other'); 
+            saveAnnotationToServer(audioLength,annotation_name,filename,regions,userName,'local');
+            saveAnnotationToServer(audioLength,annotation_name,filename,unremovableRegions,userName,'other'); 
             
             alert("Your file has been processed, Refresh the waveform to get the results")
 
@@ -843,7 +842,7 @@ document.addEventListener('DOMContentLoaded', function () {
     validateButton.addEventListener('click', function () {
         //saveAnnotationToServer(audioLength,annotation_name,fileInput,regions,userName,'validated');
         // in isExpert case : regions==unremovableRegions
-        saveAnnotationToServer(audioLength,annotation_name,fileInput,unremovableRegions,userName,'validated');
+        saveAnnotationToServer(audioLength,annotation_name,fileInput.files[0].name,unremovableRegions,userName,'validated');
 
         const filenameToDelete = fileInput.files[0].name;  
     
@@ -870,7 +869,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     uploadButton.addEventListener('click', function () {
         //saveAnnotationToServer(audioLength,annotation_name,fileInput,regions,userName,"other");
-        saveAnnotationToServer(audioLength,annotation_name,fileInput,unremovableRegions,userName,"other");
+        saveAnnotationToServer(audioLength,annotation_name,fileInput.files[0].name,unremovableRegions,userName,"other");
 
     });
 
