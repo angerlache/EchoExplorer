@@ -8,7 +8,7 @@
 <body>
     <h1>Register Page</h1>
 
-    <form action="" method="POST">
+    <form id="myForm" action="" method="POST">
         {{ form.hidden_tag() }}   <!-- this notation protects against XSS attack  -->
         {{ form.username }}
         {{ form.password }}
@@ -17,6 +17,24 @@
 
 
     <a href="{{url_for('login')}}">Already have an account? Log in</a>
+
+    <p></p>
+    <label for="checkbox">Please note that every audio submitted on this application will be saved to use for training or reasearch:</label>
+    <input type="checkbox" id="checkbox" required>
+
+    <script>
+        document.getElementById('checkbox').addEventListener('change', function () {
+            var submitButton = document.getElementById('submitButton');
+            submitButton.disabled = !this.checked;
+        });
+    
+        document.getElementById('myForm').addEventListener('submit', function (event) {
+            if (!document.getElementById('checkbox').checked) {
+                event.preventDefault();
+                alert('Please agree to the terms before submitting.');
+            }
+        });
+    </script>
     
 </body>
 </html>

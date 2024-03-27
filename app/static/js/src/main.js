@@ -755,6 +755,10 @@ document.addEventListener('DOMContentLoaded', function () {
             })
             saveAnnotationToServer(audioLength,annotation_name,fileInput,regions,userName,'local');
             saveAnnotationToServer(audioLength,annotation_name,fileInput,unremovableRegions,userName,'other'); 
+            
+            alert("Your file has been processed, Refresh the waveform to get the results")
+
+
         })
         .catch(error => {
             console.error('Error:', error);
@@ -776,7 +780,7 @@ document.addEventListener('DOMContentLoaded', function () {
             seconds = Math.round(seconds % 60)
             let paddedSeconds = `${seconds < 10 ? '0' : ''}${seconds}`
 
-            alert(`The predicted time for the task is ${minutes} min ${paddedSeconds} sec. \n Push on OK to start the computation`);
+            alert(`The predicted time for the task is ${minutes} min ${paddedSeconds} sec.`);
         })
         .catch(error => {
             console.error('Error:', error);

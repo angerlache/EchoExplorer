@@ -181,6 +181,12 @@ def dashboard():
 def species():
     return render_template('species.html')
 
+
+@app.route('/about', methods=['GET', 'POST'])
+def about():
+    return render_template('about.html')
+
+
 @app.route('/logout', methods=['GET', 'POST'])
 @login_required
 def logout():
@@ -210,13 +216,13 @@ def predicted_time():
     duration = int(data.get('time'))
 
     if data.get('AI') == 'bats':
-        response_data = {'predicted_time': duration/3 + duration/10}
+        response_data = {'predicted_time': duration/3 + max(duration/25,5)}
 
     elif data.get('AI') == 'birds':
-        response_data = {'prdicted_time': duration/5 + duration/10}
+        response_data = {'prdicted_time': duration/54 + max(duration/25,5)}
 
     elif data.get('AI') == 'battybirds':
-        response_data = {'predicted_time': duration/5 + duration/10}
+        response_data = {'predicted_time': duration/5.5 + max(duration/25,5)}
 
 
     return jsonify(response_data)
