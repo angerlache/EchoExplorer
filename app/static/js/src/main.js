@@ -47,6 +47,8 @@ document.addEventListener('DOMContentLoaded', function () {
     let annotation_name;
     let maxFreq = 96000;
     let arrayBuffer;
+
+    
     
 
     //temporary init
@@ -160,7 +162,6 @@ document.addEventListener('DOMContentLoaded', function () {
         ////////////////////////////////////////////////
         form.onsubmit = function (e) {
             e.preventDefault();
-            console.log('lhtmrlthlhththm222 : ' + form.elements.choiceSelector.value);
             //console.log('eeefff',region.content)
             if (customChoice !== null) {
                 var regionContent = createRegionContent(document,customChoice, form.elements.note.value,true)

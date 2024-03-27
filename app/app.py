@@ -131,43 +131,42 @@ def index():
     
     if current_user.is_authenticated:
         # retrieve filenames from s3
-        s3 = boto3.resource('s3', endpoint_url='https://ceph-gw1.info.ucl.ac.be')
+        #s3 = boto3.resource('s3', endpoint_url='https://ceph-gw1.info.ucl.ac.be')
+        #files2 = []
+        #for obj in s3.Bucket('biodiversity-lauzelle').objects.all():
+        #    files2.append(obj.key)
+        #    print(obj.key)
         files2 = []
-        userfiles = []
-        for obj in s3.Bucket('biodiversity-lauzelle').objects.all():
-            files2.append(obj.key)
-            print(obj.key)
-
+        query = File.query.all()
+        for row in query:
+            files2.append(row.username + '/' + row.hashName)        
+        print(files2)
         print('########')
-        for obj in s3.Bucket('biodiversity-lauzelle').objects.filter(Prefix=current_user.username+'/'):
-            userfiles.append(obj.key)
-            print(obj.key)
 
+        userfiles = []
+        query = File.query.filter_by(username=current_user.username)
+        for row in query:
+            userfiles.append(row.username + '/' + row.hashName + '/' + row.name)
+        #for obj in s3.Bucket('biodiversity-lauzelle').objects.filter(Prefix=current_user.username+'/'):
+        #    userfiles.append(obj.key)
+        #    print(obj.key)
+        print(userfiles)
         
-        files = [filename for filename in os.listdir(app.config['UPLOAD_FOLDER']) if filename.endswith('.wav')]       
-        print(files)
-        return render_template('index.html',username=current_user.username,isExpert=current_user.isExpert,files=files2,userfiles=userfiles)
+        #files = [filename for filename in os.listdir(app.config['UPLOAD_FOLDER']) if filename.endswith('.wav')]       
+        return render_template('index.html',username=current_user.username,isExpert=current_user.isExpert,files=files2,userfiles=userfiles,is_logged_in=True)
     
-    return render_template('index.html')
+    return render_template('index.html',is_logged_in=False)
         
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    print(1)
     form = LoginForm()
-    print(2)
 
     if form.validate_on_submit():
-        print(3)
         user = User.query.filter_by(username=form.username.data).first()
-        print(4)
         if user:
             if bcrypt.check_password_hash(user.password, form.password.data):
-                print(5)
-
                 login_user(user)
-                print(6)
-
                 session['is_logged_in'] = True
 
                 return redirect(url_for('index'))
@@ -238,62 +237,9 @@ def process():
             db.session.add(new_file)
             db.session.commit()
 
+        ## comment these lines for testing locally because s3 not available with localhost
         s3 = boto3.resource('s3', endpoint_url='https://ceph-gw1.info.ucl.ac.be')
         s3.Bucket(bucket_name).put_object(Key=current_user.username+'/'+filename,Body=file)
-        
-
-        file_content = file.read()
-
-        # Save in the first directory
-        """filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        with open(filepath, 'wb') as f:
-            f.write(file_content)
-
-        filepath = os.path.join("allAudios", filename)
-        with open(filepath, 'wb') as f:
-            f.write(file_content)
-
-        with open("allAudios/"+filename, 'rb') as data:
-            s3 = boto3.resource('s3', endpoint_url='https://ceph-gw1.info.ucl.ac.be')
-            #print(s3.list_objects_v2(Bucket=bucket_name))
-            s3.Bucket(bucket_name).put_object(Key=current_user.username+'/'+filename,Body=data)
-          
-
-        # Save in the second directory
-        alternate_filepath = os.path.join(app.config['ALTERNATE_UPLOAD_FOLDER'], filename)
-        with open(alternate_filepath, 'wb') as f:
-            f.write(file_content)"""
-
-
-        # This is ZONE DE TEST removed AI pour le fun
-
-
-        if session['AI'] == 'bats':
-            result_path = "../AI/results/classification_result.csv"
-            os.chdir('../AI')
-            #os.system('{} {}'.format('python3', 'run_classifier.py'))
-            #os.remove("data/samples/" + filename)
-            os.chdir('../app')
-        elif session['AI'] == 'birds':
-            #result_path = "../BirdNET/results/classification_result.csv"
-            #alternate_filepath = os.path.join('../BirdNET/samples', filename)
-            #with open(alternate_filepath, 'wb') as f:
-             #   f.write(file_content)
-            os.chdir('../BirdNET')
-            #os.system('{} {} {} {} {} {} {} {}'.format("python3", "analyze.py", "--i", "samples/", '--o', 'results/', '--rtype', 'csv'))
-            #os.remove("samples/" + filename)
-            #os.remove("results/" + filename[:-3] + "BirdNET.results.csv")
-            os.chdir('../app')
-        elif session['AI'] == 'battybirds':
-            #result_path = "../BattyBirdNET/results/classification_result.csv"
-            #alternate_filepath = os.path.join('../BattyBirdNET/samples', filename)
-            #with open(alternate_filepath, 'wb') as f:
-            #    f.write(file_content)
-            os.chdir('../BattyBirdNET')
-            #os.system('{} {} {} {} {} {} {} {}'.format("python3", "analyze.py", "--i", "samples/", '--o', 'results/', '--rtype', 'csv'))
-            #os.remove("samples/" + filename)
-            #os.remove("results/" + filename[:-3] + "BirdNET.results.csv")
-            os.chdir('../app')
 
 
         data = {'message': current_user.username+'/'+filename, 'AI': session['AI']}
