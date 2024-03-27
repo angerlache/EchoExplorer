@@ -761,6 +761,28 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    function predictedTime(duration,ai) {
+        fetch('/predicted_time', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json', 
+            },
+            body: JSON.stringify({'time':duration,'AI':ai}) 
+        })
+        .then(response => response.json())
+        .then(data => {
+            let seconds = data.predicted_time;
+            let minutes = Math.floor(seconds / 60)
+            seconds = Math.round(seconds % 60)
+            let paddedSeconds = `${seconds < 10 ? '0' : ''}${seconds}`
+
+            alert(`The predicted time for the task is ${minutes} min ${paddedSeconds} sec. \n Push on OK to start the computation`);
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+    }
+
     processButton.addEventListener('click', function () {
         const file = fileInput.files[0];
 
@@ -772,6 +794,8 @@ document.addEventListener('DOMContentLoaded', function () {
         const formData = new FormData();
         formData.append('audio', file);
         formData.append('chosenAI', 'bats');
+
+        predictedTime(audioLength,'bats')
 
         processRequest(formData)
 
@@ -789,6 +813,8 @@ document.addEventListener('DOMContentLoaded', function () {
         formData.append('audio', file);
         formData.append('chosenAI', 'birds');
 
+        predictedTime(audioLength,'birds')
+
         processRequest(formData);
     });
 
@@ -804,6 +830,8 @@ document.addEventListener('DOMContentLoaded', function () {
         const formData = new FormData();
         formData.append('audio', file);
         formData.append('chosenAI', 'battybirds');
+
+        predictedTime(audioLength,'battybirds')
 
         processRequest(formData);
     });

@@ -201,6 +201,26 @@ def register():
         return redirect(url_for('login'))
     return render_template('register.html', form=form)
 
+
+@app.route('/predicted_time', methods=['POST'])
+def predicted_time():
+    data = request.json
+
+    print('Recieved data :', data)
+    duration = int(data.get('time'))
+
+    if data.get('AI') == 'bats':
+        response_data = {'predicted_time': duration/3 + duration/10}
+
+    elif data.get('AI') == 'birds':
+        response_data = {'prdicted_time': duration/5 + duration/10}
+
+    elif data.get('AI') == 'battybirds':
+        response_data = {'predicted_time': duration/5 + duration/10}
+
+
+    return jsonify(response_data)
+
 @app.route('/process', methods=['POST'])
 def process():
     if 'audio' not in request.files:
