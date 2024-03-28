@@ -13,7 +13,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const playButton = document.getElementById('playButton');
     const pauseButton = document.getElementById('pauseButton');
    
-    
+    const customOption = document.getElementById('customOption');
     //const slider = document.querySelector('input[type="range"]');
     const slider = document.getElementById('slider'); slider.disabled = true;
     const sliderContainer = document.getElementById('slider-container'); sliderContainer.disabled = true;
@@ -36,6 +36,7 @@ document.addEventListener('DOMContentLoaded', function () {
     
     const checkBoxes = document.querySelectorAll('.dropdown-menu input[type="checkbox"]'); 
     let SelectedSpecies = ['Barbarg', 'Envsp', 'Myosp', 'Pip35', 'Pip50', 'Plesp', 'Rhisp','Region','other']; 
+    let SpeciesList = ['Barbarg', 'Envsp', 'Myosp', 'Pip35', 'Pip50', 'Plesp', 'Rhisp','Region','other']; 
 
     let removefun;
 
@@ -74,6 +75,19 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         return false;
     });
+
+    Dtable.search.fixed('spec', function (searchStr, data, index) {
+        var spec = data[0];
+        if (SelectedSpecies.includes("Region")){
+            return SelectedSpecies.includes(spec) || !(SpeciesList.includes(spec));
+        }
+        else{
+            return SelectedSpecies.includes(spec)
+        }
+    }); 
+
+
+
 
     Dtable.on('click', 'tbody tr', function () {
         let data = Dtable.row(this).data();
@@ -143,12 +157,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
     // Get references to the select element and the custom option
-    const customOption = document.getElementById('customOption');
     let customChoice = null;
     // Add event listener to the custom option
     customOption.addEventListener('click', function() {
         // Show a prompt to the user to enter their custom choice
         customChoice = prompt('Enter your custom choice:');
+        customOption.textContent = customChoice + " (click to modify)";
 
     });
 
@@ -193,7 +207,13 @@ document.addEventListener('DOMContentLoaded', function () {
                 unremovableRegions.push(r);
             }
 
-            
+            var rowid = Dtable.column(3).data().indexOf(region.id)
+            var row = Dtable.row(rowid);
+            var d = row.data()
+            d[0] = regionContent.innerText;
+            row.data(d);
+            Dtable.draw();
+
 
             
             form.style.opacity = 0;
@@ -236,6 +256,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 let r = Object.assign({}, region);
                 r.start = r.start + currentPosition;
                 r.end = r.end + currentPosition;
+                console.log(r.id);
                 
 
                 if (r.content == undefined) {
@@ -262,13 +283,13 @@ document.addEventListener('DOMContentLoaded', function () {
             else{
                 if (region.id === clickedrowId) {
                     console.log(region.id);
-                    region.setOptions({ color: "red", contentEditable:true});
+                    region.setOptions({ color: 'rgba(255, 0, 0, 0.5)', contentEditable:true});
                     region.setContent(createRegionContent(document,region.content.querySelector('h3').textContent,
                                         region.content.querySelector('p').textContent,true))
                 }
                 else{
                     console.log(region.id);
-                    region.setOptions({ color: "gray", contentEditable:true})
+                    region.setOptions({ color: 'rgba(128, 128, 128, 0.5)', contentEditable:true})
                     region.setContent(createRegionContent(document,region.content.querySelector('h3').textContent,
                                         region.content.querySelector('p').textContent,false));
                 }
@@ -372,6 +393,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 
             } else if (e.shiftKey) {
                 document.getElementById('myForm').style.display = 'block'
+                customOption.textContent = "Type your own...";
 
                 if (region.content !== undefined) {
                     //document.forms.edit.elements.note.value = region.content.textContent
@@ -996,7 +1018,8 @@ document.addEventListener('DOMContentLoaded', function () {
             } 
         }); 
         console.log(SelectedSpecies)
-        Dtable.columns(0).search(SelectedSpecies.join('|'), true, false).draw();
+        Dtable.draw();
+        //Dtable.columns(0).search(SelectedSpecies.join('|'), true, false).draw();
     } 
     
     checkBoxes.forEach((checkbox) => { 
