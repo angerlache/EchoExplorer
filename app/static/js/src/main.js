@@ -28,7 +28,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const validateButton = document.getElementById('validateButton');
     const uploadButton = document.getElementById('uploadButton');
     uploadButton.disabled = true;
-    const chunkLength = 60;
+    let chunkLength = 10;
     let currentPosition = 0;
     let audioLength;
     let minProba = 80;
@@ -92,7 +92,7 @@ document.addEventListener('DOMContentLoaded', function () {
     Dtable.on('click', 'tbody tr', function () {
         let data = Dtable.row(this).data();
         var time = data[1];
-        currentPosition = Math.floor(Math.max(0,time-30));
+        currentPosition = Math.floor(Math.max(0,time-chunkLength/2));
 
         const reader = new FileReader();
         reader.onload = function (event) {
@@ -516,16 +516,6 @@ document.addEventListener('DOMContentLoaded', function () {
             }),
         )
 
-        /*
-
-        var sample = new Spectrogram(url, "#spectrovis", {
-            width: 600,
-            height: 300,
-            colorScheme: ['#440154', '#472877', '#3e4a89', '#31688d', '#26838e', '#1f9e89', '#36b778', '#6dcd59', '#b4dd2c', '#fde725']
-            });
-        
-        console.log("", sample);*/
-
         console.log('Current Position:', currentPosition);
     }
 
@@ -664,6 +654,8 @@ document.addEventListener('DOMContentLoaded', function () {
     prec.addEventListener('click' ,function () {
         currentPosition = Math.max(currentPosition - chunkLength, 0);
         const file = fileInput.files[0];
+        slider.value = currentPosition;
+        document.getElementById('secout').value = currentPosition + ' seconds'
         updateWaveform()
     });
     
@@ -675,11 +667,11 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
 
-    /*pauseButton.addEventListener('click', function () {
-        if (wavesurfer) {
-            wavesurfer.pause();
-        }
-    });*/
+    document.getElementById('numberSelector').addEventListener('change',function () {
+        var selectedNumber = document.getElementById("numberSelector").value;
+        console.log('NEW value = ', selectedNumber);
+        chunkLength = parseInt(selectedNumber)
+    })
 
     save.addEventListener('click', function () {
         saveAnnotationToServer(audioLength,annotation_name,fileInput.files[0].name,regions,userName,'local');
@@ -703,37 +695,6 @@ document.addEventListener('DOMContentLoaded', function () {
             console.log('ws1:', wsRegions);
             data.start.forEach((start, index) => {
                 console.log('Adding region:', start);
-                
-                /*if (start-currentPosition >= 0 && start-currentPosition <= chunkLength) {
-                    wsRegions.addRegion({
-                        start: start-currentPosition,
-                        end: data.end[index]-currentPosition,
-                        color: randomColor(), 
-                        content: createRegionContent(document,`${data.result[index]}` , "Confidence : " + `${data.probability[index]}`,true),
-                        drag: false,
-                        resize: false,
-                    });
-                }
-                else {
-                    var id = `bat-${Math.random().toString(32).slice(2)}`
-                    regions.push({
-                        id: id,
-                        start: start,
-                        end: data.end[index],
-                        content: createRegionContent(document,`${data.result[index]}` , "Confidence : " + `${data.probability[index]}`,true),
-                        drag: false,
-                        resize: false,
-                    })
-                    unremovableRegions.push({
-                        id: id,
-                        start: start,
-                        end: data.end[index],
-                        content: createRegionContent(document,`${data.result[index]}` , "Confidence : " + `${data.probability[index]}`,true),
-                        drag: false,
-                        resize: false,
-                    })
-            
-                }*/
 
                 var idn = `bat-${Math.random().toString(32).slice(2)}`
                 regions.push({
@@ -792,7 +753,7 @@ document.addEventListener('DOMContentLoaded', function () {
             headers: {
                 'Content-Type': 'application/json', 
             },
-            body: JSON.stringify({'time':duration,'AI':ai}) 
+            body: JSON.stringify({'time':duration,'AI':ai,'bytes':fileInput.files[0].size}) 
         })
         .then(response => response.json())
         .then(data => {

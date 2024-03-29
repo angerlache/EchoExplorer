@@ -445,7 +445,6 @@ if __name__ == "__main__":
 
     # Parse arguments
     parser = argparse.ArgumentParser(description="Analyze audio files with BirdNET")
-    parser.add_argument("--user")
     parser.add_argument(
         "--user"
     )

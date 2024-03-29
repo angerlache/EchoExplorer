@@ -216,16 +216,17 @@ def predicted_time():
     data = request.json
 
     print('Recieved data :', data)
-    duration = int(data.get('time'))
+    duration = int(data.get('time')) # used to predict time for the AI
+    size = int(data.get('bytes')) # used to predict time for the server getting the uploaded file
 
     if data.get('AI') == 'bats':
-        response_data = {'predicted_time': duration/3 + max(duration/25,5)}
+        response_data = {'predicted_time': duration/3 + size/10e6/1.15}
 
     elif data.get('AI') == 'birds':
-        response_data = {'prdicted_time': duration/54 + max(duration/25,5)}
+        response_data = {'prdicted_time': duration/54 + size/10e6/1.15}
 
     elif data.get('AI') == 'battybirds':
-        response_data = {'predicted_time': duration/5.5 + max(duration/25,5)}
+        response_data = {'predicted_time': duration/5.5 + size/10e6/1.15}
 
 
     return jsonify(response_data)
