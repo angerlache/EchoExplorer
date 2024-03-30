@@ -223,7 +223,7 @@ def predicted_time():
         response_data = {'predicted_time': duration/3 + size/1e6/1.15}
 
     elif data.get('AI') == 'birds':
-        response_data = {'prdicted_time': duration/54 + size/1e6/1.15}
+        response_data = {'predicted_time': duration/54 + size/1e6/1.15}
 
     elif data.get('AI') == 'battybirds':
         response_data = {'predicted_time': duration/5.5 + size/1e6/1.15}
