@@ -26,9 +26,13 @@ document.addEventListener('DOMContentLoaded', function () {
     const note = document.getElementById('note');
     const loadLabels = document.getElementById('loadLabels');
     const validateButton = document.getElementById('validateButton');
-    const uploadButton = document.getElementById('uploadButton');
-    uploadButton.disabled = true;
-    let chunkLength = 10;
+    const uploadButton = document.getElementById('uploadButton'); uploadButton.disabled = true;
+    const chunkLengthSelector = document.getElementById('chunkLengthSelector');
+
+
+    let chunkLength = 20;
+    chunkLengthSelector.value = chunkLength;
+
     let currentPosition = 0;
     let audioLength;
     let minProba = 80;
@@ -93,6 +97,8 @@ document.addEventListener('DOMContentLoaded', function () {
         let data = Dtable.row(this).data();
         var time = data[1];
         currentPosition = Math.floor(Math.max(0,time-chunkLength/2));
+        slider.value = currentPosition
+        document.getElementById('secout').value = currentPosition + ' seconds'
 
         const reader = new FileReader();
         reader.onload = function (event) {
@@ -176,7 +182,6 @@ document.addEventListener('DOMContentLoaded', function () {
         ////////////////////////////////////////////////
         form.onsubmit = function (e) {
             e.preventDefault();
-            //console.log('eeefff',region.content)
             if (customChoice !== null) {
                 var regionContent = createRegionContent(document,customChoice, form.elements.note.value,true)
                 customChoice = null;
@@ -190,7 +195,6 @@ document.addEventListener('DOMContentLoaded', function () {
             //console.log(region.content.querySelector('p').textContent,region.content.innerText)
 
             let toRemove = regions.filter(item => item.id === region.id)[0]
-            console.log('toRemove = ', toRemove);
             regions = regions.filter(item => item.id !== region.id);
             let r = Object.assign({}, region);
             r.start = r.start + currentPosition;
@@ -331,8 +335,6 @@ document.addEventListener('DOMContentLoaded', function () {
             }
             
 
-
-            console.log('region-removed', region)
             regions = regions.filter(item => item.id !== region.id);
             // if drag==true => region does not come from AI, so user can delete it
             // isExpert is a string because comes from index.html
@@ -341,8 +343,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 unremovableRegions = unremovableRegions.filter(item => item.id !== region.id);
             }
             
-            console.log("new regions", regions);
-            console.log("new regions", unremovableRegions);
         })
         
 
@@ -355,7 +355,6 @@ document.addEventListener('DOMContentLoaded', function () {
             r.start = r.start + currentPosition;
             r.end = r.end + currentPosition;
             r.content = region.content;
-            console.log('PROBA : ', region.proba);
             if (r.content == undefined) {
                 console.log("updaled")
             }
@@ -378,7 +377,6 @@ document.addEventListener('DOMContentLoaded', function () {
         })
                 
         wr.on('region-out', (region) => {
-            //console.log('region-out', region)
             if (activeRegion === region) {
                 ws.stop()
                 activeRegion = null
@@ -438,11 +436,13 @@ document.addEventListener('DOMContentLoaded', function () {
         var i = new Uint32Array(arrayBuffer.slice(24,28));
         sR = (i[0] << 0) | (i[1] << 8) | (i[2] << 16) | (i[3] << 24);
 
+        var j = new Uint16Array(arrayBuffer.slice(22,24));
+        var nbChannels = (j[0] << 0) | (j[1] << 8)
 
         if (start == 0) {
-            data = arrayBuffer.slice(90, end * sR * 4);
+            data = arrayBuffer.slice(90, end * sR * 4 * nbChannels/2);
         } else {
-            data = arrayBuffer.slice(start * sR * 4, end * sR * 4);
+            data = arrayBuffer.slice(start * sR * 4 * nbChannels/2, end * sR * 4 * nbChannels/2);
         }
         const buff = appendBuffer(metaData,data);
 
@@ -549,8 +549,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
         
         if (selectedFile) {
-            console.log('FILE = ', fileInput);
-            console.log('FILEee = ', fileInput.files);
             uploadButton.disabled = true;
             
             currentPosition = 0;
@@ -594,14 +592,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
     });
 
-        
-    
-
-    /*fileInput.addEventListener('change', (event) => {
-        const selectedFile = event.target.files[0];
-        console.log("a",selectedFile)
-        fileSelected(selectedFile);
-    });*/
     
     function updateWaveform() {
         const file = fileInput.files[0];
@@ -673,10 +663,10 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
 
-    document.getElementById('numberSelector').addEventListener('change',function () {
-        var selectedNumber = document.getElementById("numberSelector").value;
-        console.log('NEW value = ', selectedNumber);
-        chunkLength = parseInt(selectedNumber)
+    chunkLengthSelector.addEventListener('change',function () {
+        var selectedNumber = document.getElementById("chunkLengthSelector").value;
+        chunkLength = parseInt(selectedNumber);
+        updateWaveform()
     })
 
     save.addEventListener('click', function () {
@@ -698,7 +688,6 @@ document.addEventListener('DOMContentLoaded', function () {
             //startAI.disabled = true;
 
             
-            console.log('ws1:', wsRegions);
             data.start.forEach((start, index) => {
                 console.log('Adding region:', start);
 
@@ -734,18 +723,13 @@ document.addEventListener('DOMContentLoaded', function () {
                     idn,
                 ]).draw().node();
 
-                /*const reader = new FileReader();
-                reader.onload = function (event) {
-                    loadNextChunk(event)
-                }
-                reader.readAsArrayBuffer(fileInput.files[0]);*/
                 
             })
             saveAnnotationToServer(audioLength,annotation_name,filename,regions,userName,'local');
             saveAnnotationToServer(audioLength,annotation_name,filename,unremovableRegions,userName,'other'); 
             
-            alert("Your file has been processed, Refresh the waveform to get the results")
-
+            alert("Your file has been processed")
+            updateWaveform()
 
         })
         .catch(error => {

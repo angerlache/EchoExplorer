@@ -220,13 +220,13 @@ def predicted_time():
     size = int(data.get('bytes')) # used to predict time for the server getting the uploaded file
 
     if data.get('AI') == 'bats':
-        response_data = {'predicted_time': duration/3 + size/10e6/1.15}
+        response_data = {'predicted_time': duration/3 + size/1e6/1.15}
 
     elif data.get('AI') == 'birds':
-        response_data = {'prdicted_time': duration/54 + size/10e6/1.15}
+        response_data = {'prdicted_time': duration/54 + size/1e6/1.15}
 
     elif data.get('AI') == 'battybirds':
-        response_data = {'predicted_time': duration/5.5 + size/10e6/1.15}
+        response_data = {'predicted_time': duration/5.5 + size/1e6/1.15}
 
 
     return jsonify(response_data)
