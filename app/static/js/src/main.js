@@ -546,6 +546,7 @@ document.addEventListener('DOMContentLoaded', function () {
         Dtable.clear().draw();
         annotation_name = fileInput.files[0].name.split('.')[0] //+ '.json'
         startAI.disabled = false;
+
         
         if (selectedFile) {
             console.log('FILE = ', fileInput);
@@ -568,6 +569,11 @@ document.addEventListener('DOMContentLoaded', function () {
                 slider.max = Math.ceil(durationInSeconds);
                 slider.value = 0;
                 sliderFreq.value = 96000;
+
+                if (durationInSeconds > 3603) {
+                    alert("WARNING : audio too long, you won't be able to process it with any AI\n Max length is 1 hour");
+                    //return;
+                }
 
                 console.log('Audio duration:', durationInSeconds, 'seconds');
                 if (durationInSeconds < chunkLength) {
@@ -769,13 +775,21 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    processButton.addEventListener('click', function () {
-        const file = fileInput.files[0];
-
+    function checkAudio(file) {
         if (!file) {
             alert('Please select an audio file first.');
             return;
         }
+        if (audioLength > 3603) {
+            alert('ERROR : cannot process audio; audio too long\nMax length is 1 hour');
+            return;
+        }
+    }
+
+    processButton.addEventListener('click', function () {
+        const file = fileInput.files[0];
+
+        checkAudio(file)
 
         const formData = new FormData();
         formData.append('audio', file);
@@ -790,10 +804,7 @@ document.addEventListener('DOMContentLoaded', function () {
     processButton2.addEventListener('click', function () {
         const file = fileInput.files[0];
 
-        if (!file) {
-            alert('Please select an audio file first.');
-            return;
-        }
+        checkAudio(file)
 
         const formData = new FormData();
         formData.append('audio', file);
@@ -808,10 +819,7 @@ document.addEventListener('DOMContentLoaded', function () {
     processButton3.addEventListener('click', function () {
         const file = fileInput.files[0];
 
-        if (!file) {
-            alert('Please select an audio file first.');
-            return;
-        }
+        checkAudio(file)
 
         const formData = new FormData();
         formData.append('audio', file);
