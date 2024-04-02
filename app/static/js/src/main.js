@@ -11,7 +11,6 @@ document.addEventListener('DOMContentLoaded', function () {
     const startAI = document.getElementById('startAI');
     const visualizeButton = document.getElementById('visualizeButton');
     const playButton = document.getElementById('playButton');
-    const pauseButton = document.getElementById('pauseButton');
    
     const customOption = document.getElementById('customOption');
     //const slider = document.querySelector('input[type="range"]');
@@ -23,11 +22,12 @@ document.addEventListener('DOMContentLoaded', function () {
     const prec = document.getElementById('prec'); prec.disabled = true;
     const save = document.getElementById('save');
     const csv = document.getElementById('csv');
-    const note = document.getElementById('note');
     const loadLabels = document.getElementById('loadLabels');
     const validateButton = document.getElementById('validateButton');
     const uploadButton = document.getElementById('uploadButton'); uploadButton.disabled = true;
     const chunkLengthSelector = document.getElementById('chunkLengthSelector');
+    const zoomIn = document.getElementById('zoomIn');
+    const zoomOut = document.getElementById('zoomOut');
 
 
     let chunkLength = 20;
@@ -35,12 +35,16 @@ document.addEventListener('DOMContentLoaded', function () {
 
     let currentPosition = 0;
     let audioLength;
-    let minProba = 80;
+    //let minProba = 80;
     let sR = 44100; 
     
     const checkBoxes = document.querySelectorAll('.dropdown-menu input[type="checkbox"]'); 
     let SelectedSpecies = ['Barbarg', 'Envsp', 'Myosp', 'Pip35', 'Pip50', 'Plesp', 'Rhisp','Region','other']; 
     let SpeciesList = ['Barbarg', 'Envsp', 'Myosp', 'Pip35', 'Pip50', 'Plesp', 'Rhisp','Region','other']; 
+    let battyBirdList = {'Barbastella':'Barbarg', 'Eptesicus':'Envsp', 'Myotis':'Myosp', 'Nyctalus':'Envsp','Plecotus':'Plesp','Rhinolophus':'Rhisp','Vespertilio':'Envsp',
+                        'Pipistrellus kuhlii':'Pip35', 'Pipistrellus nathusii':'Pip35', 'Pipistrellus pipistrellus':'Pip50', 'Pipistrellus pygmaeus':'Pip50',
+                        'Hypsugo savii_Alpenfledermaus':'Pip35', //see https://de.wikipedia.org/wiki/Alpenfledermaus for pip35
+                        'Miniopterus schreibersii_Langflügelfledermaus':'Rhisp'} 
 
     let removefun;
 
@@ -74,7 +78,7 @@ document.addEventListener('DOMContentLoaded', function () {
     Dtable.column(3).visible(false);
     Dtable.search.fixed('range', function (searchStr, data, index) {
         var proba = parseFloat(data[2]) || 1; // use data for the age column
-        if ((minProba <= (proba*100))) {
+        if ((sliderProba.value <= (proba*100))) {
             return true;
         }
         return false;
@@ -236,6 +240,17 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
 
+    // close the form if user click anywhere except on the form itself
+    document.addEventListener('click', function(event) {
+        var form = document.getElementById('myForm');
+        var closeBtn = document.getElementById('closeForm');
+        
+        // Check if the clicked element is not within the form or is not the close button
+        if (event.target !== form && event.target !== closeBtn && !form.contains(event.target)) {
+            form.style.opacity = 0;
+            form.style.display = 'none';
+        }
+    });
 
 
 
@@ -248,11 +263,7 @@ document.addEventListener('DOMContentLoaded', function () {
         })
         wr.on("region-created", (region) => {
 
-            /*let r = Object.assign({}, region);
-            r.start = r.start + currentPosition;
-            r.end = r.end + currentPosition;
-            regions.push(r);
-            unremovableRegions.push(r)*/
+            
 
             //If created region is new, add it to the list.
             if(!regions.some(item => item.id === region.id)){
@@ -298,7 +309,7 @@ document.addEventListener('DOMContentLoaded', function () {
                                         region.content.querySelector('p').textContent,false));
                 }
             }
-            console.log(region);
+            console.log("new region : ",region);
 
             // set last arg of setContent to true and the content will show up only when mouse over region
             region.on('over', (e) => {
@@ -390,6 +401,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 region.remove();
                 
             } else if (e.shiftKey) {
+                region.play();
+            } else {
                 document.getElementById('myForm').style.display = 'block'
                 customOption.textContent = "Type your own...";
 
@@ -399,10 +412,6 @@ document.addEventListener('DOMContentLoaded', function () {
                     document.forms.edit.elements.choiceSelector.value = region.content.querySelector('h3').textContent;
                 }
                 editAnnotation(region)
-                
-
-            } else {
-                region.play();
             }
         })
 
@@ -545,8 +554,6 @@ document.addEventListener('DOMContentLoaded', function () {
         unremovableRegions = [];
         Dtable.clear().draw();
         annotation_name = fileInput.files[0].name.split('.')[0] //+ '.json'
-        startAI.disabled = false;
-
         
         if (selectedFile) {
             uploadButton.disabled = true;
@@ -589,6 +596,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             
         }
+        updateWaveform()
 
     });
 
@@ -626,7 +634,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     sliderProba.addEventListener('change', (e) => {
         const val = e.target.valueAsNumber;
-        minProba = val;
+        //minProba = val;
         Dtable.draw();
 
 
@@ -669,6 +677,21 @@ document.addEventListener('DOMContentLoaded', function () {
         updateWaveform()
     })
 
+    zoomIn.addEventListener('click', () => {
+        if (chunkLength == 5) {return;}
+        chunkLength -= 10;
+        if (chunkLength < 5) {
+            chunkLength = 5
+        }
+        updateWaveform()
+    });
+
+    zoomOut.addEventListener('click', () => {
+        if (chunkLength == 60) {return;}
+        chunkLength += 10;
+        updateWaveform()
+    });
+
     save.addEventListener('click', function () {
         saveAnnotationToServer(audioLength,annotation_name,fileInput.files[0].name,regions,userName,'local');
     });
@@ -690,14 +713,35 @@ document.addEventListener('DOMContentLoaded', function () {
             
             data.start.forEach((start, index) => {
                 console.log('Adding region:', start);
+                let note = ""
+                let specy;
+
+                if (data.AI == "bats") {
+                    note = ""
+                    specy = data.result[index]
+                }
+                else if (data.AI == "battybirds") {
+                    for (let key in battyBirdList) {
+                        if (data.result[index].includes(key)) {
+                            specy = battyBirdList[key]
+                            note = data.result[key]
+                            console.log(specy,note);
+                            break;
+                        }
+                    }
+                }
+                else if (data.AI == "birds") {
+                    note = ""
+                    specy = data.result[index]
+                }
 
                 var idn = `bat-${Math.random().toString(32).slice(2)}`
                 regions.push({
                     id: idn,
                     start: start, //timestamp-currentPosition,
-                    //end: start+1, //timestamp-currentPosition,
                     end: data.end[index], //timestamp-currentPosition,
-                    content: createRegionContent(document,`${data.result[index]}` , "note here",true),
+                    //content: createRegionContent(document,`${data.result[index]}` , "note here",true),
+                    content: createRegionContent(document,`${specy}`, note, true),
                     //color: randomColor(), 
                     drag: false,
                     resize: false,
@@ -706,9 +750,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 unremovableRegions.push({
                     id: idn,
                     start: start,
-                    //end: start+1, //timestamp-currentPosition,
                     end: data.end[index], //timestamp-currentPosition,
-                    content: createRegionContent(document,`${data.result[index]}` , "note here",true),
+                    //content: createRegionContent(document,`${data.result[index]}` , "note here",true),
+                    content: createRegionContent(document,`${specy}`, note, true),
                     //color: randomColor(), 
                     drag: false,
                     resize: false,
@@ -717,7 +761,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 //Populate DataTable
                 
                 var row = Dtable.row.add([
-                    data.result[index],
+                    //data.result[index],
+                    specy,
                     data.start[index],
                     data.probability[index],
                     idn,
@@ -769,6 +814,17 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
     }
+
+    // if user not logged in show error message when try to run AI
+    const tooltip = document.getElementById('tooltip');
+    document.getElementById('AIbuttons').addEventListener('mouseover', () => {
+        if (startAI.disabled) {
+            tooltip.style.display = 'block';
+        } 
+    });
+    document.getElementById('AIbuttons').addEventListener('mouseout', () => {
+        tooltip.style.display = 'none';
+    });
 
     processButton.addEventListener('click', function () {
         const file = fileInput.files[0];

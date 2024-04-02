@@ -1,0 +1,14 @@
+file_name,start,end,predicted_species,predicted_prob
+Noctule.wav,275.121,275.121,Barbastella barbastellus_Mopsfledermaus,0.897
+Noctule.wav,265.121,265.121,Eptesicus nilssonii_Nordfledermaus,0.897
+Noctule.wav,245.121,245.121,Eptesicus serotinus_Breitflügelfledermaus,0.897
+Noctule.wav,235.121,235.121,Hypsugo savii_Alpenfledermaus,0.897
+Noctule.wav,225.121,225.121,Myotis bechsteinii_Bechsteinfledermaus,0.897
+Noctule.wav,215.121,215.121,Pipistrellus kuhlii_Weißrandfledermaus oder Rauhautfledermaus,0.897
+Noctule.wav,205.121,205.121,Plecotus auritus_Braunes oder Graues Langohr,0.897
+Noctule.wav,195.121,195.121,Rhinolophus ferrumequinum_Große Hufeisennase,0.897
+Noctule.wav,185.121,185.121,Vespertilio murinus_Zweifarbfledermaus,0.897
+Noctule.wav,175.121,175.121,Eptesicus serotinus_Breitflügelfledermaus,0.897
+Noctule.wav,165.121,165.121,Miniopterus schreibersii_Langflügelfledermaus,0.897
+Noctule.wav,155.121,155.121,Myotis alcathoe_Nymphenfledermaus,0.897
+Noctule.wav,145.121,145.121,Pipistrellus nathusii_Rauhautfledermaus,0.897

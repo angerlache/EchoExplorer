@@ -126,7 +126,7 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
  
-@app.route('/')
+@app.route('/main')
 def index():
     
     if current_user.is_authenticated:
@@ -157,7 +157,7 @@ def index():
     
     return render_template('index.html',is_logged_in=False)
         
-
+"""
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     form = LoginForm()
@@ -171,6 +171,7 @@ def login():
 
                 return redirect(url_for('index'))
     return render_template('login.html', form=form)
+"""
 
 @app.route('/dashboard', methods=['GET', 'POST'])
 @login_required
@@ -187,7 +188,30 @@ def tips():
 
 @app.route('/about', methods=['GET', 'POST'])
 def about():
-    return render_template('about.html')
+    return render_template('about.html',is_logged_in=current_user.is_authenticated)
+
+@app.route('/', methods=['GET', 'POST'])
+def login_register():
+    log_form = LoginForm()
+    if log_form.validate_on_submit():
+        user = User.query.filter_by(username=log_form.username.data).first()
+        if user:
+            if bcrypt.check_password_hash(user.password, log_form.password.data):
+                login_user(user)
+                session['is_logged_in'] = True
+
+                return redirect(url_for('index'))
+    #return render_template('login.html', form=form)
+        
+    reg_form = RegisterForm()
+    if reg_form.validate_on_submit():
+        hashed_password = bcrypt.generate_password_hash(reg_form.password.data)
+        new_user = User(username=reg_form.username.data, password=hashed_password)
+        db.session.add(new_user)
+        db.session.commit()
+        #return redirect(url_for('login'))
+    
+    return render_template('login_register.html', logForm=log_form, regForm=reg_form)
 
 
 @app.route('/logout', methods=['GET', 'POST'])
@@ -195,9 +219,9 @@ def about():
 def logout():
     logout_user()
     session['is_logged_in'] = False
-    return redirect(url_for('login'))
+    return redirect(url_for('login_register'))
 
-
+"""
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     form = RegisterForm()
@@ -209,6 +233,7 @@ def register():
         db.session.commit()
         return redirect(url_for('login'))
     return render_template('register.html', form=form)
+"""
 
 
 @app.route('/predicted_time', methods=['POST'])
@@ -303,7 +328,7 @@ def process():
 
         print(results)
         
-        return jsonify({'result': results[2], 'start': results[0], 'end': results[1], 'probability':results[3]})
+        return jsonify({'result': results[2], 'start': results[0], 'end': results[1], 'probability':results[3], 'AI':session['AI']})
 
     return jsonify({'error': 'Invalid file format'})
 
