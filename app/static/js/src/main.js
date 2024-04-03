@@ -557,6 +557,9 @@ document.addEventListener('DOMContentLoaded', function () {
         
         if (selectedFile) {
             uploadButton.disabled = true;
+
+            chunkLength = 20;
+            chunkLengthSelector.value = 20;
             
             currentPosition = 0;
             maxFreq = 96000;
@@ -586,17 +589,25 @@ document.addEventListener('DOMContentLoaded', function () {
                     next.disabled = true;
                     slider.disabled = true;
                     sliderContainer.disabled = true
+                    document.getElementById('secout').value = currentPosition + '/' + `${audioLength}` + ' seconds'
                 } else {
                     prec.disabled = false;
                     next.disabled = false;
                     slider.disabled = false;
                     sliderContainer.disabled = false
+                    document.getElementById('secout').value = currentPosition + '/' + `${audioLength}` + ' seconds'
                 }
             });
 
             
         }
-        updateWaveform()
+        //updateWaveform()
+
+        // avoid bug, sometimes the updateWaveform() seems to be executed before audioLength is updated, so waveform has wrong length
+        setTimeout(() => {
+            updateWaveform();
+        }, 50);
+        
 
     });
 
@@ -650,7 +661,7 @@ document.addEventListener('DOMContentLoaded', function () {
     next.addEventListener('click' ,function () {
         currentPosition += chunkLength;
         slider.value = currentPosition;
-        document.getElementById('secout').value = currentPosition + ' seconds'
+        document.getElementById('secout').value = currentPosition + '/' + `${audioLength}` + ' seconds'
 
         updateWaveform()
     });
@@ -659,7 +670,7 @@ document.addEventListener('DOMContentLoaded', function () {
         currentPosition = Math.max(currentPosition - chunkLength, 0);
         const file = fileInput.files[0];
         slider.value = currentPosition;
-        document.getElementById('secout').value = currentPosition + ' seconds'
+        document.getElementById('secout').value = currentPosition + '/' + `${audioLength}` + ' seconds'
         updateWaveform()
     });
     
