@@ -12,7 +12,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const visualizeButton = document.getElementById('visualizeButton');
     const playButton = document.getElementById('playButton');
    
-    //const customOption = document.getElementById('customOption');
+    const customOption = document.getElementById('customOption');
     //const slider = document.querySelector('input[type="range"]');
     const slider = document.getElementById('slider'); slider.disabled = true;
     const sliderContainer = document.getElementById('slider-container'); sliderContainer.disabled = true;
@@ -168,11 +168,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
     
     let customChoice = null;
-    /*customOption.addEventListener('click', function() {
+    customOption.addEventListener('click', function() {
         // Show a prompt to the user to enter their custom choice
         customChoice = prompt('Enter your custom choice:');
         customOption.textContent = customChoice + " (click to modify)";
-    });*/
+    });
 
 
     // FROM : https://github.com/smart-audio/audio_diarization_annotation/tree/master
@@ -409,7 +409,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 region.play();
             } else {
                 document.getElementById('myForm').style.display = 'block'
-                //customOption.textContent = "Custom name (type your own...)";
+                customOption.textContent = "Custom name (type your own...)";
 
                 if (region.content !== undefined) {
                     //document.forms.edit.elements.note.value = region.content.textContent
