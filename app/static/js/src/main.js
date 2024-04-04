@@ -773,28 +773,29 @@ document.addEventListener('DOMContentLoaded', function () {
                 console.log('Adding region:', start);
                 let note = ""
                 let specy;
-
-                if (data.AI == "bats") {
+                /*
+                if (data.AI == "BatML") {
                     note = ""
                     specy = data.result[index]
                 }
-                else if (data.AI == "battybirds") {
-                    /*for (let key in battyBirdList) {
+                else if (data.AI == "BattyBirdNET") {
+                    for (let key in battyBirdList) {
                         if (data.result[index].includes(key)) {
                             specy = battyBirdList[key]
                             note = data.result[key]
                             console.log(specy,note);
                             break;
                         }
-                    }*/
+                    }
                     note = ""
                     specy = data.result[index]
                 }
-                else if (data.AI == "birds") {
+                else if (data.AI == "BirdNET") {
                     note = ""
                     specy = data.result[index]
-                }
-
+                }*/
+                note = ""
+                specy = data.result[index]
                 var idn = `bat-${Math.random().toString(32).slice(2)}`
                 regions.push({
                     id: idn,
