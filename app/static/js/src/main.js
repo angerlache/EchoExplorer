@@ -692,6 +692,12 @@ document.addEventListener('DOMContentLoaded', function () {
     chunkLengthSelector.addEventListener('change',function () {
         var selectedNumber = document.getElementById("chunkLengthSelector").value;
         chunkLength = parseInt(selectedNumber);
+        if (audioLength > chunkLength) {
+            prec.disabled = false;
+            next.disabled = false;
+            slider.disabled = false;
+            sliderContainer.disabled = false
+        }
         updateWaveform()
     })
 
@@ -701,12 +707,24 @@ document.addEventListener('DOMContentLoaded', function () {
         if (chunkLength < 5) {
             chunkLength = 5
         }
+        if (audioLength > chunkLength) {
+            prec.disabled = false;
+            next.disabled = false;
+            slider.disabled = false;
+            sliderContainer.disabled = false
+        }
         updateWaveform()
     });
 
     zoomOut.addEventListener('click', () => {
         if (chunkLength == 60) {return;}
         chunkLength += 10;
+        if (audioLength > chunkLength) {
+            prec.disabled = false;
+            next.disabled = false;
+            slider.disabled = false;
+            sliderContainer.disabled = false
+        }
         updateWaveform()
     });
 
