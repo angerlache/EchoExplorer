@@ -509,7 +509,7 @@ document.addEventListener('DOMContentLoaded', function () {
             console.log('rendering DONE');
             //renderRegions(chunkLength,currentPosition,wsRegions,regions);
             setupRegionEventListener(wsRegions, wavesurfer, clickedId);
-            renderRegions(chunkLength,currentPosition,wsRegions,regions,SelectedSpecies);
+            renderRegions(chunkLength,currentPosition,wsRegions,regions,SelectedSpecies,SpeciesList);
             
         });
         
@@ -739,14 +739,16 @@ document.addEventListener('DOMContentLoaded', function () {
                     specy = data.result[index]
                 }
                 else if (data.AI == "battybirds") {
-                    for (let key in battyBirdList) {
+                    /*for (let key in battyBirdList) {
                         if (data.result[index].includes(key)) {
                             specy = battyBirdList[key]
                             note = data.result[key]
                             console.log(specy,note);
                             break;
                         }
-                    }
+                    }*/
+                    note = ""
+                    specy = data.result[index]
                 }
                 else if (data.AI == "birds") {
                     note = ""

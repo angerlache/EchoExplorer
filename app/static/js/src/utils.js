@@ -71,10 +71,14 @@ export function getCurrRegions(chunkLength,currentPosition,wr,regions){
 
 
 
-export function renderRegions(chunkLength,currentPosition,wr,regions,SelectedSpecies){
+export function renderRegions(chunkLength,currentPosition,wr,regions,SelectedSpecies,SpeciesList){
     getCurrRegions(chunkLength,currentPosition,wr,regions).forEach(reg => {
         //console.log("region added",reg)
-        if (SelectedSpecies.includes(reg.content.querySelector('h3').textContent) || SelectedSpecies.includes('other')) {
+        if (!SelectedSpecies.includes(reg.content.querySelector('h3').textContent) && SpeciesList.includes(reg.content.querySelector('h3').textContent)) {
+            // it is Envsp,Barbarg,...
+            // and must not appear on waveform
+        } 
+        else if (SelectedSpecies.includes(reg.content.querySelector('h3').textContent) || SelectedSpecies.includes('other')) {
             wr.addRegion({
                 start: reg.start - currentPosition,
                 end: reg.end - currentPosition,
