@@ -168,8 +168,8 @@
         </div>
 
         <div class="btn-group">
-            <button type="button" id="dropdownCheckSpecies" class="btn dropdown-toggle" aria-expanded="false" data-bs-toggle="dropdown" style="font-size: 0.8rem;">Species</button>
-            <ul class="dropdown-menu" aria-labelledby="multiSelectDropdown"> 
+            <button type="button" title="check the species you want to display" id="dropdownCheckSpecies" class="btn dropdown-toggle" aria-expanded="false" data-bs-toggle="dropdown" style="font-size: 0.8rem;">Species</button>
+            <ul class="dropdown-menu" id="specyBoxes" aria-labelledby="dropdownCheckSpecies"> 
                 <li> <label style="font-size: 0.8rem;"> <input type="checkbox" value="Barbarg" checked> Barbarg </label> </li> 
                 <li> <label style="font-size: 0.8rem;"> <input type="checkbox" value="Envsp" checked> Envsp </label> </li> 
                 <li> <label style="font-size: 0.8rem;"> <input type="checkbox" value="Myosp" checked> Myosp </label> </li>
@@ -180,6 +180,17 @@
                 <li> <label title="for birds/bats full names and custom names"  style="font-size: 0.8rem;"> <input type="checkbox" value="other" checked> Others </label> </li> 
                 <li> <label title="unannotated regions" style="font-size: 0.8rem;"> <input type="checkbox" value="Region" checked> Region </label> </li> 
                 <button type="button" style="font-size: 0.8rem;" class="btn" id="applySpecies">Apply</button>
+            </ul> 
+        </div>
+
+        <div class="btn-group">
+            <button type="button" title="check the AI's you want to show the results" id="dropdownCheckAI" class="btn dropdown-toggle" aria-expanded="false" data-bs-toggle="dropdown" style="font-size: 0.8rem;">AI</button>
+            <ul class="dropdown-menu" id="aiBoxes" aria-labelledby="dropdownCheckAI"> 
+                <li> <label style="font-size: 0.8rem;"> <input type="checkbox" value="Human" checked> Human </label> </li> 
+                <li> <label style="font-size: 0.8rem;"> <input type="checkbox" value="BatML" checked> BatML </label> </li> 
+                <li> <label style="font-size: 0.8rem;"> <input type="checkbox" value="BirdNET" checked> BirdNET </label> </li> 
+                <li> <label style="font-size: 0.8rem;"> <input type="checkbox" value="BattyBirdNET" checked> BattyBirdNET </label> </li>
+                <button type="button" style="font-size: 0.8rem;" class="btn" id="applyAI">Apply</button>
             </ul> 
         </div>
 
@@ -227,9 +238,9 @@
 
     <button id="playButton" > <i class="bi bi-play-fill"></i>/<i class="bi bi-pause-fill"></i> </i></button>
 
-    <button id="prec"> <i class="bi bi-skip-backward-fill"></i> </button>
+    <button id="prec" title="move backward in the audio"> <i class="bi bi-skip-backward-fill"></i> </button>
 
-    <button id="next"> <i class="bi bi-skip-forward-fill"></i> </button>
+    <button id="next" title="move forward in the audio"> <i class="bi bi-skip-forward-fill"></i> </button>
 
 
     <label id="slider-container">
@@ -339,6 +350,7 @@
                 <th>Specie</th>
                 <th>Time</th>
                 <th>Probability</th>
+                <th>AI</th>
                 <th>Id</th>
             </tr>
         </thead>

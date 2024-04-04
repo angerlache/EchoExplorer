@@ -71,10 +71,13 @@ export function getCurrRegions(chunkLength,currentPosition,wr,regions){
 
 
 
-export function renderRegions(chunkLength,currentPosition,wr,regions,SelectedSpecies,SpeciesList){
+export function renderRegions(chunkLength,currentPosition,wr,regions,SelectedSpecies,SpeciesList,SelectedAI){
     getCurrRegions(chunkLength,currentPosition,wr,regions).forEach(reg => {
         //console.log("region added",reg)
-        if (!SelectedSpecies.includes(reg.content.querySelector('h3').textContent) && SpeciesList.includes(reg.content.querySelector('h3').textContent)) {
+        if (!SelectedAI.includes(reg.ai)) {
+            // if AI not include in the list => do not show the region
+        }
+        else if (!SelectedSpecies.includes(reg.content.querySelector('h3').textContent) && SpeciesList.includes(reg.content.querySelector('h3').textContent)) {
             // it is Envsp,Barbarg,...
             // and must not appear on waveform
         } 
@@ -105,6 +108,7 @@ export function loadRegions(document,annotations,regions){
                 start: region.start,
                 end: region.end,
                 id: region.id,
+                ai: region.ai,
                 content: createRegionContent(document,region.label,region.note,true)})
         }
     });
@@ -131,6 +135,8 @@ export function saveAnnotationToServer(audioLength,annotation_name,filename,regi
                     note: region.content.querySelector('p').textContent,
                     id: region.id,
                     proba: region.proba,
+                    ai: region.ai,
+                    drag: region.drag
                 };
             } else {
                 return {
@@ -142,6 +148,8 @@ export function saveAnnotationToServer(audioLength,annotation_name,filename,regi
                     label: region.content.querySelector('h3').textContent,
                     note: region.content.querySelector('p').textContent,
                     id: region.id,
+                    ai: region.ai,
+                    drag: region.drag
                 }
             }
         })

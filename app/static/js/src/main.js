@@ -29,6 +29,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const zoomIn = document.getElementById('zoomIn');
     const zoomOut = document.getElementById('zoomOut');
     const applySpecies = document.getElementById('applySpecies')
+    const applyAI = document.getElementById('applyAI')
 
 
     let chunkLength = 20;
@@ -39,7 +40,9 @@ document.addEventListener('DOMContentLoaded', function () {
     //let minProba = 80;
     let sR = 44100; 
     
-    const checkBoxes = document.querySelectorAll('.dropdown-menu input[type="checkbox"]'); 
+    //const checkBoxes = document.querySelectorAll('.dropdown-menu input[type="checkbox"]'); 
+    const checkBoxes = document.querySelectorAll('#specyBoxes input[type="checkbox"]');
+    const AIcheckBoxes = document.querySelectorAll('#aiBoxes input[type="checkbox"]');
     let SelectedSpecies = ['Barbarg', 'Envsp', 'Myosp', 'Pip35', 'Pip50', 'Plesp', 'Rhisp','Region','other']; 
     let SpeciesList = ['Barbarg', 'Envsp', 'Myosp', 'Pip35', 'Pip50', 'Plesp', 'Rhisp','Region','other']; 
     let battyBirdList = {'Barbastella':'Barbarg', 'Eptesicus':'Envsp', 'Myotis':'Myosp', 'Nyctalus':'Envsp','Plecotus':'Plesp','Rhinolophus':'Rhisp','Vespertilio':'Envsp',
@@ -47,7 +50,8 @@ document.addEventListener('DOMContentLoaded', function () {
                         'Hypsugo savii_Alpenfledermaus':'Pip35', //see https://de.wikipedia.org/wiki/Alpenfledermaus for pip35
                         'Miniopterus schreibersii_Langflügelfledermaus':'Rhisp'} 
 
-    let removefun;
+    let SelectedAI = ['Human', 'BatML', 'BirdNET', 'BattyBirdNET'];
+    let AIlist = ['Human', 'BatML', 'BirdNET', 'BattyBirdNET'];
 
     let wavesurfer;
     
@@ -76,7 +80,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // add this in fileInput listener to have new table when new audio ?
     // or when audio chosen from allAudios
     const Dtable = new DataTable('#myTable',{order: [[1, 'asc']]});   
-    Dtable.column(3).visible(false);
+    Dtable.column(4).visible(false); // 3
     Dtable.search.fixed('range', function (searchStr, data, index) {
         var proba = parseFloat(data[2]) || 1; // use data for the age column
         if ((sliderProba.value <= (proba*100))) {
@@ -87,13 +91,21 @@ document.addEventListener('DOMContentLoaded', function () {
 
     Dtable.search.fixed('spec', function (searchStr, data, index) {
         var spec = data[0];
-        if (SelectedSpecies.includes("Region")){
+        //if (SelectedSpecies.includes("Region")){
+        if (SelectedSpecies.includes("other")){
             return SelectedSpecies.includes(spec) || !(SpeciesList.includes(spec));
         }
         else{
             return SelectedSpecies.includes(spec)
         }
     }); 
+
+    ////
+    Dtable.search.fixed('ai', function (searchStr, data, index) {
+        var ai = data[3];
+        return SelectedAI.includes(ai)
+    }); 
+    ////
 
 
 
@@ -107,7 +119,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const reader = new FileReader();
         reader.onload = function (event) {
-            loadNextChunk(event,data[3])
+            loadNextChunk(event,data[4]) //3
         }
         var file = fileInput.files[0];
         reader.readAsArrayBuffer(file);
@@ -128,6 +140,7 @@ document.addEventListener('DOMContentLoaded', function () {
         // if user repush on the button, the regions are not duplicated
     
         annotations.forEach(region => {
+            
             if (region.proba !== undefined) {
                 regions.push({
                     start: region.start,
@@ -135,6 +148,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     id: region.id,
                     content: createRegionContent(document,region.label,region.note,true),
                     proba: region.proba,
+                    drag: region.drag,
+                    ai: region.ai,
                 });
             } else {
                 regions.push({
@@ -142,6 +157,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     end: region.end,
                     id: region.id,
                     content: createRegionContent(document,region.label,region.note,true),
+                    drag: region.drag,
+                    ai: region.ai
                 });
             }
 
@@ -150,6 +167,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     region.label,
                     region.start,
                     region.proba,
+                    region.ai,
                     region.id
                 ]).draw().node();
             } else if (addRow) {
@@ -157,6 +175,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     region.label,
                     region.start,
                     "-",
+                    region.ai,
                     region.id
                 ]).draw().node();
             }
@@ -207,6 +226,7 @@ document.addEventListener('DOMContentLoaded', function () {
             let r = Object.assign({}, region);
             r.start = r.start + currentPosition;
             r.end = r.end + currentPosition;
+            r.ai = toRemove.ai;
             if (toRemove.proba !== undefined) {
                 r.proba = toRemove.proba;
             }
@@ -219,7 +239,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 unremovableRegions.push(r);
             }
 
-            var rowid = Dtable.column(3).data().indexOf(region.id)
+            var rowid = Dtable.column(4).data().indexOf(region.id) //3
             var row = Dtable.row(rowid);
             var d = row.data()
             d[0] = regionContent.innerText;
@@ -275,6 +295,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 let r = Object.assign({}, region);
                 r.start = r.start + currentPosition;
                 r.end = r.end + currentPosition;
+                r.ai = 'Human'
                 console.log(r.id);
                 
 
@@ -289,6 +310,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         "Region",
                         r.start,
                         "-",
+                        "Human",
                         r.id
                     ]).draw().node();
                 }
@@ -341,7 +363,7 @@ document.addEventListener('DOMContentLoaded', function () {
             var r = null;
             Dtable.rows().every(function() {
                 var rowData = this.data();
-                if (rowData[3] === region.id) {
+                if (rowData[4] === region.id) { //3
                     r = this;
                 }
             });
@@ -382,7 +404,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             Dtable.rows().every(function() {
                 var rowData = this.data();
-                if (rowData[3] === region.id) {
+                if (rowData[4] === region.id) { //3
                     rowData[1] = r.start;
                     this.data(rowData);
 
@@ -509,7 +531,7 @@ document.addEventListener('DOMContentLoaded', function () {
             console.log('rendering DONE');
             //renderRegions(chunkLength,currentPosition,wsRegions,regions);
             setupRegionEventListener(wsRegions, wavesurfer, clickedId);
-            renderRegions(chunkLength,currentPosition,wsRegions,regions,SelectedSpecies,SpeciesList);
+            renderRegions(chunkLength,currentPosition,wsRegions,regions,SelectedSpecies,SpeciesList,SelectedAI);
             
         });
         
@@ -784,6 +806,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     drag: false,
                     resize: false,
                     proba: data.probability[index],
+                    ai: data.AI,
                 })
                 unremovableRegions.push({
                     id: idn,
@@ -795,6 +818,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     drag: false,
                     resize: false,
                     proba: data.probability[index],
+                    ai: data.AI,
                 })
                 //Populate DataTable
                 
@@ -803,6 +827,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     specy,
                     data.start[index],
                     data.probability[index],
+                    data.AI,
                     idn,
                 ]).draw().node();
 
@@ -872,9 +897,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const formData = new FormData();
         formData.append('audio', file);
-        formData.append('chosenAI', 'bats');
+        formData.append('chosenAI', 'BatML');
 
-        predictedTime(audioLength,'bats')
+        predictedTime(audioLength,'BatML')
 
         processRequest(formData)
 
@@ -887,9 +912,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const formData = new FormData();
         formData.append('audio', file);
-        formData.append('chosenAI', 'birds');
+        formData.append('chosenAI', 'BirdNET');
 
-        predictedTime(audioLength,'birds')
+        predictedTime(audioLength,'BirdNET')
 
         processRequest(formData);
     });
@@ -902,9 +927,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const formData = new FormData();
         formData.append('audio', file);
-        formData.append('chosenAI', 'battybirds');
+        formData.append('chosenAI', 'BattyBirdNET');
 
-        predictedTime(audioLength,'battybirds')
+        predictedTime(audioLength,'BattyBirdNET')
 
         processRequest(formData);
     });
@@ -1016,6 +1041,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         note: region.content.querySelector('p').textContent,
                         id: region.id,
                         proba: region.proba,
+                        ai: region.ai
                     };
                 } else {
                     return {
@@ -1028,6 +1054,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         note: region.content.querySelector('p').textContent,
                         id: region.id,
                         proba: 0,
+                        ai: region.ai
                     }
                 }
             })
@@ -1060,12 +1087,19 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function handleCB() { 
         SelectedSpecies = [];     
+        SelectedAI = []
         checkBoxes.forEach((checkbox) => { 
             if (checkbox.checked) { 
                 SelectedSpecies.push(checkbox.value); 
             } 
         }); 
+        AIcheckBoxes.forEach((checkbox) => {
+            if (checkbox.checked) { 
+                SelectedAI.push(checkbox.value); 
+            } 
+        });
         console.log(SelectedSpecies)
+        console.log(SelectedAI)
         Dtable.draw();
         //Dtable.columns(0).search(SelectedSpecies.join('|'), true, false).draw();
     } 
@@ -1073,8 +1107,16 @@ document.addEventListener('DOMContentLoaded', function () {
     checkBoxes.forEach((checkbox) => { 
         checkbox.addEventListener('change', handleCB); 
     }); 
+    
+    AIcheckBoxes.forEach((checkbox) => { 
+        checkbox.addEventListener('change', handleCB); 
+    }); 
 
     applySpecies.addEventListener('click', () => {
+        updateWaveform();
+    });
+
+    applyAI.addEventListener('click', () => {
         updateWaveform();
     });
 
