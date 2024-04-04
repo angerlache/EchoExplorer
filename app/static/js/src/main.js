@@ -12,7 +12,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const visualizeButton = document.getElementById('visualizeButton');
     const playButton = document.getElementById('playButton');
    
-    const customOption = document.getElementById('customOption');
+    //const customOption = document.getElementById('customOption');
     //const slider = document.querySelector('input[type="range"]');
     const slider = document.getElementById('slider'); slider.disabled = true;
     const sliderContainer = document.getElementById('slider-container'); sliderContainer.disabled = true;
@@ -28,6 +28,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const chunkLengthSelector = document.getElementById('chunkLengthSelector');
     const zoomIn = document.getElementById('zoomIn');
     const zoomOut = document.getElementById('zoomOut');
+    const applySpecies = document.getElementById('applySpecies')
 
 
     let chunkLength = 20;
@@ -165,16 +166,13 @@ document.addEventListener('DOMContentLoaded', function () {
     
     }
 
-
-    // Get references to the select element and the custom option
+    
     let customChoice = null;
-    // Add event listener to the custom option
-    customOption.addEventListener('click', function() {
+    /*customOption.addEventListener('click', function() {
         // Show a prompt to the user to enter their custom choice
         customChoice = prompt('Enter your custom choice:');
         customOption.textContent = customChoice + " (click to modify)";
-
-    });
+    });*/
 
 
     // FROM : https://github.com/smart-audio/audio_diarization_annotation/tree/master
@@ -190,7 +188,13 @@ document.addEventListener('DOMContentLoaded', function () {
                 var regionContent = createRegionContent(document,customChoice, form.elements.note.value,true)
                 customChoice = null;
             } else {
-                var regionContent = createRegionContent(document,form.elements.choiceSelector.value, form.elements.note.value,true)
+                console.log('iiii, ', form.elements.choiceSelector.value);
+
+                if (form.elements.choiceSelector.value === "") {
+                    var regionContent = createRegionContent(document,"Region", form.elements.note.value,true)
+                } else {
+                    var regionContent = createRegionContent(document,form.elements.choiceSelector.value, form.elements.note.value,true)
+                }
 
             }
             region.setContent(regionContent);
@@ -267,7 +271,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             //If created region is new, add it to the list.
             if(!regions.some(item => item.id === region.id)){
-                region.content = createRegionContent(document,"Region", "",false);
+                region.content = createRegionContent(document,"Region", "",true);
                 let r = Object.assign({}, region);
                 r.start = r.start + currentPosition;
                 r.end = r.end + currentPosition;
@@ -281,7 +285,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     regions.push(r);
                     unremovableRegions.push(r);
                     var row = Dtable.row.add([
-                        "hand-added Region",
+                        //"hand-added Region",
+                        "Region",
                         r.start,
                         "-",
                         r.id
@@ -404,7 +409,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 region.play();
             } else {
                 document.getElementById('myForm').style.display = 'block'
-                customOption.textContent = "Type your own...";
+                //customOption.textContent = "Custom name (type your own...)";
 
                 if (region.content !== undefined) {
                     //document.forms.edit.elements.note.value = region.content.textContent
@@ -538,6 +543,8 @@ document.addEventListener('DOMContentLoaded', function () {
             const data = await response.json();
             loadRegions(document,data,regions,true);
             loadRegions(document,data,unremovableRegions,false);
+
+            updateWaveform()
 
             // hide the button after user pushed it, so that cannot use it
             //loadLabels.disabled = true;
@@ -789,6 +796,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         })
         .catch(error => {
+            alert("ERROR: if you are using firefox, please try chrome")
             console.error('Error:', error);
         });
     }
@@ -1045,5 +1053,9 @@ document.addEventListener('DOMContentLoaded', function () {
     checkBoxes.forEach((checkbox) => { 
         checkbox.addEventListener('change', handleCB); 
     }); 
+
+    applySpecies.addEventListener('click', () => {
+        updateWaveform();
+    });
 
 });
