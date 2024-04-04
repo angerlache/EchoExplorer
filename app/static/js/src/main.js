@@ -191,7 +191,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 console.log('iiii, ', form.elements.choiceSelector.value);
 
                 if (form.elements.choiceSelector.value === "") {
-                    var regionContent = createRegionContent(document,"Region", form.elements.note.value,true)
+                    var regionContent = createRegionContent(document,reg.content.querySelector('h3').textContent, form.elements.note.value,true)
                 } else {
                     var regionContent = createRegionContent(document,form.elements.choiceSelector.value, form.elements.note.value,true)
                 }
