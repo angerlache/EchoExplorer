@@ -339,6 +339,8 @@ def annotation(username,path):
     print('annotation path = ' + path)
     if request.method == 'GET':
         hash_name = get_hashname(path+'.wav')
+        if hash_name is None:
+            return
         
         return send_from_directory(os.path.join(work_dir, 'users', username, 'annotation'), hash_name[:-3]+'json')
         #return send_from_directory(os.path.join(work_dir, 'annotation'), path)
@@ -346,6 +348,11 @@ def annotation(username,path):
     else:
         data = request.data
         hash_name = get_hashname(path+'.wav')
+        if hash_name is None:
+            hash_name = str(hash(path))#+".wav"
+            new_file = File(name=path+'.wav', hashName=hash_name, username=current_user.username)
+            db.session.add(new_file)
+            db.session.commit()
         
         #output_dir = os.path.join(work_dir, 'annotation')
         output_dir = os.path.join(work_dir, 'users', username, 'annotation')
@@ -434,11 +441,12 @@ def get_hashname(filename):
     elif query1:
         hash_name = query1.hashName
     else:
+        return None
         # TODO ?
-        hash_name = str(hash(filename))#+".wav"
-        new_file = File(name=filename, hashName=hash_name, username=current_user.username)
-        db.session.add(new_file)
-        db.session.commit()
+        #hash_name = str(hash(filename))#+".wav"
+        #new_file = File(name=filename, hashName=hash_name, username=current_user.username)
+        #db.session.add(new_file)
+        #db.session.commit()
     return hash_name
 
 @app.route('/split')
