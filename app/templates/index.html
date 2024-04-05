@@ -159,7 +159,7 @@
             <button type="button" class="btn dropdown-toggle" data-bs-toggle="dropdown" style="font-size: 0.8rem;">Options</button>
             <div class="dropdown-menu" style="width: auto;">
                 <label style="font-size: 0.8rem;">
-                    Max Freq: <input type="range" id="maxFreq" min="1000" max="96000" value="96000"  oninput="this.nextElementSibling.value = this.value + 'Hz'" /> <output id="freqout"> 96000 Hz</output>
+                    Max Freq: <input type="range" id="maxFreq" min="4000" max="96000" value="96000"  oninput="this.nextElementSibling.value = this.value + 'Hz'" /> <output id="freqout"> 96000 Hz</output>
                 </label>
                 <label id="proba-container" style="font-size: 0.8rem;">
                     Classification proba: <input type="range" id="proba-slider" min="0" max="100" value="50"  oninput="this.nextElementSibling.value = this.value + ' %'" /> <output id="probaout">50 %</output>
@@ -202,7 +202,10 @@
                 <button class="dropdown-item" id="save" disabled style="font-size: 0.8rem;">Save Local</button>
                 <button class="dropdown-item" id="uploadButton" style="font-size: 0.8rem;">Share it</button>
                 <!--button class="dropdown-item" id="discussButton" {% if not isExpert %}style="display: none;"{% endif %}>Discussed</button-->
-                <button class="dropdown-item" id="validateButton" style="font-size: 0.8rem;" {% if not isExpert %}style="display: none;"{% endif %}>Validated</button>
+                {% if isExpert %}
+                    <button class="dropdown-item" id="validateButton" style="font-size: 0.8rem;">Validated</button>
+                {% endif %}
+                
             </div>
         </div>      
         

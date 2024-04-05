@@ -20,7 +20,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const sliderProba = document.getElementById('proba-slider');
     const next = document.getElementById('next'); next.disabled = true;
     const prec = document.getElementById('prec'); prec.disabled = true;
-    const save = document.getElementById('save');
+    const save = document.getElementById('save'); save.disabled = true;
     const csv = document.getElementById('csv');
     const loadLabels = document.getElementById('loadLabels');
     const validateButton = document.getElementById('validateButton');
@@ -239,13 +239,25 @@ document.addEventListener('DOMContentLoaded', function () {
                 unremovableRegions.push(r);
             }
 
+            /*
             var rowid = Dtable.column(4).data().indexOf(region.id) //3
             var row = Dtable.row(rowid);
+            console.log(row.data());
+
             var d = row.data()
             d[0] = regionContent.innerText;
             row.data(d);
             Dtable.draw();
+            */
 
+            Dtable.rows().every(function() {
+                var rowData = this.data();
+                if (rowData[4] === region.id) { //3
+                    rowData[1] = r.start;
+                    this.data(rowData);
+
+                }
+            });
 
             
             form.style.opacity = 0;
@@ -588,6 +600,7 @@ document.addEventListener('DOMContentLoaded', function () {
         
         if (selectedFile) {
             uploadButton.disabled = true;
+            save.disabled = true;
 
             chunkLength = 20;
             chunkLengthSelector.value = 20;
@@ -767,7 +780,7 @@ document.addEventListener('DOMContentLoaded', function () {
             console.log(data);
 
 
-            if (userName) {uploadButton.disabled = false;}
+            if (userName) {uploadButton.disabled = false;save.disabled = false;}
             //startAI.disabled = true;
 
             
