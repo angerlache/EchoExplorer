@@ -1005,12 +1005,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 // 'visualizeButton' listener
                 setTimeout(() => {
                     // Manually trigger the click event on the visualizeButton
-                    const clickEvent = new Event('click', {
-                        bubbles: true,
-                        cancelable: true,
-                    });
-
-                    document.getElementById('visualizeButton').dispatchEvent(clickEvent);
+                    updateWaveform()
                 }, 200); // Adjust the delay (in milliseconds) as needed
 
                 try {
