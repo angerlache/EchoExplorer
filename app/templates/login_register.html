@@ -75,7 +75,7 @@
     <div class="container">
         <h1>Sign up</h1>
 
-        <form id="registerForm" action="" method="POST">
+        <form id="registerForm" action="{{url_for('register')}}" method="POST">
             {{ regForm.hidden_tag() }}   
             <label for="regUsername">Username:</label>
             {{ regForm.username }}
@@ -91,7 +91,7 @@
 
         <h1>Sign in</h1>
 
-        <form id="loginForm" action="" method="POST">
+        <form id="loginForm" action="{{url_for('login')}}" method="POST">
             {{ logForm.hidden_tag() }}
             <label for="logUsername">Username:</label>
             {{ logForm.username }}

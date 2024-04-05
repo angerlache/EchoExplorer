@@ -71,11 +71,15 @@ export function getCurrRegions(chunkLength,currentPosition,wr,regions){
 
 
 
-export function renderRegions(chunkLength,currentPosition,wr,regions,SelectedSpecies,SpeciesList,SelectedAI){
+export function renderRegions(chunkLength,currentPosition,wr,regions,SelectedSpecies,SpeciesList,SelectedAI,threshold){
     getCurrRegions(chunkLength,currentPosition,wr,regions).forEach(reg => {
         //console.log("region added",reg)
         if (!SelectedAI.includes(reg.ai)) {
             // if AI not include in the list => do not show the region
+        }
+        else if (reg.proba !== undefined && reg.proba*100 < threshold) {
+            // if proba is undefined, region will be shown
+            // do not show the region if it has a proba and that proba < threshold
         }
         else if (!SelectedSpecies.includes(reg.content.querySelector('h3').textContent) && SpeciesList.includes(reg.content.querySelector('h3').textContent)) {
             // it is Envsp,Barbarg,...

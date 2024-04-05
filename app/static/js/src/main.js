@@ -546,7 +546,7 @@ document.addEventListener('DOMContentLoaded', function () {
             console.log('rendering DONE');
             //renderRegions(chunkLength,currentPosition,wsRegions,regions);
             setupRegionEventListener(wsRegions, wavesurfer, clickedId);
-            renderRegions(chunkLength,currentPosition,wsRegions,regions,SelectedSpecies,SpeciesList,SelectedAI);
+            renderRegions(chunkLength,currentPosition,wsRegions,regions,SelectedSpecies,SpeciesList,SelectedAI,sliderProba.value);
             
         });
         
@@ -693,6 +693,7 @@ document.addEventListener('DOMContentLoaded', function () {
         //minProba = val;
         Dtable.draw();
 
+        updateWaveform()
 
     });
 

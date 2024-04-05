@@ -157,21 +157,20 @@ def index():
     
     return render_template('index.html',is_logged_in=False)
         
-"""
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    form = LoginForm()
-
-    if form.validate_on_submit():
-        user = User.query.filter_by(username=form.username.data).first()
+    log_form = LoginForm()
+    reg_form = RegisterForm()
+    if log_form.validate_on_submit():
+        user = User.query.filter_by(username=log_form.username.data).first()
         if user:
-            if bcrypt.check_password_hash(user.password, form.password.data):
+            if bcrypt.check_password_hash(user.password, log_form.password.data):
                 login_user(user)
                 session['is_logged_in'] = True
-
                 return redirect(url_for('index'))
-    return render_template('login.html', form=form)
-"""
+    return render_template('login_register.html', logForm=log_form, regForm=reg_form)
+
 
 @app.route('/dashboard', methods=['GET', 'POST'])
 @login_required
@@ -193,24 +192,7 @@ def about():
 @app.route('/', methods=['GET', 'POST'])
 def login_register():
     log_form = LoginForm()
-    if log_form.validate_on_submit():
-        user = User.query.filter_by(username=log_form.username.data).first()
-        if user:
-            if bcrypt.check_password_hash(user.password, log_form.password.data):
-                login_user(user)
-                session['is_logged_in'] = True
-
-                return redirect(url_for('index'))
-    #return render_template('login.html', form=form)
-        
     reg_form = RegisterForm()
-    if reg_form.validate_on_submit():
-        hashed_password = bcrypt.generate_password_hash(reg_form.password.data)
-        new_user = User(username=reg_form.username.data, password=hashed_password)
-        db.session.add(new_user)
-        db.session.commit()
-        #return redirect(url_for('login'))
-    
     return render_template('login_register.html', logForm=log_form, regForm=reg_form)
 
 
@@ -221,19 +203,22 @@ def logout():
     session['is_logged_in'] = False
     return redirect(url_for('login_register'))
 
-"""
+
 @app.route('/register', methods=['GET', 'POST'])
 def register():
-    form = RegisterForm()
-
-    if form.validate_on_submit():
-        hashed_password = bcrypt.generate_password_hash(form.password.data)
-        new_user = User(username=form.username.data, password=hashed_password)
+    log_form = LoginForm()
+    reg_form = RegisterForm()
+    if reg_form.validate_on_submit():
+        hashed_password = bcrypt.generate_password_hash(reg_form.password.data)
+        new_user = User(username=reg_form.username.data, password=hashed_password)
         db.session.add(new_user)
         db.session.commit()
-        return redirect(url_for('login'))
-    return render_template('register.html', form=form)
-"""
+
+        user = User.query.filter_by(username=reg_form.username.data).first()
+        login_user(user)
+        session['is_logged_in'] = True
+        return redirect(url_for('index'))
+    return render_template('login_register.html', logForm=log_form, regForm=reg_form)
 
 
 @app.route('/predicted_time', methods=['POST'])
