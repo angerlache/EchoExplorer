@@ -1003,10 +1003,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 // Introduce a delay using setTimeout, because we need 'fileInput' listener has finished before starting
                 // 'visualizeButton' listener
-                setTimeout(() => {
+                /*setTimeout(() => {
                     // Manually trigger the click event on the visualizeButton
                     updateWaveform()
-                }, 200); // Adjust the delay (in milliseconds) as needed
+                }, 200); // Adjust the delay (in milliseconds) as needed*/
 
                 try {
                     const response = await fetch('/uploads/' + annotation_name);
