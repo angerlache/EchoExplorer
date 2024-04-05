@@ -254,6 +254,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 var rowData = this.data();
                 if (rowData[4] === region.id) { //3
                     rowData[1] = r.start;
+                    rowData[0] = regionContent.innerText
                     this.data(rowData);
 
                 }
@@ -612,7 +613,7 @@ document.addEventListener('DOMContentLoaded', function () {
             audioElement.src = URL.createObjectURL(selectedFile);
 
             // if another file, let access to the button
-            if (isLoggedIn) {loadLabels.disabled = false; save.disabled = false; csv.disabled = false;}
+            if (isLoggedIn) {loadLabels.disabled = false; csv.disabled = false;}
         
             audioElement.addEventListener('loadedmetadata', () => {
                 const durationInSeconds = audioElement.duration;
