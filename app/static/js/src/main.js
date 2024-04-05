@@ -387,12 +387,14 @@ document.addEventListener('DOMContentLoaded', function () {
         wr.on("region-updated", (region) => {
 
             console.log('region-updated', region)
+            let toRemove = regions.filter(item => item.id === region.id)[0]
             regions = regions.filter(item => item.id !== region.id);
             
             let r = Object.assign({}, region);
             r.start = r.start + currentPosition;
             r.end = r.end + currentPosition;
             r.content = region.content;
+            r.ai = toRemove.ai;
             if (r.content == undefined) {
                 console.log("updaled")
             }

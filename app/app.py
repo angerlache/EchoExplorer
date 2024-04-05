@@ -33,12 +33,12 @@ os.environ['NO_PROXY'] = 'https://gotham.inl.ovh'
 
 app = Flask(__name__)
 sslify = SSLify(app)
-limiter = Limiter(
+"""limiter = Limiter(
     get_remote_address,
     app=app,
     default_limits=["200 per day", "50 per hour"],
     storage_uri="memory://", # change storage for production
-)
+)"""
 
 work_dir = ""
 
@@ -434,8 +434,11 @@ def get_hashname(filename):
     elif query1:
         hash_name = query1.hashName
     else:
-        pass
         # TODO ?
+        hash_name = str(hash(filename))#+".wav"
+        new_file = File(name=filename, hashName=hash_name, username=current_user.username)
+        db.session.add(new_file)
+        db.session.commit()
     return hash_name
 
 @app.route('/split')
