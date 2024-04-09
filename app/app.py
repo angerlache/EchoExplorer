@@ -288,6 +288,7 @@ def process():
         data = {'message': current_user.username+'/'+filename, 'AI': session['AI']}
         json_data = json.dumps(data)
         print("request posted !")
+        
         ###""" comment this block for testing locally because s3 not available with localhost
         ###### and use the csv fake_labels.csv with fake labels
         #response = requests.post('https://gotham.inl.ovh/process_on_second_machine', data=json_data, headers=headers)
@@ -317,8 +318,8 @@ def process():
         # Process the file using your AI model function
         results = [[],[],[],[]]
         
-        """with open('received_classification_result_' + current_user.username + '.csv') as resultfile:
-        #with open('fake_labels.csv') as resultfile:
+        #with open('received_classification_result_' + current_user.username + '.csv') as resultfile:
+        """with open('fake_labels.csv') as resultfile:
             next(resultfile)
             for line in resultfile:
                 line = line.strip().split(',')
@@ -329,9 +330,11 @@ def process():
                     results[3].append(line[4])
                 
 
-        print(results)"""
-        return jsonify(response_data.json())
-        #return jsonify({'result': results[2], 'start': results[0], 'end': results[1], 'probability':results[3], 'AI':session['AI']})
+        print(results)
+        return jsonify({'result': results[2], 'start': results[0], 'end': results[1], 'probability':results[3], 'AI':session['AI']})
+        """
+
+        #return jsonify(response_data.json())
 
     return jsonify({'error': 'Invalid file format'})
 
