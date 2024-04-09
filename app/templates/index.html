@@ -118,24 +118,28 @@
         <div class="btn-group">
             <button type="button" class="btn dropdown-toggle" data-bs-toggle="dropdown" style="font-size: 0.8rem;">File</button>
             <div class="dropdown-menu">
-                <div class="dropdown-item" style="padding: 0rem;">
-                    <label class="btn" title="only wav files are supported"  for="audioFile" style="font-size: 0.8rem;">Open</label>
+                <button type="button" class="dropdown-item" style="padding: 0rem;">
+                    <label class="btn" title="only wav files are supported" for="audioFile" style="text-align: left; width: 100%; font-size: 0.8rem;">Open</label>
                     <input type="file" id="audioFile" accept=".wav" style="display: none;">
-                </div>
-                <button type="button" class="btn" data-bs-toggle="modal" data-bs-target="#myModal" style="font-size: 0.8rem;">
+                </button>
+                <button type="button" class="dropdown-item" style="padding: 0rem;">
+                    <label class="btn" for="multipleAudioFile" style="text-align: left; width: 100%; font-size: 0.8rem;">Open multiple</label>
+                    <input type="file" id="multipleAudioFile" accept=".wav" multiple style="display: none;">
+                </button>
+                <button type="button" class="btn" data-bs-toggle="modal" data-bs-target="#myModal" style="text-align: left; width: 100%; font-size: 0.8rem;">
                     All audios
                 </button>
-                <!--button type="button" class="btn dropdown-item">Open</button-->
             </div>
         </div>
+        
 
         <div class="btn-group">
-            <button type="button" class="btn dropdown-toggle" data-bs-toggle="dropdown" style="font-size: 0.8rem;">Zoom</button>
+            <button type="button" id="zoomButton" class="btn dropdown-toggle" data-bs-toggle="dropdown" style="font-size: 0.8rem;">Zoom</button>
             <div class="dropdown-menu">
                 <button type="button" id="zoomIn" class="btn dropdown-item" style="font-size: 0.8rem;">Zoom in</button>
                 <button type="button" id="zoomOut" class="btn dropdown-item" style="font-size: 0.8rem;">Zoom out</button>
                 
-                <select id="chunkLengthSelector" class="custom-select" style="font-size: 0.8rem;">
+                <select id="chunkLengthSelector" class="custom-select" style="text-align: left; width: 100%; font-size: 0.8rem;">
                     <option value="5">5s</option>
                     <option value="10">10s</option>
                     <option value="20">20s</option>
@@ -156,7 +160,7 @@
 
 
         <div class="btn-group">
-            <button type="button" class="btn dropdown-toggle" data-bs-toggle="dropdown" style="font-size: 0.8rem;">Options</button>
+            <button type="button" id="optionsButton" class="btn dropdown-toggle" data-bs-toggle="dropdown" style="font-size: 0.8rem;">Options</button>
             <div class="dropdown-menu" style="width: auto;">
                 <label style="font-size: 0.8rem;">
                     Max Freq: <input type="range" id="maxFreq" min="4000" max="96000" value="96000"  oninput="this.nextElementSibling.value = this.value + 'Hz'" /> <output id="freqout"> 96000 Hz</output>
@@ -168,8 +172,10 @@
         </div>
 
         <div class="btn-group">
-            <button type="button" title="check the species you want to display" id="dropdownCheckSpecies" class="btn dropdown-toggle" aria-expanded="false" data-bs-toggle="dropdown" style="font-size: 0.8rem;">Species</button>
-            <ul class="dropdown-menu" id="specyBoxes" aria-labelledby="dropdownCheckSpecies"> 
+            <button type="button" title="check the species you want to display" id="speciesButton" class="btn dropdown-toggle" aria-expanded="false" data-bs-toggle="dropdown" style="font-size: 0.8rem;">Species</button>
+            <ul class="dropdown-menu" id="specyBoxes" aria-labelledby="dropdownCheckSpecies">
+                <!--if we want the name of specy not clickable--> 
+                <!--li style="font-size: 0.8rem;"> <label> <input type="checkbox" value="Barbarg" checked>  </label> Barbarg </li--> 
                 <li> <label style="font-size: 0.8rem;"> <input type="checkbox" value="Barbarg" checked> Barbarg </label> </li> 
                 <li> <label style="font-size: 0.8rem;"> <input type="checkbox" value="Envsp" checked> Envsp </label> </li> 
                 <li> <label style="font-size: 0.8rem;"> <input type="checkbox" value="Myosp" checked> Myosp </label> </li>
@@ -179,23 +185,23 @@
                 <li> <label style="font-size: 0.8rem;"> <input type="checkbox" value="Rhisp" checked> Rhisp </label> </li> 
                 <li> <label title="for birds/bats full names and custom names"  style="font-size: 0.8rem;"> <input type="checkbox" value="other" checked> Others </label> </li> 
                 <li> <label title="unannotated regions" style="font-size: 0.8rem;"> <input type="checkbox" value="Region" checked> Region </label> </li> 
-                <button type="button" style="font-size: 0.8rem;" class="btn" id="applySpecies">Apply</button>
+                <button type="button" style="text-align: left; width: 100%; font-size: 0.8rem;" class="btn" id="applySpecies">Apply</button>
             </ul> 
         </div>
 
         <div class="btn-group">
-            <button type="button" title="check the AI's you want to show the results" id="dropdownCheckAI" class="btn dropdown-toggle" aria-expanded="false" data-bs-toggle="dropdown" style="font-size: 0.8rem;">AI</button>
+            <button type="button" title="check the AI's you want to show the results" id="aiButton" class="btn dropdown-toggle" aria-expanded="false" data-bs-toggle="dropdown" style="font-size: 0.8rem;">AI</button>
             <ul class="dropdown-menu" id="aiBoxes" aria-labelledby="dropdownCheckAI"> 
                 <li> <label style="font-size: 0.8rem;"> <input type="checkbox" value="Human" checked> Human </label> </li> 
                 <li> <label style="font-size: 0.8rem;"> <input type="checkbox" value="BatML" checked> BatML </label> </li> 
                 <li> <label style="font-size: 0.8rem;"> <input type="checkbox" value="BirdNET" checked> BirdNET </label> </li> 
                 <li> <label style="font-size: 0.8rem;"> <input type="checkbox" value="BattyBirdNET" checked> BattyBirdNET </label> </li>
-                <button type="button" style="font-size: 0.8rem;" class="btn" id="applyAI">Apply</button>
+                <button type="button" style="text-align: left; width: 100%; font-size: 0.8rem;" class="btn" id="applyAI">Apply</button>
             </ul> 
         </div>
 
         <div class="btn-group">
-            <button type="button" title="click+drag to create a region&#013;click to annotate&#013;'shift'+click to play&#013;'Ctrl'+click to delete" class="btn dropdown-toggle" data-bs-toggle="dropdown" style="font-size: 0.8rem;">Annotations</button>
+            <button type="button" id="annotationsButton" title="click+drag to create a region&#013;click to annotate&#013;'shift'+click to play&#013;'Ctrl'+click to delete" class="btn dropdown-toggle" data-bs-toggle="dropdown" style="font-size: 0.8rem;">Annotations</button>
             <div class="dropdown-menu">
                 <button class="dropdown-item" id="loadLabels" disabled style="font-size: 0.8rem;">Load Local</button>
                 <button class="dropdown-item" id="csv" disabled style="font-size: 0.8rem;">Download csv</button>
@@ -204,6 +210,8 @@
                 <!--button class="dropdown-item" id="discussButton" {% if not isExpert %}style="display: none;"{% endif %}>Discussed</button-->
                 {% if isExpert %}
                     <button class="dropdown-item" id="validateButton" style="font-size: 0.8rem;">Validated</button>
+                {% else %}
+                    <button class="dropdown-item" id="validateButton" style="display: none; font-size: 0.8rem;">Validated</button>
                 {% endif %}
                 
             </div>
@@ -214,17 +222,8 @@
     <br>
       
       
-      
-      
-
     <input type="file" id="audioFile" accept=".wav" style="display: none;">
     <button id="visualizeButton" style="display: none;">Visualize Audio</button>
-
-
-
-
-
-
 
 
     <br>
@@ -239,7 +238,7 @@
     <div id="wave-timeline"></div>
 
 
-    <button id="playButton" > <i class="bi bi-play-fill"></i>/<i class="bi bi-pause-fill"></i> </i></button>
+    <button id="playButton" disabled> <i class="bi bi-play-fill"></i>/<i class="bi bi-pause-fill"></i> </i></button>
 
     <button id="prec" title="move backward in the audio"> <i class="bi bi-skip-backward-fill"></i> </button>
 

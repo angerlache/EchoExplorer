@@ -5,6 +5,7 @@ import { generateColorMap,appendBuffer,renderRegions,saveAnnotationToServer,crea
 
 document.addEventListener('DOMContentLoaded', function () {
     const fileInput = document.getElementById('audioFile');
+    const multipleAudioFile = document.getElementById('multipleAudioFile');
     const processButton = document.getElementById('processButton');
     const processButton2 = document.getElementById('processButton2');
     const processButton3 = document.getElementById('processButton3');
@@ -31,12 +32,21 @@ document.addEventListener('DOMContentLoaded', function () {
     const applySpecies = document.getElementById('applySpecies')
     const applyAI = document.getElementById('applyAI')
 
+    const zoomButton = document.getElementById('zoomButton')
+    const optionsButton = document.getElementById('optionsButton')
+    const annotationsButton = document.getElementById('annotationsButton')
+    const speciesButton = document.getElementById('speciesButton')
+    const aiButton = document.getElementById('aiButton')
+    
+
 
     let chunkLength = 20;
     chunkLengthSelector.value = chunkLength;
 
     let currentPosition = 0;
     let audioLength;
+    let multipleAudioLength = [];
+    let multipleAudio = false;
     //let minProba = 80;
     let sR = 44100; 
     
@@ -66,16 +76,18 @@ document.addEventListener('DOMContentLoaded', function () {
     
 
     //temporary init
-    wavesurfer = WaveSurfer.create({
-        container: '#waveform',
-        waveColor: 'black',
-        progressColor: 'red',
-        sampleRate: maxFreq * 2,
-        //minPxPerSec: 500,
-        dragToSeek: true,
-    });
-    wavesurfer.registerPlugin(WaveSurfer.Timeline.create());
-    
+    function temporaryInit() {
+        wavesurfer = WaveSurfer.create({
+            container: '#waveform',
+            waveColor: 'black',
+            progressColor: 'red',
+            sampleRate: maxFreq * 2,
+            //minPxPerSec: 500,
+            dragToSeek: true,
+        });
+        wavesurfer.registerPlugin(WaveSurfer.Timeline.create());
+    }
+    temporaryInit()
 
     // add this in fileInput listener to have new table when new audio ?
     // or when audio chosen from allAudios
@@ -590,8 +602,56 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    fileInput.addEventListener('change', (event) => {
+    multipleAudioFile.addEventListener('change', (event) => {
+        if (wavesurfer) {
+            if(wsRegions){
+                wsRegions.unAll();
+            }
+            wavesurfer.destroy();
+        }
+        temporaryInit()
+        const selectedFiles = event.target.files;
+        console.log(selectedFiles);
+        Dtable.clear().draw();
+        if (selectedFiles) {
+            multipleAudio = true;
+            uploadButton.disabled = true;
+            save.disabled = true;
+            loadLabels.disabled = true; 
+            csv.disabled = true;
+            validateButton.disabled = true;
+            playButton.disabled = true;
+            zoomButton.disabled = true;
+            optionsButton.disabled = true;
+            annotationsButton.disabled = true;
+            speciesButton.disabled = true;
+            aiButton.disabled = true;
+            prec.disabled = true;
+            next.disabled = true;
+            slider.disabled = true;
+            sliderContainer.disabled = true
+            document.getElementById('secout').value = ''
 
+            Array.from(selectedFiles).forEach((file) => {
+                const audioElement = new Audio();
+                audioElement.src = URL.createObjectURL(file);
+                audioElement.addEventListener('loadedmetadata', () => {
+                    const durationInSeconds = audioElement.duration;
+                    multipleAudioLength.push(durationInSeconds)
+    
+                    if (durationInSeconds > 3603) {
+                        alert("WARNING : " + file.name + " too long, you won't be able to process it with any AI\n Max length is 1 hour");
+                        //return;
+                    }
+                    console.log('Audio duration:', durationInSeconds, 'seconds');
+                });
+            })
+        }
+    });
+
+
+
+    fileInput.addEventListener('change', (event) => {
         const selectedFile = event.target.files[0];
         //function fileSelected(selectedFile) //{
         regions = [];
@@ -600,6 +660,13 @@ document.addEventListener('DOMContentLoaded', function () {
         annotation_name = fileInput.files[0].name.split('.')[0] //+ '.json'
         
         if (selectedFile) {
+            multipleAudio = false;
+            playButton.disabled = false;
+            zoomButton.disabled = false;
+            optionsButton.disabled = false;
+            annotationsButton.disabled = false;
+            speciesButton.disabled = false;
+            aiButton.disabled = false;
             uploadButton.disabled = true;
             save.disabled = true;
 
@@ -771,8 +838,7 @@ document.addEventListener('DOMContentLoaded', function () {
         saveAnnotationToServer(audioLength,annotation_name,fileInput.files[0].name,regions,userName,'local');
     });
     
-    function processRequest(formData) {
-        let filename = fileInput.files[0].name
+    function processRequest(formData, filename, duration) {
         fetch('/process', {
             method: 'POST',
             body: formData
@@ -781,10 +847,7 @@ document.addEventListener('DOMContentLoaded', function () {
         .then(data => {
             console.log(data);
 
-
-            if (userName) {uploadButton.disabled = false;save.disabled = false;}
-            //startAI.disabled = true;
-
+            if (userName && !multipleAudio) {uploadButton.disabled = false;save.disabled = false;}
             
             data.start.forEach((start, index) => {
                 console.log('Adding region:', start);
@@ -839,23 +902,27 @@ document.addEventListener('DOMContentLoaded', function () {
                     ai: data.AI,
                 })
                 //Populate DataTable
-                
-                var row = Dtable.row.add([
-                    //data.result[index],
-                    specy,
-                    data.start[index],
-                    data.probability[index],
-                    data.AI,
-                    idn,
-                ]).draw().node();
-
+                if (!multipleAudio) {
+                    var row = Dtable.row.add([
+                        //data.result[index],
+                        specy,
+                        data.start[index],
+                        data.probability[index],
+                        data.AI,
+                        idn,
+                    ]).draw().node();
+                }
                 
             })
-            saveAnnotationToServer(audioLength,annotation_name,filename,regions,userName,'local');
-            saveAnnotationToServer(audioLength,annotation_name,filename,unremovableRegions,userName,'other'); 
+            saveAnnotationToServer(duration,filename.split('.')[0],filename,regions,userName,'local');
+            saveAnnotationToServer(duration,filename.split('.')[0],filename,unremovableRegions,userName,'other'); 
             
-            alert("Your file has been processed")
-            updateWaveform()
+            if (multipleAudio) {
+                alert("Your file " + filename + " has been processed.\n You can find it in your section 'My Audios'")
+            } else {
+                alert("Your file has been processed")
+                updateWaveform()
+            }
 
         })
         .catch(error => {
@@ -864,13 +931,13 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    function predictedTime(duration,ai) {
+    function predictedTime(duration,ai,size,filename) {
         fetch('/predicted_time', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json', 
             },
-            body: JSON.stringify({'time':duration,'AI':ai,'bytes':fileInput.files[0].size}) 
+            body: JSON.stringify({'time':duration,'AI':ai,'bytes':size}) 
         })
         .then(response => response.json())
         .then(data => {
@@ -879,19 +946,19 @@ document.addEventListener('DOMContentLoaded', function () {
             seconds = Math.round(seconds % 60)
             let paddedSeconds = `${seconds < 10 ? '0' : ''}${seconds}`
 
-            alert(`The predicted time for the task is ${minutes} min ${paddedSeconds} sec.`);
+            alert(`The predicted time to analyse ${filename} is ${minutes} min ${paddedSeconds} sec.`);
         })
         .catch(error => {
             console.error('Error:', error);
         });
     }
 
-    function checkAudio(file) {
+    function checkAudio(file,duration) {
         if (!file) {
             alert('Please select an audio file first.');
             return;
         }
-        if (audioLength > 3603) {
+        if (duration > 3603) {
             alert('ERROR : cannot process audio; audio too long\nMax length is 1 hour');
             return;
         }
@@ -908,48 +975,47 @@ document.addEventListener('DOMContentLoaded', function () {
         tooltip.style.display = 'none';
     });
 
-    processButton.addEventListener('click', function () {
-        const file = fileInput.files[0];
-
-        checkAudio(file)
+    function processButtonRoutine(file,duration,ai) {
+        checkAudio(file,duration)
 
         const formData = new FormData();
         formData.append('audio', file);
-        formData.append('chosenAI', 'BatML');
+        formData.append('chosenAI', ai);
 
-        predictedTime(audioLength,'BatML')
+        predictedTime(duration,ai,file.size,file.name)
 
-        processRequest(formData)
+        processRequest(formData,file.name,duration)
+    }
 
+    processButton.addEventListener('click', function () {
+        if (!multipleAudio) {
+            processButtonRoutine(fileInput.files[0],audioLength,'BatML')
+        } else {
+            Array.from(multipleAudioFile.files).forEach((file, i) => {
+                processButtonRoutine(file,multipleAudioLength[i],'BatML')
+            })
+        }
     });
 
     processButton2.addEventListener('click', function () {
-        const file = fileInput.files[0];
-
-        checkAudio(file)
-
-        const formData = new FormData();
-        formData.append('audio', file);
-        formData.append('chosenAI', 'BirdNET');
-
-        predictedTime(audioLength,'BirdNET')
-
-        processRequest(formData);
+        if (!multipleAudio) {
+            processButtonRoutine(fileInput.files[0],audioLength,'BirdNET')
+        } else {
+            Array.from(multipleAudioFile.files).forEach((file, i) => {
+                processButtonRoutine(file,multipleAudioLength[i],'BirdNET')
+            })
+        }
     });
 
 
     processButton3.addEventListener('click', function () {
-        const file = fileInput.files[0];
-
-        checkAudio(file)
-
-        const formData = new FormData();
-        formData.append('audio', file);
-        formData.append('chosenAI', 'BattyBirdNET');
-
-        predictedTime(audioLength,'BattyBirdNET')
-
-        processRequest(formData);
+        if (!multipleAudio) {
+            processButtonRoutine(fileInput.files[0],audioLength,'BattyBirdNET')
+        } else {
+            Array.from(multipleAudioFile.files).forEach((file, i) => {
+                processButtonRoutine(file,multipleAudioLength[i],'BattyBirdNET')
+            })
+        }
     });
 
     validateButton.addEventListener('click', function () {
