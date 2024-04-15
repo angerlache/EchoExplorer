@@ -1,4 +1,4 @@
-import { generateColorMap,appendBuffer,renderRegions,saveAnnotationToServer,createRegionContent } from './utils.js';
+import { generateColorMap,appendBuffer,renderRegions,saveAnnotationToServer,createRegionContent,getBrowser } from './utils.js';
 'use strict';
 
 
@@ -112,14 +112,82 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }); 
 
-    ////
     Dtable.search.fixed('ai', function (searchStr, data, index) {
         var ai = data[3];
         return SelectedAI.includes(ai)
     }); 
-    ////
+    
+    function cleanBeforeLoad() {
+        if (wavesurfer) {
+            // ICI tu fait un truc pour que il fasse plus qqchs on-delete
+            if(wsRegions){
+                wsRegions.unAll();
+            }
+            wavesurfer.destroy();
+        }
+        var modal = bootstrap.Modal.getInstance(myModalEl) 
+        modal.hide();
+        FilesDtable.clear().draw();
+        myFilesDtable.clear().draw();
+        Dtable.clear().draw();
+    }
 
+    var myModalEl = document.getElementById('myModal')
+    const FilesDtable = new DataTable('#FilesTable',{order: [[1, 'asc']]}); 
+    const myFilesDtable = new DataTable('#myFilesTable',{order: [[1, 'asc']]}); 
+    FilesDtable.column(0).visible(false); 
+    myFilesDtable.column(0).visible(false);
 
+    myFilesDtable.on('click', 'tbody tr', function () {
+        let data = myFilesDtable.row(this).data();
+        var filename = data[0];
+        var user = data[2];
+        cleanBeforeLoad()
+        changeAudio(user + '/' + filename);    
+    });
+    
+
+    document.getElementById('allAudios').addEventListener('click', () => {
+        fetch("/retrieve_filenames", {
+            method: "GET"
+        })
+        .then(response => response.json())
+        .then(res => {
+            res.audios.forEach((file,i) => {
+                var row = FilesDtable.row.add([
+                    file.split('/')[1],
+                    file.split('/')[1],
+                    file.split('/')[0],
+                    res.durations[i],
+                ]).draw().node();
+            })
+
+            res.myaudios.forEach((file,i) => {
+                var row = myFilesDtable.row.add([
+                    file.split('/')[1],
+                    file.split('/')[2],
+                    file.split('/')[0],
+                    res.mydurations[i],
+                ]).draw().node();
+            })
+        }).catch(function (err) {
+            console.log('Fetch Error :-S', err);
+        });
+    })
+
+    FilesDtable.on('click', 'tbody tr', function () {
+        let data = FilesDtable.row(this).data();
+        var filename = data[0];
+        var user = data[2];
+        cleanBeforeLoad()
+        changeAudio(user + '/' + filename);
+        
+    });
+
+    document.getElementById('closeModal').addEventListener('click', () => {
+        FilesDtable.clear().draw();
+        myFilesDtable.clear().draw();
+    });
 
 
     Dtable.on('click', 'tbody tr', function () {
@@ -689,7 +757,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 slider.max = Math.ceil(durationInSeconds);
                 slider.value = 0;
                 sliderFreq.value = 96000;
-
+                if (getBrowser() == 'Firefox') {sliderFreq.max = 96000;}
+                
                 if (durationInSeconds > 3603) {
                     alert("WARNING : audio too long, you won't be able to process it with any AI\n Max length is 1 hour");
                     //return;
@@ -751,6 +820,7 @@ document.addEventListener('DOMContentLoaded', function () {
     sliderFreq.addEventListener('change', (e) => {
         const val = e.target.valueAsNumber;
         maxFreq = val;
+        document.getElementById('freqout').value = `${maxFreq}` + ' Hz'
 
         updateWaveform()
     });
@@ -981,6 +1051,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const formData = new FormData();
         formData.append('audio', file);
         formData.append('chosenAI', ai);
+        formData.append('duration', Math.round(duration));
 
         predictedTime(duration,ai,file.size,file.name)
 

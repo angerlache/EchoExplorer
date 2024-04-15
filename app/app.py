@@ -75,6 +75,7 @@ class File(db.Model):
     name: Mapped[str] = mapped_column(primary_key=True) # name on client's computer
     hashName: Mapped[str] = mapped_column(unique=True)
     username: Mapped[str] = mapped_column(primary_key=True)
+    duration: Mapped[int] = mapped_column()
 
     __table_args__ = (PrimaryKeyConstraint('name','username'), )
 
@@ -128,7 +129,27 @@ class LoginForm(FlaskForm):
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
- 
+@app.route('/retrieve_filenames', methods=['GET'])
+def retrieve_filenames():
+    # Retrieve all rows from the database and extract the filename attribute
+    files2 = []
+    durations = []
+    mydurations = []
+    query = File.query.all()
+    for row in query:
+        files2.append(row.username + '/' + row.hashName)  
+        durations.append(row.duration)      
+    print(files2)
+    print('########')
+    userfiles = []
+    query = File.query.filter_by(username=current_user.username)
+    for row in query:
+        userfiles.append(row.username + '/' + row.hashName + '/' + row.name)
+        mydurations.append(row.duration)      
+
+    print(files2, userfiles)
+    return jsonify({'audios': files2, 'myaudios':userfiles, 'durations': durations, 'mydurations': mydurations})
+
 @app.route('/main')
 def index():
     
@@ -252,6 +273,8 @@ def process():
     file = request.files['audio']
     session['AI'] = request.form.get('chosenAI')
 
+    # use secure_filename (everywhere I read filename from a client) 
+    secured_filename = secure_filename(file.filename)
     if file.filename == '':
         return jsonify({'error': 'No selected file'})
     
@@ -262,9 +285,9 @@ def process():
             return jsonify({'error': 'user not logged in'})
         
         bucket_name = "biodiversity-lauzelle"
-        print('filename = ' + file.filename)
-        query1 = File.query.filter_by(hashName=file.filename).first()
-        query2 = File.query.filter_by(name=file.filename, username=current_user.username).first()
+        print('filename = ' + secured_filename)
+        query1 = File.query.filter_by(hashName=secured_filename).first()
+        query2 = File.query.filter_by(name=secured_filename, username=current_user.username).first()
         print(query1)
         print(query2)
         if query1:
@@ -275,8 +298,8 @@ def process():
             filename = query2.hashName
         else:
             print('FILE NOT FOUND IN DB')
-            filename = str(hash(file.filename))+".wav"
-            new_file = File(name=file.filename, hashName=filename, username=current_user.username)
+            filename = str(hash(secured_filename))+".wav"
+            new_file = File(name=secured_filename, hashName=filename, username=current_user.username,duration=request.form.get('duration'))
             db.session.add(new_file)
             db.session.commit()
 
@@ -342,8 +365,10 @@ def process():
 #@app.route('/annotation/<path:path>', methods=['GET', 'POST'])
 @app.route('/users/<username>/annotation/<path:path>', methods=['GET', 'POST'])
 def annotation(username,path):
+    path = secure_filename(path)
     print('annotation path = ' + path)
     if request.method == 'GET':
+        # use secure_filename (everywhere I read filename from a client) 
         hash_name = get_hashname(path+'.wav')
         if hash_name is None:
             return
@@ -371,6 +396,7 @@ def annotation(username,path):
     
 @app.route('/validated/<path:path>', methods=['POST'])
 def validate(path):
+    path = secure_filename(path)
     hash_name = get_hashname(path+'.wav')
 
     data = request.data
@@ -386,6 +412,7 @@ def validate(path):
 
 @app.route('/uploads/<path>', methods=['POST','GET'])
 def pending_audio(path):
+    path = secure_filename(path)
     print('path = '+path)
     if request.method == 'GET':
         hash_name = get_hashname(path+'.wav')
@@ -410,7 +437,7 @@ def pending_audio(path):
 @app.route('/delete_file', methods=['POST'])
 def delete_file():
     try:
-        filename = request.json['filename']  # Assuming you send the filename in the request body
+        filename = secure_filename(request.json['filename'])  # Assuming you send the filename in the request body
         hash_name = get_hashname(filename)
 
         # remove here for s3
@@ -427,7 +454,8 @@ def delete_file():
 
 @app.route('/reload/<user>/<filename>',methods=['POST','GET'])
 def uploaded_file(filename,user):
-    #return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+    # no need to secure_filename because here it is the hashed filename
+    
     # TODO : retrieve from s3 here
     s3 = boto3.client('s3', endpoint_url='https://ceph-gw1.info.ucl.ac.be')
      
