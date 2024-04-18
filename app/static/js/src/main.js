@@ -72,7 +72,39 @@ document.addEventListener('DOMContentLoaded', function () {
     let maxFreq = 96000;
     let arrayBuffer;
 
+    var modalNewObservation = document.getElementById('modalNewObservation')
     
+    // dont know exactly the diff between 'shown.bs.modal' and 'show.bs.modal'
+    // but in the latter the map is not rendered well
+    modalNewObservation.addEventListener('shown.bs.modal', (event) => {
+        map.invalidateSize();
+    });
+
+    var map = L.map('map').setView([50.8503, 4.3517], 8);
+    var mapFiles = L.map('mapFiles').setView([50.8503, 4.3517], 8);
+    var markers = L.layerGroup()
+    let marker = null;
+
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+    }).addTo(map);
+
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+    }).addTo(mapFiles);
+
+    function onMapClick(e) {    
+        if (marker != null) {
+            map.removeLayer(marker)
+        }
+        marker = L.marker(e.latlng).addTo(map);
+        console.log(marker);
+        console.log(marker._latlng);
+    }
+    
+    map.on('click', onMapClick);
     
 
     //temporary init
@@ -151,6 +183,8 @@ document.addEventListener('DOMContentLoaded', function () {
         })
         .then(response => response.json())
         .then(res => {
+            markers.clearLayers();
+            console.log(res);
             res.audios.forEach((file,i) => {
                 var row = FilesDtable.row.add([
                     file.split('/')[1],
@@ -158,7 +192,14 @@ document.addEventListener('DOMContentLoaded', function () {
                     file.split('/')[0],
                     res.durations[i],
                 ]).draw().node();
+                if (res.lat[i] != null) {
+                    var circleMarker = L.circleMarker([res.lat[i], res.lng[i]],{
+                        radius: 4
+                    }).bindPopup(file.split('/')[2])
+                    markers.addLayer(circleMarker)
+                }
             })
+            markers.addTo(mapFiles)
         }).catch(function (err) {
             console.log('Fetch Error :-S', err);
         });
@@ -166,6 +207,7 @@ document.addEventListener('DOMContentLoaded', function () {
     
 
     document.getElementById('myAudios').addEventListener('click', () => {
+        mapFiles.invalidateSize();
         whichFiles = 'my'
         getFiles('all')
     })
@@ -176,6 +218,7 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     document.getElementById('allAudios').addEventListener('click', () => {
+        mapFiles.invalidateSize();
         whichFiles = 'all'
         getFiles('all')
     })
@@ -714,7 +757,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-
+    
 
     fileInput.addEventListener('change', (event) => {
         const selectedFile = event.target.files[0];
@@ -912,6 +955,7 @@ document.addEventListener('DOMContentLoaded', function () {
         })
         .then(response => response.json())
         .then(data => {
+            marker = null;
             console.log(data);
 
             if (userName && !multipleAudio) {uploadButton.disabled = false;save.disabled = false;}
@@ -1050,6 +1094,10 @@ document.addEventListener('DOMContentLoaded', function () {
         formData.append('audio', file);
         formData.append('chosenAI', ai);
         formData.append('duration', Math.round(duration));
+        if (marker != null) {
+            formData.append('lat', marker._latlng.lat);
+            formData.append('lng', marker._latlng.lng);
+        }
 
         predictedTime(duration,ai,file.size,file.name)
 

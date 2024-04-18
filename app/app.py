@@ -85,6 +85,8 @@ class File(db.Model):
     name: Mapped[str] = mapped_column(primary_key=True) # name on client's computer
     hashName: Mapped[str] = mapped_column(unique=True)
     username: Mapped[str] = mapped_column(primary_key=True)
+    lat: Mapped[float] = mapped_column(nullable=True)
+    lng: Mapped[float] = mapped_column(nullable=True)
 
     __table_args__ = (PrimaryKeyConstraint('name','username'), )
 
@@ -143,6 +145,8 @@ def retrieve_myfilenames():
     which_species = request.args.get('arg')
     userfiles = []
     durations = []
+    lat = []
+    lng = []
     if which_species == 'all':
         documents = local_annotations.find({}, {"_id":1, "old_name": 1, "username":1, "duration":1})
     else:
@@ -154,15 +158,19 @@ def retrieve_myfilenames():
         if doc.get('username') == current_user.username:
             durations.append(doc.get("duration"))
             userfiles.append(current_user.username+'/'+doc.get("_id")+'/'+doc.get("old_name"))
+            lat.append(File.query.filter_by(hashName=doc.get("_id")).first().lat)
+            lng.append(File.query.filter_by(hashName=doc.get("_id")).first().lng)
 
     print(userfiles)
-    return jsonify({'audios':userfiles, 'durations': durations})
+    return jsonify({'audios':userfiles, 'durations': durations, 'lat': lat, 'lng': lng})
 
 @app.route('/retrieve_allfilenames', methods=['GET'])
 def retrieve_allfilenames():
     which_species = request.args.get('arg')
     files = []
     durations = []
+    lat = []
+    lng = []
     if which_species == 'all':
         documents = annotations.find({}, {"_id":1, "username":1, "duration":1})
     else:
@@ -172,10 +180,13 @@ def retrieve_allfilenames():
     for doc in documents:
         durations.append(doc.get("duration"))
         files.append(doc.get('username')+'/'+doc.get("_id")+'/'+doc.get("_id"))
+        lat.append(File.query.filter_by(hashName=doc.get("_id")).first().lat)
+        lng.append(File.query.filter_by(hashName=doc.get("_id")).first().lng)
+
 
     print(files)
 
-    return jsonify({'audios':files, 'durations': durations})
+    return jsonify({'audios':files, 'durations': durations, 'lat': lat, 'lng': lng})
 
 @app.route('/main')
 @login_required
@@ -306,7 +317,10 @@ def process():
         else:
             print('FILE NOT FOUND IN DB')
             filename = str(hash(secured_filename))+".wav"
-            new_file = File(name=secured_filename, hashName=filename, username=current_user.username)
+            if request.form.get('lat') is not None:
+                new_file = File(name=secured_filename, hashName=filename, username=current_user.username,lat=request.form.get('lat'),lng=request.form.get('lng'))
+            else:
+                new_file = File(name=secured_filename, hashName=filename, username=current_user.username)
             db.session.add(new_file)
             db.session.commit()
 

@@ -44,6 +44,15 @@
   
     <script src="https://cdn.datatables.net/2.0.3/js/dataTables.js"></script>
 
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""/>
+    
+     <!-- Make sure you put this AFTER Leaflet's CSS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""></script>
+
 </head>
 <body>
 
@@ -99,6 +108,9 @@
                 </button>
                 <button type="button" id="allAudios" class="btn" data-bs-toggle="modal" data-bs-target="#modalAudios" style="text-align: left; width: 100%; font-size: 0.8rem;">
                     All audios
+                </button>
+                <button type="button" id="newObservation" class="btn" data-bs-toggle="modal" data-bs-target="#modalNewObservation" style="text-align: left; width: 100%; font-size: 0.8rem;">
+                    New observation
                 </button>
             </div>
         </div>
@@ -226,19 +238,17 @@
     <div class="modal" id="modalAudios">
         <div class="modal-dialog modal-fullscreen">
         <div class="modal-content">
-
-            <select id="speciesToSearch" class="custom-select" style="text-align: left; width: 100%; font-size: 0.8rem;">
-                <option value="" selected disabled hidden>Select Species</option>
-                <option value="Barbarg">Barbarg</option>
-                <option value="Envsp">Envsp</option>
-                <option value="Pip35">Pip35</option>
-                <option value="Pip50">Pip50</option>
-                <option value="Rhisp">Rhisp</option>
-                <option value="Plesp">Plesp</option>
-                <option value="Myosp">Myosp</option>
-            </select>
-    
             <div class="modal-body">
+                <select id="speciesToSearch" class="custom-select" style="text-align: left; width: 100%; font-size: 0.8rem;">
+                    <option value="" selected disabled hidden>Select Species</option>
+                    <option value="Barbarg">Barbarg</option>
+                    <option value="Envsp">Envsp</option>
+                    <option value="Pip35">Pip35</option>
+                    <option value="Pip50">Pip50</option>
+                    <option value="Rhisp">Rhisp</option>
+                    <option value="Plesp">Plesp</option>
+                    <option value="Myosp">Myosp</option>
+                </select>
                 <table id="FilesTable" class="display" style="width:100%;">
                     <thead>
                         <tr>
@@ -251,10 +261,32 @@
                     <tbody>
                     </tbody>
                 </table>
+                <div id="mapFiles" style="height: 360px;"></div>
+
             </div>
     
             <div class="modal-footer">
                 <button type="button" id="closeModalAudios" class="btn btn-danger" data-bs-dismiss="modal">Close</button>
+            </div>
+    
+        </div>
+        </div>
+    </div>
+
+    <div class="modal" id="modalNewObservation">
+        <div class="modal-dialog modal-fullscreen">
+        <div class="modal-content">
+    
+            <div class="modal-body">
+                <button type="button" class="dropdown-item" style="padding: 0rem;">
+                    <label class="btn" title="only wav files are supported" for="audioFile" style="text-align: left; width: 100%; font-size: 0.8rem;">Open</label>
+                    <input type="file" id="audioFile" accept=".wav" style="display: none;">
+                </button>
+                <div id="map" style="height: 360px;"></div>
+            </div>
+    
+            <div class="modal-footer">
+                <button type="button" id="closeModalNewObservation" class="btn btn-danger" data-bs-dismiss="modal">Close</button>
             </div>
     
         </div>
@@ -290,7 +322,6 @@
         </div>
 
     </form>
-
 
 
  
