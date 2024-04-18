@@ -1,0 +1,64 @@
+
+/* Style for custom dropdown select */
+.custom-select-wrapper {
+    position: relative;
+    display: inline-block;
+    width: 100%;
+}
+
+.custom-select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    width: 100%;
+    padding: 0.5rem 1rem;
+    font-size: 0.8rem;
+    border: 1px solid #ced4da;
+    border-radius: 5px;
+    background-color: #f8f9fa;
+    cursor: pointer;
+}
+
+.custom-select:focus {
+    outline: none;
+    border-color: #4d90fe;
+}
+
+/* Hide the first option */
+.custom-select option:first-child {
+    display: none;
+}
+
+
+body {
+    background-color: #f0f0f0; /* Change the color to your desired background color */
+    margin: 0; /* Remove default margin */
+    padding: 0; /* Remove default padding */
+}
+
+.btn-group {
+    margin: 0 auto; /* Center the button group horizontally */
+    width: 100%; /* Adjust the width of the button group as needed */
+    background-color: #f0f0f0; /* Change the color to your desired background color */
+}
+
+
+/* Custom styles for the select element */
+.dropdown-menu .custom-select {
+    display: block;
+    /*width: 100%;*/
+    padding: 0.375rem 1rem;
+    font-size: 0.8rem;
+    /*line-height: 1.5;*/
+    color: #212529;
+    background-color: transparent;
+    background-clip: padding-box;
+    border: none;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+/* Adjust the size of the checkbox */
+.dropdown-menu input[type="checkbox"] {
+    transform: scale(0.8); /* Adjust scale factor */
+}
+

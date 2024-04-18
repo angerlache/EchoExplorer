@@ -31,10 +31,20 @@ import shutil
 import json
 import uuid
 import requests
+# start mongodb : sudo systemctl start mongod
+# stop mongodb : sudo systemctl stop mongod
+from pymongo import MongoClient
+from pymongo.errors import DuplicateKeyError
 
 os.environ['NO_PROXY'] = 'https://gotham.inl.ovh'
 
 app = Flask(__name__)
+
+client = MongoClient("localhost", 27017)
+db = client.mymongodb
+annotations = db.annotations
+local_annotations = db.local_annotations
+
 sslify = SSLify(app)
 """limiter = Limiter(
     get_remote_address,
@@ -75,7 +85,6 @@ class File(db.Model):
     name: Mapped[str] = mapped_column(primary_key=True) # name on client's computer
     hashName: Mapped[str] = mapped_column(unique=True)
     username: Mapped[str] = mapped_column(primary_key=True)
-    duration: Mapped[int] = mapped_column()
 
     __table_args__ = (PrimaryKeyConstraint('name','username'), )
 
@@ -129,55 +138,53 @@ class LoginForm(FlaskForm):
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-@app.route('/retrieve_filenames', methods=['GET'])
-def retrieve_filenames():
-    # Retrieve all rows from the database and extract the filename attribute
-    files2 = []
-    durations = []
-    mydurations = []
-    query = File.query.all()
-    for row in query:
-        files2.append(row.username + '/' + row.hashName)  
-        durations.append(row.duration)      
-    print(files2)
-    print('########')
+@app.route('/retrieve_myfilenames', methods=['GET'])
+def retrieve_myfilenames():
+    which_species = request.args.get('arg')
     userfiles = []
-    query = File.query.filter_by(username=current_user.username)
-    for row in query:
-        userfiles.append(row.username + '/' + row.hashName + '/' + row.name)
-        mydurations.append(row.duration)      
+    durations = []
+    if which_species == 'all':
+        documents = local_annotations.find({}, {"_id":1, "old_name": 1, "username":1, "duration":1})
+    else:
+        documents = local_annotations.find(
+                    {"annotations": {"$elemMatch": {"label": which_species}}},
+                    {"_id": 1, "old_name": 1, "username": 1, "duration": 1})
 
-    print(files2, userfiles)
-    return jsonify({'audios': files2, 'myaudios':userfiles, 'durations': durations, 'mydurations': mydurations})
+    for doc in documents:
+        if doc.get('username') == current_user.username:
+            durations.append(doc.get("duration"))
+            userfiles.append(current_user.username+'/'+doc.get("_id")+'/'+doc.get("old_name"))
+
+    print(userfiles)
+    return jsonify({'audios':userfiles, 'durations': durations})
+
+@app.route('/retrieve_allfilenames', methods=['GET'])
+def retrieve_allfilenames():
+    which_species = request.args.get('arg')
+    files = []
+    durations = []
+    if which_species == 'all':
+        documents = annotations.find({}, {"_id":1, "username":1, "duration":1})
+    else:
+        documents = annotations.find(
+                    {"annotations": {"$elemMatch": {"label": which_species}}},
+                    {"_id": 1, "username": 1, "duration": 1})
+    for doc in documents:
+        durations.append(doc.get("duration"))
+        files.append(doc.get('username')+'/'+doc.get("_id")+'/'+doc.get("_id"))
+
+    print(files)
+
+    return jsonify({'audios':files, 'durations': durations})
 
 @app.route('/main')
+@login_required
 def index():
     
     if current_user.is_authenticated:
-        # retrieve filenames from s3
-        #s3 = boto3.resource('s3', endpoint_url='https://ceph-gw1.info.ucl.ac.be')
-        #files2 = []
-        #for obj in s3.Bucket('biodiversity-lauzelle').objects.all():
-        #    files2.append(obj.key)
-        #    print(obj.key)
-        files2 = []
-        query = File.query.all()
-        for row in query:
-            files2.append(row.username + '/' + row.hashName)        
-        print(files2)
-        print('########')
 
-        userfiles = []
-        query = File.query.filter_by(username=current_user.username)
-        for row in query:
-            userfiles.append(row.username + '/' + row.hashName + '/' + row.name)
-        #for obj in s3.Bucket('biodiversity-lauzelle').objects.filter(Prefix=current_user.username+'/'):
-        #    userfiles.append(obj.key)
-        #    print(obj.key)
-        print(userfiles)
-        print('IS EXPERT = ', current_user.isExpert, type(current_user.isExpert))
         #files = [filename for filename in os.listdir(app.config['UPLOAD_FOLDER']) if filename.endswith('.wav')]       
-        return render_template('index.html',username=current_user.username,isExpert=current_user.isExpert,files=files2,userfiles=userfiles,is_logged_in=True)
+        return render_template('index.html',username=current_user.username,isExpert=current_user.isExpert,is_logged_in=True)
     
     return render_template('index.html',is_logged_in=False)
         
@@ -299,7 +306,7 @@ def process():
         else:
             print('FILE NOT FOUND IN DB')
             filename = str(hash(secured_filename))+".wav"
-            new_file = File(name=secured_filename, hashName=filename, username=current_user.username,duration=request.form.get('duration'))
+            new_file = File(name=secured_filename, hashName=filename, username=current_user.username)
             db.session.add(new_file)
             db.session.commit()
 
@@ -372,18 +379,21 @@ def annotation(username,path):
         hash_name = get_hashname(path+'.wav')
         if hash_name is None:
             return
-        
-        return send_from_directory(os.path.join(work_dir, 'users', username, 'annotation'), hash_name[:-3]+'json')
+        doc = local_annotations.find_one({'filename': hash_name})
+        if doc is None:
+            return
+        return jsonify(doc.get('annotations',{}))
+        #return send_from_directory(os.path.join(work_dir, 'users', username, 'annotation'), hash_name[:-3]+'json')
         #return send_from_directory(os.path.join(work_dir, 'annotation'), path)
     
     else:
         data = request.data
         hash_name = get_hashname(path+'.wav')
-        if hash_name is None:
+        """if hash_name is None:
             hash_name = str(hash(path))#+".wav"
             new_file = File(name=path+'.wav', hashName=hash_name, username=current_user.username)
             db.session.add(new_file)
-            db.session.commit()
+            db.session.commit()"""
         
         #output_dir = os.path.join(work_dir, 'annotation')
         output_dir = os.path.join(work_dir, 'users', username, 'annotation')
@@ -391,6 +401,18 @@ def annotation(username,path):
         with open(os.path.join(output_dir, hash_name[:-3]+'json'), 'w') as f:
             data = data.decode('utf-8')
             data = json.loads(data)
+            
+            doc = {
+                "_id": hash_name,
+                "filename": hash_name,
+                "old_name": path+'.wav',
+                "username": current_user.username,
+                "validated": False,
+                "duration": data[0]["duration"],
+                "annotations": data
+            }
+            local_annotations.replace_one({"_id": hash_name}, doc, upsert=True)
+            
             json.dump(data, f, indent=2)
         return 'ok'
     
@@ -407,6 +429,23 @@ def validate(path):
     with open(os.path.join(output_dir, hash_name[:-3]+'json'), 'w') as f:
         data = data.decode('utf-8')
         data = json.loads(data)
+        to_add = {
+            "_id": hash_name,
+            "filename": hash_name,
+            "username": current_user.username,
+            "validated": True,
+            "duration": data[0]["duration"],
+            "validated_by": current_user.username,
+            "annotations": data,
+        }
+        doc = annotations.find_one({'filename': hash_name})
+        if doc is None:
+            annotations.insert_one(to_add)
+        else:
+            if doc.get('validated'):
+                return
+            doc["username"] = doc.get('username')
+            annotations.replace_one({"_id": hash_name}, doc, upsert=True)
         json.dump(data, f, indent=2)
     return 'ok'
 
@@ -416,8 +455,12 @@ def pending_audio(path):
     print('path = '+path)
     if request.method == 'GET':
         hash_name = get_hashname(path+'.wav')
+        if hash_name is None: return
         
-        return send_from_directory(os.path.join(work_dir, 'uploads'), hash_name[:-3]+'json')
+        doc = annotations.find_one({'filename': hash_name})
+        if doc is None: return
+        return jsonify(doc.get('annotations',{}))
+        #return send_from_directory(os.path.join(work_dir, 'uploads'), hash_name[:-3]+'json')
         #return send_from_directory(os.path.join(work_dir, 'annotation'), path)
     
     elif request.method == 'POST':
@@ -430,7 +473,21 @@ def pending_audio(path):
         os.makedirs(output_dir, exist_ok=True)
         with open(os.path.join(output_dir, hash_name[:-3]+'json'), 'w') as f:
             data = data.decode('utf-8')
-            data = json.loads(data)   
+            data = json.loads(data)  
+            to_add = {
+                "_id": hash_name,
+                "filename": hash_name,
+                "username": current_user.username,
+                "validated": False,
+                "duration": data[0]["duration"],
+                "annotations": data
+            }
+            doc = annotations.find_one({'filename': hash_name})
+            if doc is None:
+                annotations.insert_one(to_add)
+            else:
+                if doc.get('username') == current_user.username and not doc.get('validated'):
+                    annotations.replace_one({"_id": hash_name}, doc, upsert=True)
             json.dump(data, f, indent=2)
         return 'ok'
 

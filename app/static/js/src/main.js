@@ -37,8 +37,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const annotationsButton = document.getElementById('annotationsButton')
     const speciesButton = document.getElementById('speciesButton')
     const aiButton = document.getElementById('aiButton')
+    const searchForSpeciesInFile = document.getElementById('speciesToSearch')
     
-
 
     let chunkLength = 20;
     chunkLengthSelector.value = chunkLength;
@@ -117,7 +117,7 @@ document.addEventListener('DOMContentLoaded', function () {
         return SelectedAI.includes(ai)
     }); 
     
-    function cleanBeforeLoad() {
+    function cleanBeforeLoad(modal) {
         if (wavesurfer) {
             // ICI tu fait un truc pour que il fasse plus qqchs on-delete
             if(wsRegions){
@@ -125,30 +125,28 @@ document.addEventListener('DOMContentLoaded', function () {
             }
             wavesurfer.destroy();
         }
-        var modal = bootstrap.Modal.getInstance(myModalEl) 
-        modal.hide();
+        bootstrap.Modal.getInstance(modal).hide() 
         FilesDtable.clear().draw();
-        myFilesDtable.clear().draw();
         Dtable.clear().draw();
     }
 
-    var myModalEl = document.getElementById('myModal')
+    var myModalEl = document.getElementById('modalAudios')
+    
+    var whichFiles = 'all'
     const FilesDtable = new DataTable('#FilesTable',{order: [[1, 'asc']]}); 
-    const myFilesDtable = new DataTable('#myFilesTable',{order: [[1, 'asc']]}); 
-    FilesDtable.column(0).visible(false); 
-    myFilesDtable.column(0).visible(false);
+    FilesDtable.column(0).visible(false);
 
-    myFilesDtable.on('click', 'tbody tr', function () {
-        let data = myFilesDtable.row(this).data();
+    FilesDtable.on('click', 'tbody tr', function () {
+        let data = FilesDtable.row(this).data();
         var filename = data[0];
         var user = data[2];
-        cleanBeforeLoad()
+        cleanBeforeLoad(myModalEl)
+        searchForSpeciesInFile.selectedIndex = 0;
         changeAudio(user + '/' + filename);    
     });
-    
 
-    document.getElementById('allAudios').addEventListener('click', () => {
-        fetch("/retrieve_filenames", {
+    function getFiles(whichSpecies) {
+        fetch(`/retrieve_${whichFiles}filenames?arg=${whichSpecies}`, {
             method: "GET"
         })
         .then(response => response.json())
@@ -156,38 +154,37 @@ document.addEventListener('DOMContentLoaded', function () {
             res.audios.forEach((file,i) => {
                 var row = FilesDtable.row.add([
                     file.split('/')[1],
-                    file.split('/')[1],
-                    file.split('/')[0],
-                    res.durations[i],
-                ]).draw().node();
-            })
-
-            res.myaudios.forEach((file,i) => {
-                var row = myFilesDtable.row.add([
-                    file.split('/')[1],
                     file.split('/')[2],
                     file.split('/')[0],
-                    res.mydurations[i],
+                    res.durations[i],
                 ]).draw().node();
             })
         }).catch(function (err) {
             console.log('Fetch Error :-S', err);
         });
+    }
+    
+
+    document.getElementById('myAudios').addEventListener('click', () => {
+        whichFiles = 'my'
+        getFiles('all')
     })
 
-    FilesDtable.on('click', 'tbody tr', function () {
-        let data = FilesDtable.row(this).data();
-        var filename = data[0];
-        var user = data[2];
-        cleanBeforeLoad()
-        changeAudio(user + '/' + filename);
-        
+    searchForSpeciesInFile.addEventListener('change', () => {
+        FilesDtable.clear().draw();
+        getFiles(searchForSpeciesInFile.value)
     });
 
-    document.getElementById('closeModal').addEventListener('click', () => {
+    document.getElementById('allAudios').addEventListener('click', () => {
+        whichFiles = 'all'
+        getFiles('all')
+    })
+
+    document.getElementById('closeModalAudios').addEventListener('click', () => {
         FilesDtable.clear().draw();
-        myFilesDtable.clear().draw();
+        searchForSpeciesInFile.selectedIndex = 0;
     });
+    
 
 
     Dtable.on('click', 'tbody tr', function () {
@@ -949,8 +946,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 var idn = `bat-${Math.random().toString(32).slice(2)}`
                 regions.push({
                     id: idn,
-                    start: start, //timestamp-currentPosition,
-                    end: data.end[index], //timestamp-currentPosition,
+                    start: parseFloat(start), //timestamp-currentPosition,
+                    end: parseFloat(data.end[index]), //timestamp-currentPosition,
                     //content: createRegionContent(document,`${data.result[index]}` , "note here",true),
                     content: createRegionContent(document,`${specy}`, note, true),
                     //color: randomColor(), 
@@ -961,8 +958,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 })
                 unremovableRegions.push({
                     id: idn,
-                    start: start,
-                    end: data.end[index], //timestamp-currentPosition,
+                    start: parseFloat(start),
+                    end: parseFloat(data.end[index]), //timestamp-currentPosition,
                     //content: createRegionContent(document,`${data.result[index]}` , "note here",true),
                     content: createRegionContent(document,`${specy}`, note, true),
                     //color: randomColor(), 
@@ -984,9 +981,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
                 
             })
-            saveAnnotationToServer(duration,filename.split('.')[0],filename,regions,userName,'local');
-            saveAnnotationToServer(duration,filename.split('.')[0],filename,unremovableRegions,userName,'other'); 
-            
+            if (multipleAudio || document.getElementById('saveAfterAI').checked) {
+                saveAnnotationToServer(duration,filename.split('.')[0],filename,regions,userName,'local');
+                saveAnnotationToServer(duration,filename.split('.')[0],filename,unremovableRegions,userName,'other'); 
+            }
             if (multipleAudio) {
                 alert("Your file " + filename + " has been processed.\n You can find it in your section 'My Audios'")
             } else {

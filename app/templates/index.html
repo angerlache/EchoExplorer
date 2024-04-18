@@ -4,42 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+    <link rel="stylesheet" href="../static/css/mystyle.css">
 
-    <style>
-        body {
-            background-color: #f0f0f0; /* Change the color to your desired background color */
-            margin: 0; /* Remove default margin */
-            padding: 0; /* Remove default padding */
-        }
-
-        .btn-group {
-            margin: 0 auto; /* Center the button group horizontally */
-            width: 100%; /* Adjust the width of the button group as needed */
-            background-color: #f0f0f0; /* Change the color to your desired background color */
-        }
-
-
-        /* Custom styles for the select element */
-        .dropdown-menu .custom-select {
-            display: block;
-            /*width: 100%;*/
-            padding: 0.375rem 1rem;
-            font-size: 0.8rem;
-            /*line-height: 1.5;*/
-            color: #212529;
-            background-color: transparent;
-            background-clip: padding-box;
-            border: none;
-            transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
-        }
-
-        /* Adjust the size of the checkbox */
-        .dropdown-menu input[type="checkbox"] {
-            transform: scale(0.8); /* Adjust scale factor */
-        }
-        
-
-    </style>
 
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <!--script src="{{ url_for('static', filename='js/lib/jquery-2.2.3.min.js') }}" type="text/javascript"></script>
@@ -128,7 +94,10 @@
                     <label class="btn" for="multipleAudioFile" style="text-align: left; width: 100%; font-size: 0.8rem;">Open multiple</label>
                     <input type="file" id="multipleAudioFile" accept=".wav" multiple style="display: none;">
                 </button>
-                <button type="button" id="allAudios" class="btn" data-bs-toggle="modal" data-bs-target="#myModal" style="text-align: left; width: 100%; font-size: 0.8rem;">
+                <button type="button" id="myAudios" class="btn" data-bs-toggle="modal" data-bs-target="#modalAudios" style="text-align: left; width: 100%; font-size: 0.8rem;">
+                    My audios
+                </button>
+                <button type="button" id="allAudios" class="btn" data-bs-toggle="modal" data-bs-target="#modalAudios" style="text-align: left; width: 100%; font-size: 0.8rem;">
                     All audios
                 </button>
             </div>
@@ -170,6 +139,7 @@
                 <label id="proba-container" style="font-size: 0.8rem;">
                     Classification proba: <input type="range" id="proba-slider" min="0" max="100" value="50"  oninput="this.nextElementSibling.value = this.value + ' %'" /> <output id="probaout">50 %</output>
                 </label> 
+                <label style="font-size: 0.8rem;"> <input type="checkbox" id="saveAfterAI" checked> Save after AI </label>
             </div>
         </div>
 
@@ -252,42 +222,24 @@
     </label>
 
     
-
     <!-- The Modal -->
-    <div class="modal" id="myModal">
+    <div class="modal" id="modalAudios">
         <div class="modal-dialog modal-fullscreen">
         <div class="modal-content">
-        
+
+            <select id="speciesToSearch" class="custom-select" style="text-align: left; width: 100%; font-size: 0.8rem;">
+                <option value="" selected disabled hidden>Select Species</option>
+                <option value="Barbarg">Barbarg</option>
+                <option value="Envsp">Envsp</option>
+                <option value="Pip35">Pip35</option>
+                <option value="Pip50">Pip50</option>
+                <option value="Rhisp">Rhisp</option>
+                <option value="Plesp">Plesp</option>
+                <option value="Myosp">Myosp</option>
+            </select>
+    
             <div class="modal-body">
-                {% if not is_logged_in %}
-                    You must be logged in to see all the files and your files.<br>
-                {% endif %}
-                <br>
-                NOTE: loading a file here can take up to some minutes
-                <br>
-                <!--ul>
-                    {% for filename in userfiles %}
-                        <script>function extractFilename(filename) {
-                                    var parts = filename.split('/');
-                                    return parts.slice(0, 2).join('/');}</script>
-                        <li>
-                            <a href="#" onclick="changeAudio(extractFilename('{{ filename }}'))">{{ filename.split('/')[0] + '/' + filename.split('/').pop() }}</a>
-                        </li>
-                        
-                    {% endfor %}
-                </ul>
-                Others' files:
-                <ul>
-                    {% for filename in files %}
-                        <li>
-                            <a href="#" onclick="changeAudio('{{ filename }}')">{{ filename.split('/')[1] }}</a>
-                        </li>
-                        
-                    {% endfor %}
-                </ul-->
-
-                <h3>My Audios</h3>
-                <table id="myFilesTable", class="display" style="width:100%">
+                <table id="FilesTable" class="display" style="width:100%;">
                     <thead>
                         <tr>
                             <th>Hash</th>
@@ -299,43 +251,17 @@
                     <tbody>
                     </tbody>
                 </table>
-
-                <br>
-                <br>
-                <br>
-                <br>
-
-                <h3>Others' files:</h3>
-                <table id="FilesTable", class="display" style="width:100%">
-                    <thead>
-                        <tr>
-                            <th>Hash</th>
-                            <th>Filename</th>
-                            <th>Posted by</th>
-                            <th>Duration[s]</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                    </tbody>
-                </table>
-            
-                </div>
-        
-                <!-- Modal footer -->
-                <div class="modal-footer">
-                <button type="button" id="closeModal" class="btn btn-danger" data-bs-dismiss="modal">Close</button>
+            </div>
+    
+            <div class="modal-footer">
+                <button type="button" id="closeModalAudios" class="btn btn-danger" data-bs-dismiss="modal">Close</button>
             </div>
     
         </div>
         </div>
     </div>
-    
 
     <div id="spectrogram"></div>
-
-
-
-
 
     <form role="form" id="myForm" style="display: none;" name="edit" style="opacity: 0; transition: opacity 300ms linear; margin: 30px 0;">
         
