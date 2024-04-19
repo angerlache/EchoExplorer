@@ -52,7 +52,8 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
     crossorigin=""></script>
-
+    
+    
 </head>
 <body>
 
@@ -239,16 +240,34 @@
         <div class="modal-dialog modal-fullscreen">
         <div class="modal-content">
             <div class="modal-body">
-                <select id="speciesToSearch" class="custom-select" style="text-align: left; width: 100%; font-size: 0.8rem;">
-                    <option value="" selected disabled hidden>Select Species</option>
-                    <option value="Barbarg">Barbarg</option>
-                    <option value="Envsp">Envsp</option>
-                    <option value="Pip35">Pip35</option>
-                    <option value="Pip50">Pip50</option>
-                    <option value="Rhisp">Rhisp</option>
-                    <option value="Plesp">Plesp</option>
-                    <option value="Myosp">Myosp</option>
-                </select>
+                <div class="row">
+                    <div class="col-sm">
+                        <select id="speciesToSearch" class="custom-select" style="text-align: left; width: 100%; font-size: 0.8rem;">
+                            <option value="" selected disabled hidden>Select Species</option>
+                            <option value="Barbarg">Barbarg</option>
+                            <option value="Envsp">Envsp</option>
+                            <option value="Pip35">Pip35</option>
+                            <option value="Pip50">Pip50</option>
+                            <option value="Rhisp">Rhisp</option>
+                            <option value="Plesp">Plesp</option>
+                            <option value="Myosp">Myosp</option>
+                        </select>
+                    </div>
+                    <div class="col-sm">
+                            <input type="text" id="autoSearch" class="form-control" placeholder="Search species..">
+                            <div class="position-absolute invisible" id="autoSearchComplete"></div>
+                            
+                    </div>
+                    <div class="col-md-auto">
+                        <button type="button" id="autoSearchButton"class="btn btn-outline-primary"><i class="bi bi-search"></i></button>
+                    </div>
+                  </div>
+                
+
+                
+                <br>
+                <br>
+                <br>
                 <table id="FilesTable" class="display" style="width:100%;">
                     <thead>
                         <tr>
@@ -350,6 +369,12 @@
     </script>
 
     <script src="{{ url_for('static', filename='js/src/main.js') }}" type="module"></script>
+
+    <script src="{{ url_for('static', filename='js/lib/autocomplete.js') }}"></script>
+    <script>
+        const autocomplete_example1 = ["Envsp"];
+        set_autocomplete('autoSearch', 'autoSearchComplete', autocomplete_example1, start_at_letters=1, count_results=2);
+    </script>
     
 
 
