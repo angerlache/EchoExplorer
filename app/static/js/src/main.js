@@ -1164,28 +1164,6 @@ document.addEventListener('DOMContentLoaded', function () {
         //saveAnnotationToServer(audioLength,annotation_name,fileInput,regions,userName,'validated');
         // in isExpert case : regions==unremovableRegions
         saveAnnotationToServer(audioLength,annotation_name,fileInput.files[0].name,unremovableRegions,userName,'validated');
-
-        const filenameToDelete = fileInput.files[0].name;  
-    
-        // Send a POST request to the Flask server to delete the file
-        fetch('/delete_file', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ filename: filenameToDelete }),
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                console.log(data.message);
-            } else {
-                console.error(data.message);
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-        });
     });
 
     uploadButton.addEventListener('click', function () {

@@ -522,24 +522,7 @@ def pending_audio(path):
                 doc["annotations"] = data
                 annotations.update_one({'_id': doc['_id']}, {'$set': {'annotations': doc['annotations']}})
 
-        return 'ok'
-
-@app.route('/delete_file', methods=['POST'])
-def delete_file():
-    try:
-        filename = secure_filename(request.json['filename'])  # Assuming you send the filename in the request body
-        hash_name = get_hashname(filename)
-
-        # remove here for s3
-        file_path = os.path.join(app.config['UPLOAD_FOLDER'], hash_name[:-3])
-        os.remove(file_path + 'wav')
-
-        # TODO : handle if json file has not been saved in "uploads", currently, it logs an error in js.
-        os.remove(file_path + 'json')
-        return jsonify({'success': True, 'message': 'File deleted successfully'})
-    except Exception as e:
-        return jsonify({'success': False, 'message': str(e)})
-    
+        return 'ok' 
 
 
 @app.route('/reload/<user>/<filename>',methods=['POST','GET'])
