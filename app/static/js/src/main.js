@@ -156,6 +156,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 wsRegions.unAll();
             }
             wavesurfer.destroy();
+            temporaryInit();
         }
         bootstrap.Modal.getInstance(modal).hide() 
         FilesDtable.clear().draw();
@@ -174,7 +175,7 @@ document.addEventListener('DOMContentLoaded', function () {
         var user = data[2];
         cleanBeforeLoad(myModalEl)
         searchForSpeciesInFile.selectedIndex = 0;
-        changeAudio(user + '/' + filename);    
+        changeAudio(user + '/' + filename,whichFiles);    
     });
 
     function getFiles(whichSpecies) {
@@ -651,7 +652,7 @@ document.addEventListener('DOMContentLoaded', function () {
             if(wsRegions){
                 wsRegions.unAll();
             }
-            
+            console.log(wavesurfer)
             wavesurfer.destroy();
         }
 
@@ -1196,7 +1197,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
     // Function to load waveform
-    window.changeAudio = function(filename) {
+    window.changeAudio = function(filename,whichFiles) {
         console.log("1111 ", '/reload/' + filename);
         
         fetch('/reload/' + filename)
@@ -1220,9 +1221,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 });
                 
                 fileInput.dispatchEvent(inputEvent);
-                uploadButton.disabled = true;
+                uploadButton.disabled = false;
                 loadLabels.disabled = true;
-
+                save.disabled = false;
                 // Introduce a delay using setTimeout, because we need 'fileInput' listener has finished before starting
                 // 'visualizeButton' listener
                 /*setTimeout(() => {
@@ -1231,7 +1232,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 }, 200); // Adjust the delay (in milliseconds) as needed*/
 
                 try {
-                    const response = await fetch('/uploads/' + annotation_name);
+                    const response = await fetch(`/uploads/` + annotation_name + `?arg=${whichFiles}`);
                     const data = await response.json();
                     loadRegions(document,data,regions,true);
                     loadRegions(document,data,unremovableRegions,false);

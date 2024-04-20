@@ -177,11 +177,11 @@ def retrieve_allfilenames():
     lng = []
     validated = []
     if which_species == 'all':
-        documents = annotations.find({}, {"_id":1, "username":1, "duration":1, "validated": 1})
+        documents = annotations.find({}, {"_id":1, "username":1, "duration":1, "validated": 1, "old_name": 1})
     else:
         documents = annotations.find(
                     {"annotations": {"$elemMatch": {"label": which_species}}},
-                    {"_id": 1, "username": 1, "duration": 1, "validated":1})
+                    {"_id": 1, "username": 1, "duration": 1, "validated":1, "old_name": 1})
     for doc in documents:
         durations.append(doc.get("duration"))
         if doc.get('username') == current_user.username:
@@ -432,15 +432,20 @@ def annotation(username,path):
             "old_name": path+'.wav',
             "username": current_user.username,
             "validated": False,
+            "validated_by": [],
             "duration": data[0]["duration"],
             "annotations": data
         }
         doc = annotations.find_one({'filename': hash_name})
-        if doc is not None:
-            to_add['validated'] = doc["validated"]
-            to_add['validated_by'] = doc["validated_by"]
-        local_annotations.replace_one({"_id": hash_name}, to_add, upsert=True)
-            
+        if doc is None:
+            local_annotations.replace_one({"_id": hash_name}, to_add, upsert=True)
+        else:
+            #to_add['validated'] = doc["validated"]
+            #to_add['validated_by'] = doc["validated_by"]
+            doc["annotations"] = data
+            #local_annotations.replace_one({"_id": hash_name}, to_add, upsert=True)
+            local_annotations.update_one({'_id': doc['_id']}, {'$set': {'annotations': doc['annotations'], 'validated': doc['validated'], 'validated_by': doc['validated_by']}})
+ 
         return 'ok'
     
 @app.route('/validated/<path:path>', methods=['POST'])
@@ -458,7 +463,7 @@ def validate(path):
         "username": current_user.username,
         "validated": True,
         "duration": data[0]["duration"],
-        "validated_by": current_user.username,
+        "validated_by": [current_user.username],
         "annotations": data,
     }
     doc = annotations.find_one({'filename': hash_name})
@@ -467,7 +472,8 @@ def validate(path):
     else:
         doc["validated"] = True
         doc["annotations"] = data
-        doc["validated_by"] = current_user.username
+        doc["validated_by"].append(current_user.username)
+
         annotations.update_one({'_id': doc['_id']}, {'$set': {'validated_by':doc['validated_by'],
                                                                 'validated': doc['validated'], 
                                                                 'annotations': doc['annotations']}})
@@ -477,13 +483,18 @@ def validate(path):
 
 @app.route('/uploads/<path>', methods=['POST','GET'])
 def pending_audio(path):
+    which_files = request.args.get('arg')
     path = secure_filename(path)
     print('path = '+path)
     if request.method == 'GET':
         hash_name = get_hashname(path+'.wav')
         if hash_name is None: return
         
-        doc = annotations.find_one({'filename': hash_name})
+        if which_files == 'all':
+            doc = annotations.find_one({'filename': hash_name})
+        else:
+            doc = local_annotations.find_one({'filename': hash_name})
+
         if doc is None: return
         return jsonify(doc.get('annotations',{}))
     
@@ -499,6 +510,7 @@ def pending_audio(path):
             "old_name": path+'.wav',
             "username": current_user.username,
             "validated": False,
+            "validated_by": [],
             "duration": data[0]["duration"],
             "annotations": data
         }
