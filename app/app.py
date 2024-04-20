@@ -185,7 +185,7 @@ def retrieve_allfilenames():
     for doc in documents:
         durations.append(doc.get("duration"))
         if doc.get('username') == current_user.username:
-            files.append(doc.get('username')+'/'+doc.get("_id")+'/'+doc.get("old_names"))
+            files.append(doc.get('username')+'/'+doc.get("_id")+'/'+doc.get("old_name"))
         else:
             files.append(doc.get('username')+'/'+doc.get("_id")+'/'+doc.get("_id"))
         validated.append(doc.get('validated'))
@@ -418,41 +418,29 @@ def annotation(username,path):
         if doc is None:
             return
         return jsonify(doc.get('annotations',{}))
-        #return send_from_directory(os.path.join(work_dir, 'users', username, 'annotation'), hash_name[:-3]+'json')
-        #return send_from_directory(os.path.join(work_dir, 'annotation'), path)
     
     else:
         data = request.data
         hash_name = get_hashname(path+'.wav')
-        """if hash_name is None:
-            hash_name = str(hash(path))#+".wav"
-            new_file = File(name=path+'.wav', hashName=hash_name, username=current_user.username)
-            db.session.add(new_file)
-            db.session.commit()"""
         
-        #output_dir = os.path.join(work_dir, 'annotation')
-        output_dir = os.path.join(work_dir, 'users', username, 'annotation')
-        os.makedirs(output_dir, exist_ok=True)
-        with open(os.path.join(output_dir, hash_name[:-3]+'json'), 'w') as f:
-            data = data.decode('utf-8')
-            data = json.loads(data)
+        data = data.decode('utf-8')
+        data = json.loads(data)
+        
+        to_add = {
+            "_id": hash_name,
+            "filename": hash_name,
+            "old_name": path+'.wav',
+            "username": current_user.username,
+            "validated": False,
+            "duration": data[0]["duration"],
+            "annotations": data
+        }
+        doc = annotations.find_one({'filename': hash_name})
+        if doc is not None:
+            to_add['validated'] = doc["validated"]
+            to_add['validated_by'] = doc["validated_by"]
+        local_annotations.replace_one({"_id": hash_name}, to_add, upsert=True)
             
-            to_add = {
-                "_id": hash_name,
-                "filename": hash_name,
-                "old_name": path+'.wav',
-                "username": current_user.username,
-                "validated": False,
-                "duration": data[0]["duration"],
-                "annotations": data
-            }
-            doc = annotations.find_one({'filename': hash_name})
-            if doc is not None:
-                to_add['validated'] = doc["validated"]
-                to_add['validated_by'] = doc["validated_by"]
-            local_annotations.replace_one({"_id": hash_name}, to_add, upsert=True)
-            
-            json.dump(data, f, indent=2)
         return 'ok'
     
 @app.route('/validated/<path:path>', methods=['POST'])
@@ -461,33 +449,28 @@ def validate(path):
     hash_name = get_hashname(path+'.wav')
 
     data = request.data
-    filename = path
-    #output_dir = os.path.join(work_dir, 'annotation')
-    output_dir = os.path.join(work_dir, 'validated')
-    os.makedirs(output_dir, exist_ok=True)
-    with open(os.path.join(output_dir, hash_name[:-3]+'json'), 'w') as f:
-        data = data.decode('utf-8')
-        data = json.loads(data)
-        to_add = {
-            "_id": hash_name,
-            "filename": hash_name,
-            "username": current_user.username,
-            "validated": True,
-            "duration": data[0]["duration"],
-            "validated_by": current_user.username,
-            "annotations": data,
-        }
-        doc = annotations.find_one({'filename': hash_name})
-        if doc is None:
-            annotations.insert_one(to_add)
-        else:
-            doc["validated"] = True
-            doc["annotations"] = data
-            doc["validated_by"] = current_user.username
-            annotations.update_one({'_id': doc['_id']}, {'$set': {'validated_by':doc['validated_by'],
-                                                                  'validated': doc['validated'], 
-                                                                  'annotations': doc['annotations']}})
-        json.dump(data, f, indent=2)
+    data = data.decode('utf-8')
+    data = json.loads(data)
+    to_add = {
+        "_id": hash_name,
+        "filename": hash_name,
+        "old_name": path+'.wav',
+        "username": current_user.username,
+        "validated": True,
+        "duration": data[0]["duration"],
+        "validated_by": current_user.username,
+        "annotations": data,
+    }
+    doc = annotations.find_one({'filename': hash_name})
+    if doc is None:
+        annotations.insert_one(to_add)
+    else:
+        doc["validated"] = True
+        doc["annotations"] = data
+        doc["validated_by"] = current_user.username
+        annotations.update_one({'_id': doc['_id']}, {'$set': {'validated_by':doc['validated_by'],
+                                                                'validated': doc['validated'], 
+                                                                'annotations': doc['annotations']}})
     return 'ok'
 
 
@@ -503,37 +486,30 @@ def pending_audio(path):
         doc = annotations.find_one({'filename': hash_name})
         if doc is None: return
         return jsonify(doc.get('annotations',{}))
-        #return send_from_directory(os.path.join(work_dir, 'uploads'), hash_name[:-3]+'json')
-        #return send_from_directory(os.path.join(work_dir, 'annotation'), path)
     
     elif request.method == 'POST':
         hash_name = get_hashname(path+'.wav')
 
         data = request.data
-        filename = path
-        #output_dir = os.path.join(work_dir, 'annotation')
-        output_dir = os.path.join(work_dir, 'uploads')
-        os.makedirs(output_dir, exist_ok=True)
-        with open(os.path.join(output_dir, hash_name[:-3]+'json'), 'w') as f:
-            data = data.decode('utf-8')
-            data = json.loads(data)  
-            to_add = {
-                "_id": hash_name,
-                "filename": hash_name,
-                "username": current_user.username,
-                "validated": False,
-                "duration": data[0]["duration"],
-                "annotations": data
-            }
-            doc = annotations.find_one({'filename': hash_name})
-            if doc is None:
-                annotations.insert_one(to_add)
-            else:
-                if current_user.isExpert or (doc.get('username') == current_user.username and not doc.get('validated')):
-                    doc["annotations"] = data
-                    annotations.update_one({'_id': doc['_id']}, {'$set': {'annotations': doc['annotations']}})
+        data = data.decode('utf-8')
+        data = json.loads(data)  
+        to_add = {
+            "_id": hash_name,
+            "filename": hash_name,
+            "old_name": path+'.wav',
+            "username": current_user.username,
+            "validated": False,
+            "duration": data[0]["duration"],
+            "annotations": data
+        }
+        doc = annotations.find_one({'filename': hash_name})
+        if doc is None:
+            annotations.insert_one(to_add)
+        else:
+            if current_user.isExpert or (doc.get('username') == current_user.username and not doc.get('validated')):
+                doc["annotations"] = data
+                annotations.update_one({'_id': doc['_id']}, {'$set': {'annotations': doc['annotations']}})
 
-            json.dump(data, f, indent=2)
         return 'ok'
 
 @app.route('/delete_file', methods=['POST'])
