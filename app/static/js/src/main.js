@@ -193,8 +193,10 @@ document.addEventListener('DOMContentLoaded', function () {
                     res.durations[i],
                 ]).draw().node();
                 if (res.lat[i] != null) {
+                    var color = 'orange'
+                    if (res.validated[i] == 'True' || res.validated[i] == true) {console.log("he"); color = 'green'}
                     var circleMarker = L.circleMarker([res.lat[i], res.lng[i]],{
-                        radius: 4
+                        radius: 4,color: color
                     }).bindPopup(file.split('/')[2])
                     markers.addLayer(circleMarker)
                 }
@@ -757,7 +759,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    
+
 
     fileInput.addEventListener('change', (event) => {
         const selectedFile = event.target.files[0];
@@ -1027,7 +1029,7 @@ document.addEventListener('DOMContentLoaded', function () {
             })
             if (multipleAudio || document.getElementById('saveAfterAI').checked) {
                 saveAnnotationToServer(duration,filename.split('.')[0],filename,regions,userName,'local');
-                saveAnnotationToServer(duration,filename.split('.')[0],filename,unremovableRegions,userName,'other'); 
+                //saveAnnotationToServer(duration,filename.split('.')[0],filename,unremovableRegions,userName,'other'); 
             }
             if (multipleAudio) {
                 alert("Your file " + filename + " has been processed.\n You can find it in your section 'My Audios'")
