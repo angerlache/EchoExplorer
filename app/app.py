@@ -38,7 +38,9 @@ from pymongo.errors import DuplicateKeyError
 
 os.environ['NO_PROXY'] = 'https://gotham.inl.ovh'
 
-app = Flask(__name__)
+abs_instance_path = os.path.abspath(os.path.join(os.path.dirname( __file__ ), 'instance')) #<--- this will be the instance directory
+app = Flask(__name__, instance_path=abs_instance_path)
+
 
 client = MongoClient("localhost", 27017)
 db = client.mymongodb
@@ -198,7 +200,10 @@ def retrieve_allfilenames():
 
 @app.route('/retrieve_allspecies', methods=['GET'])
 def retrieve_allspecies():
-    names = annotations.distinct("annotations.label")
+    if request.args.get('arg') == 'all':
+        names = annotations.distinct("annotations.label")
+    else:
+        names = local_annotations.distinct("annotations.label")
     print(names)
     return jsonify({'species':names})
 

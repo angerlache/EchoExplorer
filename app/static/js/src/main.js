@@ -183,7 +183,7 @@ document.addEventListener('DOMContentLoaded', function () {
         })
         .then(response => response.json())
         .then(res => {
-            setAllSpecies()
+            setAllSpecies(whichFiles)
             markers.clearLayers();
             console.log(res);
             res.audios.forEach((file,i) => {
@@ -210,8 +210,8 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    function setAllSpecies(){
-        fetch(`/retrieve_allspecies`, {
+    function setAllSpecies(whichFiles){
+        fetch(`/retrieve_allspecies?arg=${whichFiles}`, {
             method: "GET"
         })
         .then(response => response.json())
