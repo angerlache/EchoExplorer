@@ -196,6 +196,14 @@ def retrieve_allfilenames():
 
     return jsonify({'audios':files, 'durations': durations, 'lat': lat, 'lng': lng, 'validated': validated})
 
+@app.route('/retrieve_allspecies', methods=['GET'])
+def retrieve_allspecies():
+    names = annotations.distinct("annotations.label")
+    print(names)
+    return jsonify({'species':names})
+
+
+
 @app.route('/main')
 @login_required
 def index():
@@ -341,10 +349,10 @@ def process():
         json_data = json.dumps(data)
         print("request posted !")
         
-        ###""" comment this block for testing locally because s3 not available with localhost
+        #""" comment this block for testing locally because s3 not available with localhost
         ###### and use the csv fake_labels.csv with fake labels
         #response = requests.post('https://gotham.inl.ovh/process_on_second_machine', data=json_data, headers=headers)
-
+        
         # Construct the curl command
         curl_command = ['curl', '-X', 'POST', '-H', 'Content-Type: application/json', '-d', json_data, 'https://gotham.inl.ovh/process_on_second_machine']
 
@@ -365,7 +373,7 @@ def process():
         # Save the received CSV file on the first machine
         #with open('received_classification_result_' + current_user.username + '.csv', 'wb') as f:
         #    f.write(response.content)
-        ###"""
+        #"""
 
         # Process the file using your AI model function
         results = [[],[],[],[]]
@@ -476,6 +484,8 @@ def validate(path):
                                                                   'annotations': doc['annotations']}})
         json.dump(data, f, indent=2)
     return 'ok'
+
+
 
 @app.route('/uploads/<path>', methods=['POST','GET'])
 def pending_audio(path):

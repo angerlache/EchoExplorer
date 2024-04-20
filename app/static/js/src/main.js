@@ -183,13 +183,15 @@ document.addEventListener('DOMContentLoaded', function () {
         })
         .then(response => response.json())
         .then(res => {
+            setAllSpecies()
             markers.clearLayers();
             console.log(res);
             res.audios.forEach((file,i) => {
+                let splitFile = file.split('/')
                 var row = FilesDtable.row.add([
-                    file.split('/')[1],
-                    file.split('/')[2],
-                    file.split('/')[0],
+                    splitFile[1],
+                    splitFile[2],
+                    splitFile[0],
                     res.durations[i],
                 ]).draw().node();
                 if (res.lat[i] != null) {
@@ -202,6 +204,20 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             })
             markers.addTo(mapFiles)
+            
+        }).catch(function (err) {
+            console.log('Fetch Error :-S', err);
+        });
+    }
+
+    function setAllSpecies(){
+        fetch(`/retrieve_allspecies`, {
+            method: "GET"
+        })
+        .then(response => response.json())
+        .then(res => {
+            let species = res.species
+            set_autocomplete('autoSearch', 'autoSearchComplete', species, start_at_letters=1, count_results=2);
         }).catch(function (err) {
             console.log('Fetch Error :-S', err);
         });
@@ -213,6 +229,12 @@ document.addEventListener('DOMContentLoaded', function () {
         whichFiles = 'my'
         getFiles('all')
     })
+
+    
+    document.getElementById('autoSearchButton').addEventListener('click', () => {
+        FilesDtable.clear().draw();
+        getFiles(document.getElementById('autoSearch').value)
+    });
 
     searchForSpeciesInFile.addEventListener('change', () => {
         FilesDtable.clear().draw();
