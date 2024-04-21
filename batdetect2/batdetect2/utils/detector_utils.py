@@ -327,7 +327,7 @@ def convert_results(
     return results
 
 
-def save_results_to_file(results, op_path: str) -> None:
+def save_results_to_file(results, op_path: str, result_path: str) -> None:
     """Save results to file.
 
     Will create the output directory if it does not exist.
@@ -364,7 +364,8 @@ def save_results_to_file(results, op_path: str) -> None:
                 "class_prob",
             ]
         ]
-        preds_df.to_csv(op_path + ".csv", sep=",", index=False)
+        #preds_df.to_csv(op_path + ".csv", sep=",", index=False)
+        preds_df.to_csv(result_path + ".csv", sep=",", index=False)
 
     if "spec_feats" in results.keys():
         # create csv file with spectrogram features
