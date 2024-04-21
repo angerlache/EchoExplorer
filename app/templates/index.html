@@ -241,33 +241,26 @@
         <div class="modal-content">
             <div class="modal-body">
                 <div class="row">
-                    <div class="col-sm">
-                        <select id="speciesToSearch" class="custom-select" style="text-align: left; width: 100%; font-size: 0.8rem;">
-                            <option value="" selected disabled hidden>Select Species</option>
-                            <option value="Barbarg">Barbarg</option>
-                            <option value="Envsp">Envsp</option>
-                            <option value="Pip35">Pip35</option>
-                            <option value="Pip50">Pip50</option>
-                            <option value="Rhisp">Rhisp</option>
-                            <option value="Plesp">Plesp</option>
-                            <option value="Myosp">Myosp</option>
-                        </select>
+                    <div class="col-sm"class="dropdown" id="taxDiv">
+                        <button class="btn btn-light dropdown-toggle" type="button" id="taxonomyButton" data-bs-auto-close="outside" data-bs-toggle="dropdown" aria-expanded="false">
+                            Select Species
+                        </button>
                     </div>
                     <div class="col-sm">
                             <input type="text" id="autoSearch" class="form-control" placeholder="Search species..">
                             <div class="position-absolute invisible" id="autoSearchComplete"></div>
-                            
-                    </div>
+                    </div>         
                     <div class="col-md-auto">
                         <button type="button" id="autoSearchButton"class="btn btn-outline-primary"><i class="bi bi-search"></i></button>
                     </div>
                   </div>
+                  
+
+                <br>
+                <br>
+                <br>
                 
 
-                
-                <br>
-                <br>
-                <br>
                 <table id="FilesTable" class="display" style="width:100%;">
                     <thead>
                         <tr>
@@ -291,6 +284,8 @@
         </div>
         </div>
     </div>
+    
+    
 
     <div class="modal" id="modalNewObservation">
         <div class="modal-dialog modal-fullscreen">

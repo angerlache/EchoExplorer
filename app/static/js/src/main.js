@@ -1,4 +1,4 @@
-import { generateColorMap,appendBuffer,renderRegions,saveAnnotationToServer,createRegionContent,getBrowser } from './utils.js';
+import { generateColorMap,appendBuffer,renderRegions,saveAnnotationToServer,createRegionContent,getBrowser,addTaxonomy} from './utils.js';
 'use strict';
 
 
@@ -31,13 +31,14 @@ document.addEventListener('DOMContentLoaded', function () {
     const zoomOut = document.getElementById('zoomOut');
     const applySpecies = document.getElementById('applySpecies')
     const applyAI = document.getElementById('applyAI')
+    
 
     const zoomButton = document.getElementById('zoomButton')
     const optionsButton = document.getElementById('optionsButton')
     const annotationsButton = document.getElementById('annotationsButton')
     const speciesButton = document.getElementById('speciesButton')
     const aiButton = document.getElementById('aiButton')
-    const searchForSpeciesInFile = document.getElementById('speciesToSearch')
+    //const searchForSpeciesInFile = document.getElementById('speciesToSearch')
     
 
     let chunkLength = 20;
@@ -51,6 +52,7 @@ document.addEventListener('DOMContentLoaded', function () {
     let sR = 44100; 
     
     //const checkBoxes = document.querySelectorAll('.dropdown-menu input[type="checkbox"]'); 
+    let modalCheckedBoxes = [];
     const checkBoxes = document.querySelectorAll('#specyBoxes input[type="checkbox"]');
     const AIcheckBoxes = document.querySelectorAll('#aiBoxes input[type="checkbox"]');
     let SelectedSpecies = ['Barbarg', 'Envsp', 'Myosp', 'Pip35', 'Pip50', 'Plesp', 'Rhisp','Region','other']; 
@@ -62,9 +64,57 @@ document.addEventListener('DOMContentLoaded', function () {
 
     let SelectedAI = ['Human', 'BatML', 'BirdNET', 'BattyBirdNET'];
     let AIlist = ['Human', 'BatML', 'BirdNET', 'BattyBirdNET'];
+    const TaxonomyList = [
+        ['Bird', ['bird1', 'bird2', 'bird3']],
+        'Insect',
+        ['Bat', [['Barbastella',['Barbarg','Barbarg2']], ['Pipistrellus',['Pip35','Pip50']], ['Nyctalus',['Envsp']],['Eptesicus',['Envsp']],['Myotis',['Myosp']],['Plecotus',['Plesp']],['Rhinolophus',['Rhisp']]]]
+    ];
+    const taxDiv = document.getElementById('taxDiv')
+    const ul = addTaxonomy(TaxonomyList)
+
+    ul.querySelectorAll('input[type="checkbox"]').forEach(input => {
+        if (input.value != "Allcheckbox") {
+            input.addEventListener('change', (event) => {
+                if(input.checked){modalCheckedBoxes.push(input.value)}
+                else {
+                    let index = modalCheckedBoxes.indexOf(input.value);
+                    if (index !== -1) {
+                        modalCheckedBoxes.splice(index, 1);
+                    }
+                }
+                FilesDtable.clear().draw();
+                getFiles(modalCheckedBoxes);
+
+            })
+        }
+
+        else{
+            input.addEventListener('change', (event) => {
+                let isChecked = input.checked;
+                input.parentNode.querySelectorAll('input[type="checkbox"]').forEach(input => {
+                    input.checked = isChecked;
+                    if (isChecked && input.value != "Allcheckbox") {modalCheckedBoxes.push(input.value)}
+                    else {
+                        let index = modalCheckedBoxes.indexOf(input.value);
+                        if (index !== -1) {
+                            modalCheckedBoxes.splice(index, 1);
+                        }
+                    }
+                });
+                FilesDtable.clear().draw();
+                getFiles(modalCheckedBoxes);
+                console.log(modalCheckedBoxes);
+            })
+        }
+
+    });
+
+
+
+    taxDiv.appendChild(ul);
 
     let wavesurfer;
-    
+
     let wsRegions; // Define wsRegions here
     let regions = [];
     let unremovableRegions = []
@@ -162,6 +212,7 @@ document.addEventListener('DOMContentLoaded', function () {
         Dtable.clear().draw();
     }
 
+
     var myModalEl = document.getElementById('modalAudios')
     
     var whichFiles = 'all'
@@ -173,11 +224,15 @@ document.addEventListener('DOMContentLoaded', function () {
         var filename = data[0];
         var user = data[2];
         cleanBeforeLoad(myModalEl)
-        searchForSpeciesInFile.selectedIndex = 0;
+        //searchForSpeciesInFile.selectedIndex = 0;
         changeAudio(user + '/' + filename);    
     });
 
     function getFiles(whichSpecies) {
+        if (!Array.isArray(whichSpecies)) {
+            whichSpecies = [whichSpecies]
+        }
+        whichSpecies = JSON.stringify(whichSpecies);
         fetch(`/retrieve_${whichFiles}filenames?arg=${whichSpecies}`, {
             method: "GET"
         })
@@ -234,10 +289,11 @@ document.addEventListener('DOMContentLoaded', function () {
         getFiles(document.getElementById('autoSearch').value)
     });
 
+    /*
     searchForSpeciesInFile.addEventListener('change', () => {
         FilesDtable.clear().draw();
         getFiles(searchForSpeciesInFile.value)
-    });
+    });*/
 
     document.getElementById('allAudios').addEventListener('click', () => {
         mapFiles.invalidateSize();
@@ -247,7 +303,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     document.getElementById('closeModalAudios').addEventListener('click', () => {
         FilesDtable.clear().draw();
-        searchForSpeciesInFile.selectedIndex = 0;
+        //searchForSpeciesInFile.selectedIndex = 0;
     });
     
 

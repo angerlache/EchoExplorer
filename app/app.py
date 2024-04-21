@@ -143,6 +143,9 @@ def allowed_file(filename):
 @app.route('/retrieve_myfilenames', methods=['GET'])
 def retrieve_myfilenames():
     which_species = request.args.get('arg')
+    which_species = json.loads(which_species)
+    if which_species == []:
+        which_species = ['all']
     userfiles = []
     durations = []
     lat = []
@@ -150,9 +153,17 @@ def retrieve_myfilenames():
     if which_species == 'all':
         documents = local_annotations.find({}, {"_id":1, "old_name": 1, "username":1, "duration":1})
     else:
-        documents = local_annotations.find(
-                    {"annotations": {"$elemMatch": {"label": which_species}}},
-                    {"_id": 1, "old_name": 1, "username": 1, "duration": 1})
+        orQuery = [{"label": species} for species in which_species]
+        print(orQuery)
+        query = {
+            "annotations": {
+                "$elemMatch": {
+                    "$or": orQuery
+                }
+            }
+        }
+        documents = annotations.find(query,{"_id": 1, "old_name": 1, "username": 1, "duration": 1})
+        print(documents)
 
     for doc in documents:
         if doc.get('username') == current_user.username:
@@ -167,16 +178,28 @@ def retrieve_myfilenames():
 @app.route('/retrieve_allfilenames', methods=['GET'])
 def retrieve_allfilenames():
     which_species = request.args.get('arg')
+    which_species = json.loads(which_species)
+    if which_species == []:
+        which_species = ['all']
     files = []
     durations = []
     lat = []
     lng = []
-    if which_species == 'all':
+    if which_species == ['all']:    #Si qqun appelle sa region "all" on a un souci
         documents = annotations.find({}, {"_id":1, "username":1, "duration":1})
     else:
-        documents = annotations.find(
-                    {"annotations": {"$elemMatch": {"label": which_species}}},
-                    {"_id": 1, "username": 1, "duration": 1})
+        orQuery = [{"label": species} for species in which_species]
+        print(orQuery)
+        query = {
+            "annotations": {
+                "$elemMatch": {
+                    "$or": orQuery
+                }
+            }
+        }
+        documents = annotations.find(query,{"_id": 1, "old_name": 1, "username": 1, "duration": 1})
+        print(documents)
+
     for doc in documents:
         durations.append(doc.get("duration"))
         files.append(doc.get('username')+'/'+doc.get("_id")+'/'+doc.get("_id"))

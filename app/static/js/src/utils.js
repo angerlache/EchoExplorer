@@ -216,6 +216,82 @@ export function getBrowser() {
 }
 
 
+function createAllButton(iter){
+    const allButton = document.createElement('li');
+    const input = document.createElement('input');
+    input.classList.add('form-check-input');
+    input.type = 'checkbox';
+    input.value = "";
+    input.id = 'allCheck'+iter;
+    
+    const labelElem = document.createElement('label');
+    labelElem.classList.add('form-check-label');
+    labelElem.setAttribute('for', 'allCheck'+iter);
+    labelElem.textContent = "SelectAll";
+    
+    allButton.appendChild(input);
+    allButton.appendChild(labelElem);
+    return allButton;
 
+}
 
- 
+export function addTaxonomy(taxList, iter = 0) {
+    const ul = document.createElement('ul');
+    ul.classList.add("dropdown-menu");
+
+    //ul.appendChild(createAllButton(iter));
+
+    taxList.forEach(item => {
+        const li = document.createElement('li');
+        
+
+        if (Array.isArray(item)){
+            const [label, subItems] = item;
+            li.classList.add('dropend');
+
+            const check = document.createElement('input');
+            check.classList.add('form-check-input');
+            check.id = label.toLowerCase();
+            check.type = "checkbox";
+            check.value = "Allcheckbox" //TODO find safer way, this is dumb
+            li.appendChild(check);
+
+            const a = document.createElement('label');
+            a.classList.add('form-check-label');
+            a.innerHTML = label + '   &raquo;';
+            a.setAttribute('data-bs-toggle', 'dropdown');
+            a.setAttribute('data-bs-auto-close', 'outside');
+            a.href = '#';
+            a.setAttribute('for', label.toLowerCase());
+            li.appendChild(a);
+
+            li.appendChild(addTaxonomy(subItems, iter+1));
+            
+            
+
+        }else {
+
+            const input = document.createElement('input');
+            input.classList.add('form-check-input');
+            input.type = 'checkbox';
+            input.value = item;
+            input.id = item.toLowerCase();
+            
+            const labelElem = document.createElement('label');
+            labelElem.classList.add('form-check-label');
+            labelElem.setAttribute('for', item.toLowerCase());
+            labelElem.textContent = item;
+            
+            li.appendChild(input);
+            li.appendChild(labelElem);
+            
+        }
+
+        ul.appendChild(li);
+
+        
+
+    });
+
+    return ul;
+}
