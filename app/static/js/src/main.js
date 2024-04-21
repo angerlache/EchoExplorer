@@ -9,6 +9,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const processButton = document.getElementById('processButton');
     const processButton2 = document.getElementById('processButton2');
     const processButton3 = document.getElementById('processButton3');
+    const processButton4 = document.getElementById('processButton4');
     const startAI = document.getElementById('startAI');
     const visualizeButton = document.getElementById('visualizeButton');
     const playButton = document.getElementById('playButton');
@@ -62,8 +63,8 @@ document.addEventListener('DOMContentLoaded', function () {
                         'Hypsugo savii_Alpenfledermaus':'Pip35', //see https://de.wikipedia.org/wiki/Alpenfledermaus for pip35
                         'Miniopterus schreibersii_Langflügelfledermaus':'Rhisp'} 
 
-    let SelectedAI = ['Human', 'BatML', 'BirdNET', 'BattyBirdNET'];
-    let AIlist = ['Human', 'BatML', 'BirdNET', 'BattyBirdNET'];
+    let SelectedAI = ['Human', 'BatML', 'BirdNET', 'BattyBirdNET', 'batdetect2'];
+    let AIlist = ['Human', 'BatML', 'BirdNET', 'BattyBirdNET', 'batdetect2'];
     const TaxonomyList = [
         ['Bird', ['bird1', 'bird2', 'bird3']],
         'Insect',
@@ -206,6 +207,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 wsRegions.unAll();
             }
             wavesurfer.destroy();
+            temporaryInit();
         }
         bootstrap.Modal.getInstance(modal).hide() 
         FilesDtable.clear().draw();
@@ -225,7 +227,7 @@ document.addEventListener('DOMContentLoaded', function () {
         var user = data[2];
         cleanBeforeLoad(myModalEl)
         //searchForSpeciesInFile.selectedIndex = 0;
-        changeAudio(user + '/' + filename);    
+        changeAudio(user + '/' + filename,whichFiles);    
     });
 
     function getFiles(whichSpecies) {
@@ -238,7 +240,7 @@ document.addEventListener('DOMContentLoaded', function () {
         })
         .then(response => response.json())
         .then(res => {
-            setAllSpecies()
+            setAllSpecies(whichFiles)
             markers.clearLayers();
             console.log(res);
             res.audios.forEach((file,i) => {
@@ -248,10 +250,13 @@ document.addEventListener('DOMContentLoaded', function () {
                     splitFile[2],
                     splitFile[0],
                     res.durations[i],
+                    res.validated_by[i]
                 ]).draw().node();
                 if (res.lat[i] != null) {
+                    var color = 'orange'
+                    if (res.validated[i] == 'True' || res.validated[i] == true) {console.log("he"); color = 'green'}
                     var circleMarker = L.circleMarker([res.lat[i], res.lng[i]],{
-                        radius: 4
+                        radius: 4,color: color
                     }).bindPopup(file.split('/')[2])
                     markers.addLayer(circleMarker)
                 }
@@ -263,8 +268,8 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    function setAllSpecies(){
-        fetch(`/retrieve_allspecies`, {
+    function setAllSpecies(whichFiles){
+        fetch(`/retrieve_allspecies?arg=${whichFiles}`, {
             method: "GET"
         })
         .then(response => response.json())
@@ -705,7 +710,7 @@ document.addEventListener('DOMContentLoaded', function () {
             if(wsRegions){
                 wsRegions.unAll();
             }
-            
+            console.log(wavesurfer)
             wavesurfer.destroy();
         }
 
@@ -835,7 +840,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    
+
 
     fileInput.addEventListener('change', (event) => {
         const selectedFile = event.target.files[0];
@@ -1105,7 +1110,7 @@ document.addEventListener('DOMContentLoaded', function () {
             })
             if (multipleAudio || document.getElementById('saveAfterAI').checked) {
                 saveAnnotationToServer(duration,filename.split('.')[0],filename,regions,userName,'local');
-                saveAnnotationToServer(duration,filename.split('.')[0],filename,unremovableRegions,userName,'other'); 
+                //saveAnnotationToServer(duration,filename.split('.')[0],filename,unremovableRegions,userName,'other'); 
             }
             if (multipleAudio) {
                 alert("Your file " + filename + " has been processed.\n You can find it in your section 'My Audios'")
@@ -1213,32 +1218,20 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
+    processButton4.addEventListener('click', function () {
+        if (!multipleAudio) {
+            processButtonRoutine(fileInput.files[0],audioLength,'batdetect2')
+        } else {
+            Array.from(multipleAudioFile.files).forEach((file, i) => {
+                processButtonRoutine(file,multipleAudioLength[i],'batdetect2')
+            })
+        }
+    });
+
     validateButton.addEventListener('click', function () {
         //saveAnnotationToServer(audioLength,annotation_name,fileInput,regions,userName,'validated');
         // in isExpert case : regions==unremovableRegions
         saveAnnotationToServer(audioLength,annotation_name,fileInput.files[0].name,unremovableRegions,userName,'validated');
-
-        const filenameToDelete = fileInput.files[0].name;  
-    
-        // Send a POST request to the Flask server to delete the file
-        fetch('/delete_file', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ filename: filenameToDelete }),
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                console.log(data.message);
-            } else {
-                console.error(data.message);
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-        });
     });
 
     uploadButton.addEventListener('click', function () {
@@ -1250,7 +1243,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
     // Function to load waveform
-    window.changeAudio = function(filename) {
+    window.changeAudio = function(filename,whichFiles) {
         console.log("1111 ", '/reload/' + filename);
         
         fetch('/reload/' + filename)
@@ -1274,9 +1267,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 });
                 
                 fileInput.dispatchEvent(inputEvent);
-                uploadButton.disabled = true;
+                uploadButton.disabled = false;
                 loadLabels.disabled = true;
-
+                save.disabled = false;
                 // Introduce a delay using setTimeout, because we need 'fileInput' listener has finished before starting
                 // 'visualizeButton' listener
                 /*setTimeout(() => {
@@ -1285,7 +1278,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 }, 200); // Adjust the delay (in milliseconds) as needed*/
 
                 try {
-                    const response = await fetch('/uploads/' + annotation_name);
+                    const response = await fetch(`/uploads/` + annotation_name + `?arg=${whichFiles}`);
                     const data = await response.json();
                     loadRegions(document,data,regions,true);
                     loadRegions(document,data,unremovableRegions,false);

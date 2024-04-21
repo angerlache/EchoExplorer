@@ -38,7 +38,9 @@ from pymongo.errors import DuplicateKeyError
 
 os.environ['NO_PROXY'] = 'https://gotham.inl.ovh'
 
-app = Flask(__name__)
+abs_instance_path = os.path.abspath(os.path.join(os.path.dirname( __file__ ), 'instance')) #<--- this will be the instance directory
+app = Flask(__name__, instance_path=abs_instance_path)
+
 
 client = MongoClient("localhost", 27017)
 db = client.mymongodb
@@ -150,8 +152,11 @@ def retrieve_myfilenames():
     durations = []
     lat = []
     lng = []
-    if which_species == 'all':
-        documents = local_annotations.find({}, {"_id":1, "old_name": 1, "username":1, "duration":1})
+    validated = []
+    validated_by = []
+    if which_species == ['all']:
+        documents = local_annotations.find({}, {"_id":1, "old_name": 1, "username":1, 
+                                                "duration":1, "validated":1, "validated_by":1})
     else:
         orQuery = [{"label": species} for species in which_species]
         print(orQuery)
@@ -162,18 +167,21 @@ def retrieve_myfilenames():
                 }
             }
         }
-        documents = annotations.find(query,{"_id": 1, "old_name": 1, "username": 1, "duration": 1})
+        documents = annotations.find(query,{"_id": 1, "old_name": 1, "username": 1, "duration": 1, "validated":1, "validated_by":1})
         print(documents)
 
     for doc in documents:
         if doc.get('username') == current_user.username:
             durations.append(doc.get("duration"))
             userfiles.append(current_user.username+'/'+doc.get("_id")+'/'+doc.get("old_name"))
+            validated.append(doc.get('validated'))
+            validated_by.append(doc.get('validated_by'))
             lat.append(File.query.filter_by(hashName=doc.get("_id")).first().lat)
             lng.append(File.query.filter_by(hashName=doc.get("_id")).first().lng)
 
     print(userfiles)
-    return jsonify({'audios':userfiles, 'durations': durations, 'lat': lat, 'lng': lng})
+    return jsonify({'audios':userfiles, 'durations': durations, 'lat': lat, 'lng': lng, 
+                    'validated': validated, 'validated_by': validated_by})
 
 @app.route('/retrieve_allfilenames', methods=['GET'])
 def retrieve_allfilenames():
@@ -185,8 +193,11 @@ def retrieve_allfilenames():
     durations = []
     lat = []
     lng = []
+    validated = []
+    validated_by = []
     if which_species == ['all']:    #Si qqun appelle sa region "all" on a un souci
-        documents = annotations.find({}, {"_id":1, "username":1, "duration":1})
+        documents = annotations.find({}, {"_id":1, "username":1, "duration":1, 
+                                          "validated": 1, "old_name": 1, "validated_by":1})
     else:
         orQuery = [{"label": species} for species in which_species]
         print(orQuery)
@@ -197,23 +208,33 @@ def retrieve_allfilenames():
                 }
             }
         }
-        documents = annotations.find(query,{"_id": 1, "old_name": 1, "username": 1, "duration": 1})
+        documents = annotations.find(query,{"_id": 1, "old_name": 1, "username": 1, "duration": 1, "validated":1, "old_name": 1, "validated_by":1})
         print(documents)
 
     for doc in documents:
         durations.append(doc.get("duration"))
-        files.append(doc.get('username')+'/'+doc.get("_id")+'/'+doc.get("_id"))
+        if doc.get('username') == current_user.username:
+            files.append(doc.get('username')+'/'+doc.get("_id")+'/'+doc.get("old_name"))
+        else:
+            files.append(doc.get('username')+'/'+doc.get("_id")+'/'+doc.get("_id"))
+        validated.append(doc.get('validated'))
+        validated_by.append(doc.get('validated_by'))
         lat.append(File.query.filter_by(hashName=doc.get("_id")).first().lat)
         lng.append(File.query.filter_by(hashName=doc.get("_id")).first().lng)
 
 
     print(files)
+    print(validated)
 
-    return jsonify({'audios':files, 'durations': durations, 'lat': lat, 'lng': lng})
+    return jsonify({'audios':files, 'durations': durations, 'lat': lat, 'lng': lng, 
+                    'validated': validated, 'validated_by': validated_by})
 
 @app.route('/retrieve_allspecies', methods=['GET'])
 def retrieve_allspecies():
-    names = annotations.distinct("annotations.label")
+    if request.args.get('arg') == 'all':
+        names = annotations.distinct("annotations.label")
+    else:
+        names = local_annotations.distinct("annotations.label")
     print(names)
     return jsonify({'species':names})
 
@@ -303,13 +324,16 @@ def predicted_time():
     size = int(data.get('bytes')) # used to predict time for the server getting the uploaded file
 
     if data.get('AI') == 'BatML':
-        response_data = {'predicted_time': duration/3 + size/1e6/1.15}
+        response_data = {'predicted_time': max(10,duration/3 + size/1e6/1.15)}
 
     elif data.get('AI') == 'BirdNET':
-        response_data = {'predicted_time': duration/54 + size/1e6/1.15}
+        response_data = {'predicted_time': max(10,duration/54 + size/1e6/1.15)}
+
+    elif data.get('AI') == 'batdetect2':
+        response_data = {'predicted_time': max(10,duration/10 + size/1e6/1.15)}
 
     elif data.get('AI') == 'BattyBirdNET':
-        response_data = {'predicted_time': duration/5.5 + size/1e6/1.15}
+        response_data = {'predicted_time': max(10,duration/5.5 + size/1e6/1.15)}
 
 
     return jsonify(response_data)
@@ -428,37 +452,34 @@ def annotation(username,path):
         if doc is None:
             return
         return jsonify(doc.get('annotations',{}))
-        #return send_from_directory(os.path.join(work_dir, 'users', username, 'annotation'), hash_name[:-3]+'json')
-        #return send_from_directory(os.path.join(work_dir, 'annotation'), path)
     
     else:
         data = request.data
         hash_name = get_hashname(path+'.wav')
-        """if hash_name is None:
-            hash_name = str(hash(path))#+".wav"
-            new_file = File(name=path+'.wav', hashName=hash_name, username=current_user.username)
-            db.session.add(new_file)
-            db.session.commit()"""
         
-        #output_dir = os.path.join(work_dir, 'annotation')
-        output_dir = os.path.join(work_dir, 'users', username, 'annotation')
-        os.makedirs(output_dir, exist_ok=True)
-        with open(os.path.join(output_dir, hash_name[:-3]+'json'), 'w') as f:
-            data = data.decode('utf-8')
-            data = json.loads(data)
-            
-            doc = {
-                "_id": hash_name,
-                "filename": hash_name,
-                "old_name": path+'.wav',
-                "username": current_user.username,
-                "validated": False,
-                "duration": data[0]["duration"],
-                "annotations": data
-            }
-            local_annotations.replace_one({"_id": hash_name}, doc, upsert=True)
-            
-            json.dump(data, f, indent=2)
+        data = data.decode('utf-8')
+        data = json.loads(data)
+        
+        to_add = {
+            "_id": hash_name,
+            "filename": hash_name,
+            "old_name": path+'.wav',
+            "username": current_user.username,
+            "validated": False,
+            "validated_by": [],
+            "duration": data[0]["duration"],
+            "annotations": data
+        }
+        doc = annotations.find_one({'filename': hash_name})
+        if doc is None:
+            local_annotations.replace_one({"_id": hash_name}, to_add, upsert=True)
+        else:
+            #to_add['validated'] = doc["validated"]
+            #to_add['validated_by'] = doc["validated_by"]
+            doc["annotations"] = data
+            #local_annotations.replace_one({"_id": hash_name}, to_add, upsert=True)
+            local_annotations.update_one({'_id': doc['_id']}, {'$set': {'annotations': doc['annotations'], 'validated': doc['validated'], 'validated_by': doc['validated_by']}})
+ 
         return 'ok'
     
 @app.route('/validated/<path:path>', methods=['POST'])
@@ -467,93 +488,75 @@ def validate(path):
     hash_name = get_hashname(path+'.wav')
 
     data = request.data
-    filename = path
-    #output_dir = os.path.join(work_dir, 'annotation')
-    output_dir = os.path.join(work_dir, 'validated')
-    os.makedirs(output_dir, exist_ok=True)
-    with open(os.path.join(output_dir, hash_name[:-3]+'json'), 'w') as f:
-        data = data.decode('utf-8')
-        data = json.loads(data)
-        to_add = {
-            "_id": hash_name,
-            "filename": hash_name,
-            "username": current_user.username,
-            "validated": True,
-            "duration": data[0]["duration"],
-            "validated_by": current_user.username,
-            "annotations": data,
-        }
-        doc = annotations.find_one({'filename': hash_name})
-        if doc is None:
-            annotations.insert_one(to_add)
-        else:
-            if doc.get('validated'):
-                return
-            doc["username"] = doc.get('username')
-            annotations.replace_one({"_id": hash_name}, doc, upsert=True)
-        json.dump(data, f, indent=2)
+    data = data.decode('utf-8')
+    data = json.loads(data)
+    to_add = {
+        "_id": hash_name,
+        "filename": hash_name,
+        "old_name": path+'.wav',
+        "username": current_user.username,
+        "validated": True,
+        "duration": data[0]["duration"],
+        "validated_by": [current_user.username],
+        "annotations": data,
+    }
+    doc = annotations.find_one({'filename': hash_name})
+    if doc is None:
+        annotations.insert_one(to_add)
+    else:
+        doc["validated"] = True
+        doc["annotations"] = data
+        doc["validated_by"].append(current_user.username)
+
+        annotations.update_one({'_id': doc['_id']}, {'$set': {'validated_by':doc['validated_by'],
+                                                                'validated': doc['validated'], 
+                                                                'annotations': doc['annotations']}})
     return 'ok'
 
 
 
 @app.route('/uploads/<path>', methods=['POST','GET'])
 def pending_audio(path):
+    which_files = request.args.get('arg')
     path = secure_filename(path)
     print('path = '+path)
     if request.method == 'GET':
         hash_name = get_hashname(path+'.wav')
         if hash_name is None: return
         
-        doc = annotations.find_one({'filename': hash_name})
+        if which_files == 'all':
+            doc = annotations.find_one({'filename': hash_name})
+        else:
+            doc = local_annotations.find_one({'filename': hash_name})
+
         if doc is None: return
         return jsonify(doc.get('annotations',{}))
-        #return send_from_directory(os.path.join(work_dir, 'uploads'), hash_name[:-3]+'json')
-        #return send_from_directory(os.path.join(work_dir, 'annotation'), path)
     
     elif request.method == 'POST':
         hash_name = get_hashname(path+'.wav')
 
         data = request.data
-        filename = path
-        #output_dir = os.path.join(work_dir, 'annotation')
-        output_dir = os.path.join(work_dir, 'uploads')
-        os.makedirs(output_dir, exist_ok=True)
-        with open(os.path.join(output_dir, hash_name[:-3]+'json'), 'w') as f:
-            data = data.decode('utf-8')
-            data = json.loads(data)  
-            to_add = {
-                "_id": hash_name,
-                "filename": hash_name,
-                "username": current_user.username,
-                "validated": False,
-                "duration": data[0]["duration"],
-                "annotations": data
-            }
-            doc = annotations.find_one({'filename': hash_name})
-            if doc is None:
-                annotations.insert_one(to_add)
-            else:
-                if doc.get('username') == current_user.username and not doc.get('validated'):
-                    annotations.replace_one({"_id": hash_name}, doc, upsert=True)
-            json.dump(data, f, indent=2)
-        return 'ok'
+        data = data.decode('utf-8')
+        data = json.loads(data)  
+        to_add = {
+            "_id": hash_name,
+            "filename": hash_name,
+            "old_name": path+'.wav',
+            "username": current_user.username,
+            "validated": False,
+            "validated_by": [],
+            "duration": data[0]["duration"],
+            "annotations": data
+        }
+        doc = annotations.find_one({'filename': hash_name})
+        if doc is None:
+            annotations.insert_one(to_add)
+        else:
+            if current_user.isExpert or (doc.get('username') == current_user.username and not doc.get('validated')):
+                doc["annotations"] = data
+                annotations.update_one({'_id': doc['_id']}, {'$set': {'annotations': doc['annotations']}})
 
-@app.route('/delete_file', methods=['POST'])
-def delete_file():
-    try:
-        filename = secure_filename(request.json['filename'])  # Assuming you send the filename in the request body
-        hash_name = get_hashname(filename)
-
-        # remove here for s3
-        file_path = os.path.join(app.config['UPLOAD_FOLDER'], hash_name[:-3])
-        os.remove(file_path + 'wav')
-
-        # TODO : handle if json file has not been saved in "uploads", currently, it logs an error in js.
-        os.remove(file_path + 'json')
-        return jsonify({'success': True, 'message': 'File deleted successfully'})
-    except Exception as e:
-        return jsonify({'success': False, 'message': str(e)})
-    
+        return 'ok' 
 
 
 @app.route('/reload/<user>/<filename>',methods=['POST','GET'])
