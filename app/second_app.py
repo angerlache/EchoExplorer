@@ -27,6 +27,9 @@ def send_csv():
 
 @app.route('/process_on_second_machine', methods=['POST','GET'])
 def process_on_second_machine():
+    s = time.time()
+    print(request.data)
+    print(request.data.decode('utf-8'))
     print('hereeeeeeee')
     print(request.args)
     print(request.data)
@@ -49,10 +52,11 @@ def process_on_second_machine():
             key = obj.key"""
 
     s3 = boto3.resource('s3', endpoint_url='https://ceph-gw1.info.ucl.ac.be')
-    if AI == 'bats':
+    if AI == 'BatML':
         if not os.path.exists('../AI/data/samples/' + username):
             os.mkdir('../AI/data/samples/' + username)
         s3.Bucket('biodiversity-lauzelle').download_file(message,'../AI/data/samples/'+message) # has .wav
+        print("file from s3")
         os.chdir('../AI')
         print(os.getcwd())
         subprocess.run('{} {} {}'.format('python3', 'run_classifier.py', username) + " && rm -rf data/samples/" + username,shell=True,check=True)
@@ -60,12 +64,12 @@ def process_on_second_machine():
         os.chdir('../app')
         csv_filepath = '../AI/results/classification_result_' + username + '.csv'
 
-    elif AI == 'birds':
+    elif AI == 'BirdNET':
         if not os.path.exists('../BirdNET/samples/' + username):
             os.mkdir('../BirdNET/samples/' + username)
         if not os.path.exists('../BirdNET/results/' + username):
             os.mkdir('../BirdNET/results/' + username)
-
+            
         s3.Bucket('biodiversity-lauzelle').download_file(message,'../BirdNET/samples/'+message) # has .wav
         os.chdir('../BirdNET')
         subprocess.run("source /home/batmen/anthony/myenv/bin/activate && {} {} {} {} {} {} {} {} {} {} && rm -rf samples/{}/ && rm results/{}".format("python3", "analyze.py", "--user", username, "--i", "samples/"+username+'/', '--o', 'results/'+username+'/', '--rtype', 'csv',username,username + '/' + filename[:-3] + "BirdNET.results.csv"), shell=True, check=True)
@@ -75,7 +79,7 @@ def process_on_second_machine():
         os.chdir('../app')
         csv_filepath = '../BirdNET/results/'+username+'/classification_result_' + username + '.csv'
 
-    elif AI == 'battybirds':
+    elif AI == 'BattyBirdNET':
         if not os.path.exists('../BattyBirdNET/samples/' + username):
             os.mkdir('../BattyBirdNET/samples/' + username)
         if not os.path.exists('../BattyBirdNET/results/' + username):
@@ -91,18 +95,44 @@ def process_on_second_machine():
         os.chdir('../app')
         csv_filepath = '../BattyBirdNET/results/'+username+'/classification_result_' + username + '.csv'
 
+    elif AI == 'batdetect2':
+        if not os.path.exists('../batdetect2/samples/' + username):
+            os.mkdir('../batdetect2/samples/' + username)
+        if not os.path.exists('../batdetect2/results/' + username):
+            os.mkdir('../batdetect2/results/' + username)
+
+        s3.Bucket('biodiversity-lauzelle').download_file(message,'../batdetect2/samples/'+message) # has .wav
+        os.chdir('../batdetect2')
+        subprocess.run("source /home/batmen/anthony/myenv/bin/activate && {} {} {} {} {} {} && rm -rf samples/{}/ ".format("python3", "run_batdetect.py", "samples/"+username, "results/"+username, 0.5,username, username), shell=True, check=True)
+        os.chdir('../app')
+        csv_filepath = '../batdetect2/results/'+username+'/classification_result_' + username + '.csv'
+
+    results = [[],[],[],[]]
+    with open(csv_filepath) as resultfile:
+    #with open('fake_labels.csv') as resultfile:
+        next(resultfile)
+        for line in resultfile:
+            line = line.strip().split(',')
+            if float(line[4]) > 0.5: 
+                results[0].append(line[1])
+                results[1].append(line[2])
+                results[2].append(line[3])
+                results[3].append(line[4])
 
 
-    #shutil.rmtree(app.config['ALTERNATE_UPLOAD_FOLDER']) # delete the folder where AI is applied
-    #os.makedirs(app.config['ALTERNATE_UPLOAD_FOLDER'])
-
-    #return jsonify({'success': True})
-    #csv_filepath = '../AI/results/classification_result_' + username + '.csv'
-    return send_file(
-            csv_filepath,
-            mimetype='text/csv',
-            as_attachment=True,
-            attachment_filename='resulte.csv')
+    print(results)
+    return jsonify({'result': results[2], 'start': results[0], 'end': results[1], 'probability':results[3], 'AI':AI})
+    
+    #time.sleep(108)
+    #print('DURATION = ', time.time()-s)
+    #return send_file(
+     #       csv_filepath,
+      #      mimetype='text/csv',
+       #     as_attachment=True,
+        #    attachment_filename='resulte.csv')
 
 if __name__ == '__main__':
     app.run(debug=True,host="0.0.0.0",threaded=True)
+
+
+
