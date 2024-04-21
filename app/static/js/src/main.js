@@ -194,6 +194,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     splitFile[2],
                     splitFile[0],
                     res.durations[i],
+                    res.validated_by[i]
                 ]).draw().node();
                 if (res.lat[i] != null) {
                     var color = 'orange'

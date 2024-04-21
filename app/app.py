@@ -150,23 +150,27 @@ def retrieve_myfilenames():
     lat = []
     lng = []
     validated = []
+    validated_by = []
     if which_species == 'all':
-        documents = local_annotations.find({}, {"_id":1, "old_name": 1, "username":1, "duration":1, "validated":1})
+        documents = local_annotations.find({}, {"_id":1, "old_name": 1, "username":1, 
+                                                "duration":1, "validated":1, "validated_by":1})
     else:
         documents = local_annotations.find(
                     {"annotations": {"$elemMatch": {"label": which_species}}},
-                    {"_id": 1, "old_name": 1, "username": 1, "duration": 1, "validated":1})
+                    {"_id": 1, "old_name": 1, "username": 1, "duration": 1, "validated":1, "validated_by":1})
 
     for doc in documents:
         if doc.get('username') == current_user.username:
             durations.append(doc.get("duration"))
             userfiles.append(current_user.username+'/'+doc.get("_id")+'/'+doc.get("old_name"))
             validated.append(doc.get('validated'))
+            validated_by.append(doc.get('validated_by'))
             lat.append(File.query.filter_by(hashName=doc.get("_id")).first().lat)
             lng.append(File.query.filter_by(hashName=doc.get("_id")).first().lng)
 
     print(userfiles)
-    return jsonify({'audios':userfiles, 'durations': durations, 'lat': lat, 'lng': lng, 'validated': validated})
+    return jsonify({'audios':userfiles, 'durations': durations, 'lat': lat, 'lng': lng, 
+                    'validated': validated, 'validated_by': validated_by})
 
 @app.route('/retrieve_allfilenames', methods=['GET'])
 def retrieve_allfilenames():
@@ -176,12 +180,14 @@ def retrieve_allfilenames():
     lat = []
     lng = []
     validated = []
+    validated_by = []
     if which_species == 'all':
-        documents = annotations.find({}, {"_id":1, "username":1, "duration":1, "validated": 1, "old_name": 1})
+        documents = annotations.find({}, {"_id":1, "username":1, "duration":1, 
+                                          "validated": 1, "old_name": 1, "validated_by":1})
     else:
         documents = annotations.find(
                     {"annotations": {"$elemMatch": {"label": which_species}}},
-                    {"_id": 1, "username": 1, "duration": 1, "validated":1, "old_name": 1})
+                    {"_id": 1, "username": 1, "duration": 1, "validated":1, "old_name": 1, "validated_by":1})
     for doc in documents:
         durations.append(doc.get("duration"))
         if doc.get('username') == current_user.username:
@@ -189,6 +195,7 @@ def retrieve_allfilenames():
         else:
             files.append(doc.get('username')+'/'+doc.get("_id")+'/'+doc.get("_id"))
         validated.append(doc.get('validated'))
+        validated_by.append(doc.get('validated_by'))
         lat.append(File.query.filter_by(hashName=doc.get("_id")).first().lat)
         lng.append(File.query.filter_by(hashName=doc.get("_id")).first().lng)
 
@@ -196,7 +203,8 @@ def retrieve_allfilenames():
     print(files)
     print(validated)
 
-    return jsonify({'audios':files, 'durations': durations, 'lat': lat, 'lng': lng, 'validated': validated})
+    return jsonify({'audios':files, 'durations': durations, 'lat': lat, 'lng': lng, 
+                    'validated': validated, 'validated_by': validated_by})
 
 @app.route('/retrieve_allspecies', methods=['GET'])
 def retrieve_allspecies():
