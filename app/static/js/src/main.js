@@ -9,6 +9,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const processButton = document.getElementById('processButton');
     const processButton2 = document.getElementById('processButton2');
     const processButton3 = document.getElementById('processButton3');
+    const processButton4 = document.getElementById('processButton4');
     const startAI = document.getElementById('startAI');
     const visualizeButton = document.getElementById('visualizeButton');
     const playButton = document.getElementById('playButton');
@@ -1157,6 +1158,16 @@ document.addEventListener('DOMContentLoaded', function () {
         } else {
             Array.from(multipleAudioFile.files).forEach((file, i) => {
                 processButtonRoutine(file,multipleAudioLength[i],'BattyBirdNET')
+            })
+        }
+    });
+
+    processButton4.addEventListener('click', function () {
+        if (!multipleAudio) {
+            processButtonRoutine(fileInput.files[0],audioLength,'batdetect2')
+        } else {
+            Array.from(multipleAudioFile.files).forEach((file, i) => {
+                processButtonRoutine(file,multipleAudioLength[i],'batdetect2')
             })
         }
     });
