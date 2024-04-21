@@ -61,8 +61,8 @@ document.addEventListener('DOMContentLoaded', function () {
                         'Hypsugo savii_Alpenfledermaus':'Pip35', //see https://de.wikipedia.org/wiki/Alpenfledermaus for pip35
                         'Miniopterus schreibersii_Langflügelfledermaus':'Rhisp'} 
 
-    let SelectedAI = ['Human', 'BatML', 'BirdNET', 'BattyBirdNET'];
-    let AIlist = ['Human', 'BatML', 'BirdNET', 'BattyBirdNET'];
+    let SelectedAI = ['Human', 'BatML', 'BirdNET', 'BattyBirdNET', 'batdetect2'];
+    let AIlist = ['Human', 'BatML', 'BirdNET', 'BattyBirdNET', 'batdetect2'];
 
     let wavesurfer;
     
