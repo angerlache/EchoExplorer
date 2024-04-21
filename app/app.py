@@ -167,7 +167,7 @@ def retrieve_myfilenames():
                 }
             }
         }
-        documents = annotations.find(query,{"_id": 1, "old_name": 1, "username": 1, "duration": 1, "validated":1, "validated_by":1})
+        documents = local_annotations.find(query,{"_id": 1, "old_name": 1, "username": 1, "duration": 1, "validated":1, "validated_by":1})
         print(documents)
 
     for doc in documents:
@@ -179,7 +179,7 @@ def retrieve_myfilenames():
             lat.append(File.query.filter_by(hashName=doc.get("_id")).first().lat)
             lng.append(File.query.filter_by(hashName=doc.get("_id")).first().lng)
 
-    print(userfiles)
+    print("files", userfiles)
     return jsonify({'audios':userfiles, 'durations': durations, 'lat': lat, 'lng': lng, 
                     'validated': validated, 'validated_by': validated_by})
 
