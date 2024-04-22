@@ -89,6 +89,7 @@ class File(db.Model):
     username: Mapped[str] = mapped_column(primary_key=True)
     lat: Mapped[float] = mapped_column(nullable=True)
     lng: Mapped[float] = mapped_column(nullable=True)
+    duration: Mapped[float] = mapped_column()
 
     __table_args__ = (PrimaryKeyConstraint('name','username'), )
 
@@ -345,6 +346,7 @@ def process():
 
     file = request.files['audio']
     session['AI'] = request.form.get('chosenAI')
+    duration = request.form.get('duration')
 
     # use secure_filename (everywhere I read filename from a client) 
     secured_filename = secure_filename(file.filename)
@@ -373,9 +375,9 @@ def process():
             print('FILE NOT FOUND IN DB')
             filename = str(hash(secured_filename))+".wav"
             if request.form.get('lat') is not None:
-                new_file = File(name=secured_filename, hashName=filename, username=current_user.username,lat=request.form.get('lat'),lng=request.form.get('lng'))
+                new_file = File(name=secured_filename, hashName=filename, username=current_user.username,lat=request.form.get('lat'),lng=request.form.get('lng'),duration=duration)
             else:
-                new_file = File(name=secured_filename, hashName=filename, username=current_user.username)
+                new_file = File(name=secured_filename, hashName=filename, username=current_user.username, duration=duration)
             db.session.add(new_file)
             db.session.commit()
 
@@ -459,6 +461,7 @@ def annotation(username,path):
         
         data = data.decode('utf-8')
         data = json.loads(data)
+        duration = File.query.filter_by(hashName=hash_name).first().duration
         
         to_add = {
             "_id": hash_name,
@@ -467,7 +470,7 @@ def annotation(username,path):
             "username": current_user.username,
             "validated": False,
             "validated_by": [],
-            "duration": data[0]["duration"],
+            "duration": duration,
             "annotations": data
         }
         doc = annotations.find_one({'filename': hash_name})
@@ -490,13 +493,15 @@ def validate(path):
     data = request.data
     data = data.decode('utf-8')
     data = json.loads(data)
+    duration = File.query.filter_by(hashName=hash_name).first().duration
+
     to_add = {
         "_id": hash_name,
         "filename": hash_name,
         "old_name": path+'.wav',
         "username": current_user.username,
         "validated": True,
-        "duration": data[0]["duration"],
+        "duration": duration,
         "validated_by": [current_user.username],
         "annotations": data,
     }
@@ -538,6 +543,8 @@ def pending_audio(path):
         data = request.data
         data = data.decode('utf-8')
         data = json.loads(data)  
+        duration = File.query.filter_by(hashName=hash_name).first().duration
+
         to_add = {
             "_id": hash_name,
             "filename": hash_name,
@@ -545,7 +552,7 @@ def pending_audio(path):
             "username": current_user.username,
             "validated": False,
             "validated_by": [],
-            "duration": data[0]["duration"],
+            "duration": duration,
             "annotations": data
         }
         doc = annotations.find_one({'filename': hash_name})
