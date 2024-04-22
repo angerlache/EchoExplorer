@@ -38,10 +38,6 @@ def cli():
     "detection_threshold",
     type=float,
 )
-@click.argument(
-    "username",
-    type=str,
-)
 @click.option(
     "--cnn_features",
     is_flag=True,
@@ -82,7 +78,6 @@ def detect(
     audio_dir: str,
     ann_dir: str,
     detection_threshold: float,
-    username: str,
     time_expansion_factor: int,
     **args,
 ):

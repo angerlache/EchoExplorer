@@ -167,7 +167,7 @@ if __name__ == "__main__":
     do_time_expansion = True  # set to True if audio is not already time expanded
     save_res = True    # True to save the results in a csv file and False otherwise
     chunk_size = 4.0    # The size of an audio chunk
-    data_dir =  'data/samples/' + sys.argv[1] + '/' # path of the directory containing the audio files
+    data_dir =  'data/samples/' + sys.argv[1][:-4] + '/' # path of the directory containing the audio files
     result_dir = 'results/'    # path to the directory where the results are saved
     model_dir = 'data/models/'  # path to the saved models
     model_name = "cnn2" # one of: 'batmen', 'cnn2',  'hybrid_cnn_svm',
@@ -176,8 +176,7 @@ if __name__ == "__main__":
     audio_files = glob.glob(data_dir + '*.wav')
 
     # name of the result file
-    #classification_result_file = result_dir + 'classification_result_' + sys.argv[1] + '.csv'
-    classification_result_file = result_dir + 'classification_result_' + audio_files[0].split('/')[3] + '.csv'
+    classification_result_file = result_dir + 'classification_result_' + sys.argv[1] + '.csv'
     
     if not os.path.isdir(result_dir):
         os.makedirs(result_dir)
