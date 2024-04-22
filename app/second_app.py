@@ -62,7 +62,8 @@ def process_on_second_machine():
         subprocess.run('{} {} {}'.format('python3', 'run_classifier.py', username) + " && rm -rf data/samples/" + username,shell=True,check=True)
         print("---------------------------------------------------")
         os.chdir('../app')
-        csv_filepath = '../AI/results/classification_result_' + username + '.csv'
+        #csv_filepath = '../AI/results/classification_result_' + username + '.csv'
+        csv_filepath = '../AI/results/classification_result_' + message + '.csv'
 
     elif AI == 'BirdNET':
         if not os.path.exists('../BirdNET/samples/' + username):
@@ -77,7 +78,8 @@ def process_on_second_machine():
         #os.system('rm -rf samples/'+username)
         #os.remove("results/" + filename[:-3] + "BirdNET.results.csv")
         os.chdir('../app')
-        csv_filepath = '../BirdNET/results/'+username+'/classification_result_' + username + '.csv'
+        #csv_filepath = '../BirdNET/results/'+username+'/classification_result_' + username + '.csv'
+        csv_filepath = '../BirdNET/results/'+username+'/classification_result_' + message + '.csv'
 
     elif AI == 'BattyBirdNET':
         if not os.path.exists('../BattyBirdNET/samples/' + username):
@@ -87,11 +89,11 @@ def process_on_second_machine():
 
         s3.Bucket('biodiversity-lauzelle').download_file(message,'../BattyBirdNET/samples/'+message) # has .wav
         os.chdir('../BattyBirdNET')
-        #subprocess.run("source /home/batmen/anthony/myenv/bin/activate && {} {} {} {} {} {} {} {} {} {} && rm -rf samples/{}/ && rm results/{}".format("python3", "analyze.py", "--user", username, "--i", "samples/"+username+'/', '--o', 'results/'+username+'/', '--rtype', 'csv',username, username+'/'+filename[:-3]+"BirdNET.results.csv"), shell=True, check=True)
         subprocess.run("source /home/batmen/anthony/myenv/bin/activate && {} {} {} {} {} {} {} {} && rm -rf samples/{}/".format("python3", "bat_ident.py", "--user", username, "--i", "samples/"+username, '--o', 'results/'+username,username), shell=True, check=True)
         
         os.chdir('../app')
-        csv_filepath = '../BattyBirdNET/results/'+username+'/classification_result_' + username + '.csv'
+        #csv_filepath = '../BattyBirdNET/results/'+username+'/classification_result_' + username + '.csv'
+        csv_filepath = '../BattyBirdNET/results/'+username+'/classification_result_' + message + '.csv'
 
     elif AI == 'batdetect2':
         if not os.path.exists('../batdetect2/samples/' + username):
@@ -103,7 +105,8 @@ def process_on_second_machine():
         os.chdir('../batdetect2')
         subprocess.run("source /home/batmen/anthony/myenv/bin/activate && {} {} {} {} {} {} && rm -rf samples/{}/ ".format("python3", "run_batdetect.py", "samples/"+username, "results/"+username, 0.5,username, username), shell=True, check=True)
         os.chdir('../app')
-        csv_filepath = '../batdetect2/results/'+username+'/classification_result_' + username + '.csv'
+        #csv_filepath = '../batdetect2/results/'+username+'/classification_result_' + username + '.csv'
+        csv_filepath = '../batdetect2/results/'+username+'/classification_result_' + message + '.csv'
 
     results = [[],[],[],[]]
     with open(csv_filepath) as resultfile:

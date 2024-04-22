@@ -133,7 +133,8 @@ def detect(
                 len(results["pred_dict"]["annotation"]) > 0
             ):
                 results_path = audio_file.replace(audio_dir, ann_dir)
-                save_results_to_file(results, results_path, ann_dir+'/classification_result_'+username)
+                #save_results_to_file(results, results_path, ann_dir+'/classification_result_'+username)
+                save_results_to_file(results, results_path, ann_dir+'/classification_result_'+audio_file.split('/')[2])
         except (RuntimeError, ValueError, LookupError) as err:
             error_files.append(audio_file)
             click.secho(f"Error processing file!: {err}", fg="red")

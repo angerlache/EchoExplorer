@@ -173,8 +173,12 @@ if __name__ == "__main__":
     model_name = "cnn2" # one of: 'batmen', 'cnn2',  'hybrid_cnn_svm',
     # 'hybrid_cnn_xgboost', 'hybrid_call_svm', 'hybrid_call_xgboost'
 
+    audio_files = glob.glob(data_dir + '*.wav')
+
     # name of the result file
-    classification_result_file = result_dir + 'classification_result_' + sys.argv[1] + '.csv'
+    #classification_result_file = result_dir + 'classification_result_' + sys.argv[1] + '.csv'
+    classification_result_file = result_dir + 'classification_result_' + audio_files[0].split('/')[3] + '.csv'
+    
     if not os.path.isdir(result_dir):
         os.makedirs(result_dir)
 
@@ -278,7 +282,7 @@ if __name__ == "__main__":
     print("model name =", model_name)
     results = []
     # load audio file names and loop through them
-    audio_files = glob.glob(data_dir + '*.wav')
+    #audio_files = glob.glob(data_dir + '*.wav')
     for file_cnt, file_name in enumerate(audio_files):
         print("------------",file_name,"--------------")
         file_name_root = file_name[len(data_dir):]
@@ -308,10 +312,10 @@ if __name__ == "__main__":
             # save results
             if save_res:
                 # save to AudioTagger format
-                op_file_name = result_dir + file_name_root[:-4] + '-sceneRect.csv'
-                wo.create_audio_tagger_op(file_name_root, op_file_name, call_time,
-                                        call_classes, call_prob,
-                                        samp_rate_orig, group_names)
+                #op_file_name = result_dir + file_name_root[:-4] + '-sceneRect.csv'
+                #wo.create_audio_tagger_op(file_name_root, op_file_name, call_time,
+                #                        call_classes, call_prob,
+                #                        samp_rate_orig, group_names)
 
                 # save as dictionary
                 if num_calls > 0:

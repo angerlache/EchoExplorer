@@ -623,7 +623,7 @@ if __name__ == "__main__":
         cfg.OUTPUT_FILE = args.output_file
     else:
         #cfg.OUTPUT_FILE = None
-        cfg.OUTPUT_FILE = "classification_result_" + args.user + ".csv"
+        cfg.OUTPUT_FILE = "classification_result_" + cfg.FILE_LIST[0].split('/')[2] + ".csv"
         #cfg.OUTPUT_FILE = "classification_result.csv"
 
     # Set number of threads
@@ -642,8 +642,7 @@ if __name__ == "__main__":
     # support fork() and thus each process has to
     # have its own config. USE LINUX!
     flist = [(f, cfg.getConfig()) for f in cfg.FILE_LIST]
-    #print(flist)
-    print(cfg.FILE_LIST)
+
     # Analyze files
     if cfg.CPU_THREADS < 2: # should not be a "not" !!!!
         for entry in flist:

@@ -152,7 +152,7 @@ def save_result_file(r: Dict[str, list], path: str, afile_path: str):
 
     else:
         # CSV output file
-        header = "Start (s),End (s),Scientific name,Common name,Confidence\n"
+        header = "Useless, Start (s),End (s),Scientific name,Confidence\n"
 
         # Write header
         out_string += header
@@ -165,8 +165,7 @@ def save_result_file(r: Dict[str, list], path: str, afile_path: str):
 
                 if c[1] > cfg.MIN_CONFIDENCE and (not cfg.SPECIES_LIST or c[0] in cfg.SPECIES_LIST):
                     label = cfg.TRANSLATED_LABELS[cfg.LABELS.index(c[0])]
-                    rstring += "{},{},{},{},{:.4f}\n".format(start, end, label.split("_", 1)[0],
-                                                             label.split("_", 1)[-1], c[1])
+                    rstring += "{},{},{},{},{:.4f}\n".format(0,start, end, label.split("_", 1)[0], c[1])
 
             # Write result string to file
             out_string += rstring
@@ -326,7 +325,8 @@ def analyze_file(item):
                 rtype = ".bat.results.csv"
 
             #out_string = save_result_file(results, os.path.join(cfg.OUTPUT_PATH, rpath.rsplit(".", 1)[0] + rtype), fpath)
-            out_string = save_result_file(results, os.path.join(cfg.OUTPUT_PATH, 'classification_result_'+args.user+'.csv'), fpath)
+            #out_string = save_result_file(results, os.path.join(cfg.OUTPUT_PATH, 'classification_result_'+args.user+'.csv'), fpath)
+            out_string = save_result_file(results, os.path.join(cfg.OUTPUT_PATH, 'classification_result_'+fpath.split('/')[2]+'.csv'), fpath)
         else:
             out_string = save_result_file(results, cfg.OUTPUT_PATH, fpath)
             # Save as file
@@ -348,7 +348,7 @@ def analyze_file(item):
 
 def set_analysis_location(kHz = 256):
 
-    if args.area not in ["Bavaria",  "Sweden", "UK", "USA","USA-EAST","USA-WEST"]:
+    if args.area not in ["Bavaria",  "Sweden", "UK", "USA","USA-EAST","USA-WEST", 'EU']:
         exit(code="Unknown location option or disabled during classifier improvement.")
     else:
         args.lat = -1
