@@ -353,6 +353,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     proba: region.proba,
                     drag: region.drag,
                     ai: region.ai,
+                    resize: region.resize,
                 });
             } else {
                 regions.push({
@@ -361,7 +362,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     id: region.id,
                     content: createRegionContent(document,region.label,region.note,true),
                     drag: region.drag,
-                    ai: region.ai
+                    ai: region.ai,
+                    resize: region.resize
                 });
             }
 
@@ -1040,7 +1042,10 @@ document.addEventListener('DOMContentLoaded', function () {
         .then(data => {
             marker = null;
             console.log(data);
-
+            if (multipleAudio) {
+                regions = []
+                unremovableRegions = []
+            }
             if (userName && !multipleAudio) {uploadButton.disabled = false;save.disabled = false;}
             
             data.start.forEach((start, index) => {

@@ -140,7 +140,8 @@ export function saveAnnotationToServer(audioLength,annotation_name,filename,regi
                     id: region.id,
                     proba: region.proba,
                     ai: region.ai,
-                    drag: region.drag
+                    drag: region.drag,
+                    resize: region.resize
                 };
             } else {
                 return {
@@ -153,7 +154,8 @@ export function saveAnnotationToServer(audioLength,annotation_name,filename,regi
                     note: region.content.querySelector('p').textContent,
                     id: region.id,
                     ai: region.ai,
-                    drag: region.drag
+                    drag: region.drag,
+                    resize: region.resize
                 }
             }
         })
