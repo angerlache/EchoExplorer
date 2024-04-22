@@ -15,6 +15,7 @@ import species
 import utils
 import subprocess
 import pathlib
+from typing import List,Dict
 
 
 def load_codes():
@@ -26,7 +27,7 @@ def load_codes():
         codes = json.load(cfile)
     return codes
 
-def save_result_file(r: dict[str, list], path: str, afile_path: str):
+def save_result_file(r: Dict[str, list], path: str, afile_path: str):
     """Saves the results to the hard drive.
     Args:
         r: The dictionary with {segment: scores}.
@@ -176,7 +177,7 @@ def save_result_file(r: dict[str, list], path: str, afile_path: str):
     return out_string
 
 
-def get_sorted_timestamps(results: dict[str, list]):
+def get_sorted_timestamps(results: Dict[str, list]):
     """Sorts the results based on the segments.
     Args:
         results: The dictionary with {segment: scores}.
