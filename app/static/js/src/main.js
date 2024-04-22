@@ -802,6 +802,7 @@ document.addEventListener('DOMContentLoaded', function () {
             }
             wavesurfer.destroy();
         }
+        multipleAudioLength = [];
         temporaryInit()
         const selectedFiles = event.target.files;
         console.log(selectedFiles);
