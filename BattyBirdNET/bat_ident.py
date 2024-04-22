@@ -324,15 +324,16 @@ def analyze_file(item):
             else:
                 rtype = ".bat.results.csv"
 
-            out_string = save_result_file(results, os.path.join(cfg.OUTPUT_PATH, rpath.rsplit(".", 1)[0] + rtype), fpath)
+            #out_string = save_result_file(results, os.path.join(cfg.OUTPUT_PATH, rpath.rsplit(".", 1)[0] + rtype), fpath)
+            out_string = save_result_file(results, os.path.join(cfg.OUTPUT_PATH, 'classification_result_'+args.user+'.csv'), fpath)
         else:
             out_string = save_result_file(results, cfg.OUTPUT_PATH, fpath)
             # Save as file
-        with open(cfg.OUTPUT_PATH + "Results.csv", "a", encoding="utf-8") as rfile:
-            postString = out_string.split("\n", 1)[1]
+        #with open(cfg.OUTPUT_PATH + "Results.csv", "a", encoding="utf-8") as rfile:
+            # postString = out_string.split("\n", 1)[1]
             # rfile.write(fpath.join(postString.splitlines(True)))
-            rfile.write("\n"+fpath+"\n")
-            rfile.write(postString)
+            # rfile.write("\n"+fpath+"\n")
+            # rfile.write(postString)
 
     except Exception as ex:
         # Write error log
@@ -477,6 +478,9 @@ def set_custom_classifier():
     # args.locale = "en"
 
 def add_parser_arguments():
+    parser.add_argument(
+        "--user"
+    )
     parser.add_argument("--kHz",
                         default="256",
                         help="Sampling rate. Values in ['144', '256']. "
@@ -662,7 +666,7 @@ if __name__ == "__main__":
         with Pool(cfg.CPU_THREADS) as p:
             p.map(analyze_file, flist)
 
-    if args.segment == "on" or args.spectrum == "on":
+    """if args.segment == "on" or args.spectrum == "on":
         script_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
         results_dir = pathlib.Path(os.path.join(script_dir, args.o))
         audio_dir = pathlib.Path(os.path.join(script_dir, args.i ))
@@ -682,4 +686,4 @@ if __name__ == "__main__":
 
                     print("Spectrum in progres for: " + f)
                     cmd = ['python3', "batchspec.py", f, f, args.noisered, script_dir]
-                    subprocess.run(cmd)
+                    subprocess.run(cmd)"""

@@ -87,11 +87,9 @@ def process_on_second_machine():
 
         s3.Bucket('biodiversity-lauzelle').download_file(message,'../BattyBirdNET/samples/'+message) # has .wav
         os.chdir('../BattyBirdNET')
-        subprocess.run("source /home/batmen/anthony/myenv/bin/activate && {} {} {} {} {} {} {} {} {} {} && rm -rf samples/{}/ && rm results/{}".format("python3", "analyze.py", "--user", username, "--i", "samples/"+username+'/', '--o', 'results/'+username+'/', '--rtype', 'csv',username, username+'/'+filename[:-3]+"BirdNET.results.csv"), shell=True, check=True)
-        #os.system('{} {} {} {} {} {} {} {} {} {}'.format("python3", "analyze.py", "--user", username, "--i", "samples/"+username+'/', '--o', 'results/', '--rtype', 'csv'))
-        #os.system('deactivate')
-        #os.system('rm -rf samples/'+username)
-        #os.remove("results/" + filename[:-3] + "BirdNET.results.csv")
+        #subprocess.run("source /home/batmen/anthony/myenv/bin/activate && {} {} {} {} {} {} {} {} {} {} && rm -rf samples/{}/ && rm results/{}".format("python3", "analyze.py", "--user", username, "--i", "samples/"+username+'/', '--o', 'results/'+username+'/', '--rtype', 'csv',username, username+'/'+filename[:-3]+"BirdNET.results.csv"), shell=True, check=True)
+        subprocess.run("source /home/batmen/anthony/myenv/bin/activate && {} {} {} {} {} {} {} {} && rm -rf samples/{}/".format("python3", "bat_ident.py", "--user", username, "--i", "samples/"+username, '--o', 'results/'+username,username), shell=True, check=True)
+        
         os.chdir('../app')
         csv_filepath = '../BattyBirdNET/results/'+username+'/classification_result_' + username + '.csv'
 
