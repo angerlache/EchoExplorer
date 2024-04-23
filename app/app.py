@@ -475,12 +475,14 @@ def annotation(username,path):
         }
         doc = annotations.find_one({'filename': hash_name})
         if doc is None:
-            local_annotations.replace_one({"_id": hash_name}, to_add, upsert=True)
+            doc = local_annotations.find_one({'filename': hash_name})
+            if doc is None: 
+                local_annotations.replace_one({"_id": hash_name}, to_add, upsert=True)
+            else:
+                doc["annotations"] = data
+                local_annotations.update_one({'_id': doc['_id']}, {'$set': {'annotations': doc['annotations']}})
         else:
-            #to_add['validated'] = doc["validated"]
-            #to_add['validated_by'] = doc["validated_by"]
             doc["annotations"] = data
-            #local_annotations.replace_one({"_id": hash_name}, to_add, upsert=True)
             local_annotations.update_one({'_id': doc['_id']}, {'$set': {'annotations': doc['annotations'], 'validated': doc['validated'], 'validated_by': doc['validated_by']}})
  
         return 'ok'
