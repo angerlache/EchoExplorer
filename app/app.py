@@ -309,7 +309,7 @@ def delete_annotation():
         db.session.delete(q)
         db.session.commit()
         try:
-            boto3.client('s3').delete_object(
+            boto3.client('s3',endpoint_url='https://ceph-gw1.info.ucl.ac.be').delete_object(
                 Bucket='biodiversity-lauzelle',
                 Key=user+'/'+file
             )
