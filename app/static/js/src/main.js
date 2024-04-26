@@ -1,4 +1,4 @@
-import { generateColorMap,appendBuffer,renderRegions,saveAnnotationToServer,createRegionContent,getBrowser,addTaxonomy} from './utils.js';
+import { generateColorMap,appendBuffer,renderRegions,saveAnnotationToServer,createRegionContent,getBrowser,addTaxonomy,containsRegion} from './utils.js';
 'use strict';
 
 
@@ -28,6 +28,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const validateButton = document.getElementById('validateButton');
     const uploadButton = document.getElementById('uploadButton'); uploadButton.disabled = true;
     const chunkLengthSelector = document.getElementById('chunkLengthSelector');
+    const radiusSearchSelector = document.getElementById('radiusSearchSelector'); radiusSearchSelector.value=10000
     const zoomIn = document.getElementById('zoomIn');
     const zoomOut = document.getElementById('zoomOut');
     const applySpecies = document.getElementById('applySpecies')
@@ -39,7 +40,9 @@ document.addEventListener('DOMContentLoaded', function () {
     const annotationsButton = document.getElementById('annotationsButton')
     const speciesButton = document.getElementById('speciesButton')
     const aiButton = document.getElementById('aiButton')
-    //const searchForSpeciesInFile = document.getElementById('speciesToSearch')
+
+    const validatedFilesSwitch = document.getElementById('validatedFilesSwitch')
+    const myFilesSwitch = document.getElementById('myFilesSwitch')
     
 
     let chunkLength = 20;
@@ -84,7 +87,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                 }
                 FilesDtable.clear().draw();
-                getFiles(modalCheckedBoxes);
+                getFiles(modalCheckedBoxes,"");
 
             })
         }
@@ -103,7 +106,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                 });
                 FilesDtable.clear().draw();
-                getFiles(modalCheckedBoxes);
+                getFiles(modalCheckedBoxes,"");
                 console.log(modalCheckedBoxes);
             })
         }
@@ -150,12 +153,19 @@ document.addEventListener('DOMContentLoaded', function () {
         if (marker != null) {
             map.removeLayer(marker)
         }
-        marker = L.marker(e.latlng).addTo(map);
+        marker = L.marker(e.latlng).addTo(map).on('click', e => {e.target.remove();marker=null});
         console.log(marker);
         console.log(marker._latlng);
     }
+
+    function showFilesFromDistance(e) {
+        FilesDtable.clear().draw();
+        let coord = [e.latlng.lng, e.latlng.lat].join(',') // becomes the string "lat, lng"
+        getFiles('all', coord)
+    }
     
     map.on('click', onMapClick);
+    mapFiles.on('click', showFilesFromDistance)
     
 
     //temporary init
@@ -221,21 +231,80 @@ document.addEventListener('DOMContentLoaded', function () {
     const FilesDtable = new DataTable('#FilesTable',{order: [[1, 'asc']]}); 
     FilesDtable.column(0).visible(false);
 
-    FilesDtable.on('click', 'tbody tr', function () {
-        let data = FilesDtable.row(this).data();
-        var filename = data[0];
-        var user = data[2];
-        cleanBeforeLoad(myModalEl)
-        //searchForSpeciesInFile.selectedIndex = 0;
-        changeAudio(user + '/' + filename,whichFiles);    
+    FilesDtable.on('click', 'tbody tr', function (e) {
+        // Check if the click event originated from the delete button or edit button
+        if (!$(e.target).closest('.delete-btn').length && !$(e.target).closest('.modify-btn').length && 
+            !$(e.target).closest('.excel-btn').length && !$(e.target).closest('.audio-btn').length) {
+            let data = FilesDtable.row(this).data();
+            var filename = data[0];
+            var user = data[2];
+            cleanBeforeLoad(myModalEl)
+            changeAudio(user + '/' + filename, whichFiles);  
+        }  
     });
 
-    function getFiles(whichSpecies) {
+    FilesDtable.on('click', 'button.delete-btn', function () {
+        var row = $(this).closest('tr');
+        var rowData = FilesDtable.row(row).data();
+        console.log(rowData);
+        fetch(`/delete_annotation?file=${rowData[0]}&user=${rowData[2]}`, {
+            method: 'GET'
+        })
+        .then(response => response.json())
+        .then(res => {
+
+        }).catch(function (err) {
+            console.log('Fetch Error :-S', err);
+        });
+        FilesDtable.row(row).remove().draw(false);
+
+        var new_markers = L.layerGroup()
+        markers.eachLayer(function(marker) {
+            if (marker._id !== rowData[0]) {
+                new_markers.addLayer(marker)
+            }
+        })
+        markers.clearLayers();
+        markers = new_markers
+        markers.addTo(mapFiles)
+    });
+
+    FilesDtable.on('click', 'button.modify-btn', function () {
+        var row = $(this).closest('tr');
+        var rowData = FilesDtable.row(row).data();
+        var rowIdx = FilesDtable.row(row).index();
+        var newName = prompt("Enter the new name:") + '.wav';
+        rowData[1] = newName;
+        //FilesDtable.row(row).data(rowData).draw();
+        FilesDtable.row(rowIdx).data(rowData).invalidate();
+
+        fetch(`/rename_annotation?file=${rowData[0]}&newname=${newName}`, {
+            method: 'GET'
+        })
+        .then(response => response.json())
+        .then(res => {
+
+        }).catch(function (err) {
+            console.log('Fetch Error :-S', err);
+        });
+
+    });
+
+    FilesDtable.on('click', 'button.excel-btn', function () {
+        var row = $(this).closest('tr');
+        var rowData = FilesDtable.row(row).data();
+        var rowIdx = FilesDtable.row(row).index();
+        download_csv(rowData[0])
+
+    });
+
+
+    function getFiles(whichSpecies,geoCoord) {
         if (!Array.isArray(whichSpecies)) {
             whichSpecies = [whichSpecies]
         }
         whichSpecies = JSON.stringify(whichSpecies);
-        fetch(`/retrieve_${whichFiles}filenames?arg=${whichSpecies}`, {
+        fetch(`/retrieve_${whichFiles}filenames?arg=${whichSpecies}&arg2=${geoCoord}&radius=${radiusSearchSelector.value}&validated=${validatedFilesSwitch.checked}&myfiles=${myFilesSwitch.checked}`, {
             method: "GET"
         })
         .then(response => response.json())
@@ -243,22 +312,29 @@ document.addEventListener('DOMContentLoaded', function () {
             setAllSpecies(whichFiles)
             markers.clearLayers();
             console.log(res);
+
             res.audios.forEach((file,i) => {
                 let splitFile = file.split('/')
+                let delButton = `<button class='btn btn-sm excel-btn'><i class='fa fa-file-excel-o'></i></button> <a href='/download/${splitFile[0]}/${splitFile[1]}' download> <button class='btn btn-sm audio-btn'><i class='fa fa-file-audio-o'></i></button> </a>`
+                if (whichFiles == 'my') {delButton = `<button class='btn btn-sm delete-btn'><i class='fa fa-trash'></i></button> <button class='btn btn-sm modify-btn'><i class='fa fa-pencil'></i></button> <button class='btn btn-sm excel-btn'><i class='fa fa-file-excel-o'></i></button> <a href='/download/${splitFile[0]}/${splitFile[1]}' download> <button class='btn btn-sm audio-btn'><i class='fa fa-file-audio-o'></i></button> </a>`}
                 var row = FilesDtable.row.add([
                     splitFile[1],
                     splitFile[2],
                     splitFile[0],
                     res.durations[i],
-                    res.validated_by[i]
+                    res.validated_by[i],
+                    delButton
                 ]).draw().node();
                 if (res.lat[i] != null) {
                     var color = 'orange'
                     if (res.validated[i] == 'True' || res.validated[i] == true) {console.log("he"); color = 'green'}
-                    var circleMarker = L.circleMarker([res.lat[i], res.lng[i]],{
-                        radius: 4,color: color
-                    }).bindPopup(file.split('/')[2])
+                    var circleMarker = L.circle([res.lat[i], res.lng[i]],{
+                        radius: 5000,color: color
+                    }).bindTooltip(file.split('/')[2])
+                    circleMarker._id = file.split('/')[1]
+                    
                     markers.addLayer(circleMarker)
+                    
                 }
             })
             markers.addTo(mapFiles)
@@ -275,7 +351,7 @@ document.addEventListener('DOMContentLoaded', function () {
         .then(response => response.json())
         .then(res => {
             let species = res.species
-            set_autocomplete('autoSearch', 'autoSearchComplete', species, start_at_letters=1, count_results=2);
+            set_autocomplete('autoSearch', 'autoSearchComplete', species, start_at_letters=1, count_results=10);
         }).catch(function (err) {
             console.log('Fetch Error :-S', err);
         });
@@ -285,49 +361,67 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('myAudios').addEventListener('click', () => {
         mapFiles.invalidateSize();
         whichFiles = 'my'
-        getFiles('all')
+        getFiles('all',"")
+    })
+
+    document.getElementById('resetSearch').addEventListener('click', () => {
+        FilesDtable.clear().draw();
+        getFiles('all',"")
     })
 
     
     document.getElementById('autoSearchButton').addEventListener('click', () => {
         FilesDtable.clear().draw();
-        getFiles(document.getElementById('autoSearch').value)
+        getFiles(document.getElementById('autoSearch').value,"")
     });
 
-    /*
-    searchForSpeciesInFile.addEventListener('change', () => {
-        FilesDtable.clear().draw();
-        getFiles(searchForSpeciesInFile.value)
-    });*/
 
     document.getElementById('allAudios').addEventListener('click', () => {
         mapFiles.invalidateSize();
         whichFiles = 'all'
-        getFiles('all')
+        getFiles('all',"")
     })
 
     document.getElementById('closeModalAudios').addEventListener('click', () => {
         FilesDtable.clear().draw();
-        //searchForSpeciesInFile.selectedIndex = 0;
     });
     
 
 
-    Dtable.on('click', 'tbody tr', function () {
-        let data = Dtable.row(this).data();
-        var time = data[1];
-        currentPosition = Math.floor(Math.max(0,time-chunkLength/2));
-        slider.value = currentPosition
-        document.getElementById('secout').value = currentPosition + ' seconds'
+    Dtable.on('click', 'tbody tr', function (e) {
+        // check if the delete button is not clicked
+        if (!$(e.target).closest('.delete-btn').length) {
+            let data = Dtable.row(this).data();
+            var time = data[1];
+            currentPosition = Math.floor(Math.max(0,time-chunkLength/2));
+            slider.value = currentPosition
+            document.getElementById('secout').value = currentPosition + ' seconds'
 
-        const reader = new FileReader();
-        reader.onload = function (event) {
-            loadNextChunk(event,data[4]) //3
+            const reader = new FileReader();
+            reader.onload = function (event) {
+                loadNextChunk(event,data[4]) //3
+            }
+            var file = fileInput.files[0];
+            reader.readAsArrayBuffer(file);
+            // Example: Log values to console
+            console.log('Clicked Row:', time);
         }
-        var file = fileInput.files[0];
-        reader.readAsArrayBuffer(file);
-        // Example: Log values to console
-        console.log('Clicked Row:', time);
+    });
+
+    Dtable.on('click', 'button.delete-btn', function () {
+        var row = $(this).closest('tr');
+        var rowData = Dtable.row(row).data();
+        
+        Dtable.row(row).remove().draw(false);
+
+        let toRemove = wsRegions.regions.filter(item => item.id === rowData[4])[0]
+
+        regions = regions.filter(item => item.id !== rowData[4]);
+        if (isExpert=='True' || toRemove.drag) {
+            unremovableRegions = unremovableRegions.filter(item => item.id !== rowData[4]);
+        }
+        toRemove.remove()
+
     });
 
     // Give regions a random color when they are created
@@ -339,50 +433,32 @@ document.addEventListener('DOMContentLoaded', function () {
     //export function loadRegions(document,chunkLength,currentPosition,wr,annotations,regions){
     function loadRegions(document,annotations,regions,addRow){
 
-        // todo: check if the id is present in the list, so that
-        // if user repush on the button, the regions are not duplicated
-    
         annotations.forEach(region => {
-            
-            if (region.proba !== undefined) {
+            if (!containsRegion(region, regions)) {
+                
                 regions.push({
                     start: region.start,
                     end: region.end,
                     id: region.id,
                     content: createRegionContent(document,region.label,region.note,true),
-                    proba: region.proba,
+                    ...(region.proba !== undefined && { proba: region.proba }),
                     drag: region.drag,
                     ai: region.ai,
                     resize: region.resize,
                 });
-            } else {
-                regions.push({
-                    start: region.start,
-                    end: region.end,
-                    id: region.id,
-                    content: createRegionContent(document,region.label,region.note,true),
-                    drag: region.drag,
-                    ai: region.ai,
-                    resize: region.resize
-                });
-            }
 
-            if (addRow && region.proba !== undefined) {
-                var row = Dtable.row.add([
-                    region.label,
-                    region.start,
-                    region.proba,
-                    region.ai,
-                    region.id
-                ]).draw().node();
-            } else if (addRow) {
-                var row = Dtable.row.add([
-                    region.label,
-                    region.start,
-                    "-",
-                    region.ai,
-                    region.id
-                ]).draw().node();
+                var proba = (region.proba !== undefined) ? region.proba : "-";
+
+                if (addRow) {
+                    var row = Dtable.row.add([
+                        region.label,
+                        region.start,
+                        proba,
+                        region.ai,
+                        region.id,
+                        "<button class='btn btn-sm delete-btn'><i class='fa fa-trash'></i></button>"
+                    ]).draw().node();
+                } 
             }
             
         });
@@ -444,17 +520,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 unremovableRegions.push(r);
             }
 
-            /*
-            var rowid = Dtable.column(4).data().indexOf(region.id) //3
-            var row = Dtable.row(rowid);
-            console.log(row.data());
-
-            var d = row.data()
-            d[0] = regionContent.innerText;
-            row.data(d);
-            Dtable.draw();
-            */
-
             Dtable.rows().every(function() {
                 var rowData = this.data();
                 if (rowData[4] === region.id) { //3
@@ -505,8 +570,6 @@ document.addEventListener('DOMContentLoaded', function () {
         })
         wr.on("region-created", (region) => {
 
-            
-
             //If created region is new, add it to the list.
             if(!regions.some(item => item.id === region.id)){
                 region.content = createRegionContent(document,"Region", "",true);
@@ -529,7 +592,8 @@ document.addEventListener('DOMContentLoaded', function () {
                         r.start,
                         "-",
                         "Human",
-                        r.id
+                        r.id,
+                        "<button class='btn btn-sm delete-btn'><i class='fa fa-trash'></i></button>"
                     ]).draw().node();
                 }
                 
@@ -787,9 +851,8 @@ document.addEventListener('DOMContentLoaded', function () {
             loadRegions(document,data,unremovableRegions,false);
 
             updateWaveform()
-
-            // hide the button after user pushed it, so that cannot use it
-            //loadLabels.disabled = true;
+            save.disabled = false;
+            uploadButton.disabled = false;
         } catch (error) {
             console.error('Error fetching annotation:', error);
         }
@@ -1003,6 +1066,10 @@ document.addEventListener('DOMContentLoaded', function () {
         updateWaveform()
     })
 
+    radiusSearchSelector.addEventListener('change', () => {
+        console.log();
+    });
+
     zoomIn.addEventListener('click', () => {
         if (chunkLength == 5) {return;}
         chunkLength -= 10;
@@ -1040,67 +1107,44 @@ document.addEventListener('DOMContentLoaded', function () {
             body: formData
         })
         .then(response => response.json())
-        .then(data => {
+        .then(async data => {
+            if (marker != null) {
+                map.removeLayer(marker)
+            }
             marker = null;
             console.log(data);
             if (multipleAudio) {
                 regions = []
                 unremovableRegions = []
+                try {
+                    const response = await fetch('users/' + userName + '/annotation/' + filename.split('.')[0]);
+                    const data = await response.json();
+                    loadRegions(document,data,regions,true);
+                    loadRegions(document,data,unremovableRegions,false);
+                } catch (error) {
+                    console.error('Error fetching annotation:', error);
+                }
             }
             if (userName && !multipleAudio) {uploadButton.disabled = false;save.disabled = false;}
             
             data.start.forEach((start, index) => {
                 console.log('Adding region:', start);
                 let note = ""
-                let specy;
-                /*
-                if (data.AI == "BatML") {
-                    note = ""
-                    specy = data.result[index]
-                }
-                else if (data.AI == "BattyBirdNET") {
-                    for (let key in battyBirdList) {
-                        if (data.result[index].includes(key)) {
-                            specy = battyBirdList[key]
-                            note = data.result[key]
-                            console.log(specy,note);
-                            break;
-                        }
-                    }
-                    note = ""
-                    specy = data.result[index]
-                }
-                else if (data.AI == "BirdNET") {
-                    note = ""
-                    specy = data.result[index]
-                }*/
-                note = ""
-                specy = data.result[index]
+                let specy = data.result[index]
+                
                 var idn = `bat-${Math.random().toString(32).slice(2)}`
-                regions.push({
+                var obj = {
                     id: idn,
                     start: parseFloat(start), //timestamp-currentPosition,
                     end: parseFloat(data.end[index]), //timestamp-currentPosition,
-                    //content: createRegionContent(document,`${data.result[index]}` , "note here",true),
                     content: createRegionContent(document,`${specy}`, note, true),
-                    //color: randomColor(), 
                     drag: false,
                     resize: false,
                     proba: data.probability[index],
                     ai: data.AI,
-                })
-                unremovableRegions.push({
-                    id: idn,
-                    start: parseFloat(start),
-                    end: parseFloat(data.end[index]), //timestamp-currentPosition,
-                    //content: createRegionContent(document,`${data.result[index]}` , "note here",true),
-                    content: createRegionContent(document,`${specy}`, note, true),
-                    //color: randomColor(), 
-                    drag: false,
-                    resize: false,
-                    proba: data.probability[index],
-                    ai: data.AI,
-                })
+                }
+                regions.push(obj)
+                unremovableRegions.push(obj)
                 //Populate DataTable
                 if (!multipleAudio) {
                     var row = Dtable.row.add([
@@ -1110,6 +1154,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         data.probability[index],
                         data.AI,
                         idn,
+                        "<button class='btn btn-sm delete-btn'><i class='fa fa-trash'></i></button>"
                     ]).draw().node();
                 }
                 
@@ -1183,6 +1228,7 @@ document.addEventListener('DOMContentLoaded', function () {
         formData.append('audio', file);
         formData.append('chosenAI', ai);
         formData.append('duration', Math.round(duration));
+        console.log('marker = ', marker);
         if (marker != null) {
             formData.append('lat', marker._latlng.lat);
             formData.append('lng', marker._latlng.lng);
@@ -1297,64 +1343,30 @@ document.addEventListener('DOMContentLoaded', function () {
 
     };
 
+    function download_csv(file) {
+        fetch(`/download_csv?file=${file}`, {
+            method: 'GET',
+        })
+        .then(response => response.blob())
+        .then(blob => {
+            // Create a temporary link
+            const url = window.URL.createObjectURL(new Blob([blob]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', 'data.csv');
+
+            // Simulate click on the link to trigger download
+            document.body.appendChild(link);
+            link.click();
+
+            // Clean up
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
+        });
+    }
+
     csv.addEventListener('click', function () {
-        // Make a POST request to the server
-
-        let data = JSON.stringify(
-            Object.keys(regions).map(function (id) {
-                var region = regions[id];
-                if (region.proba !== undefined) {
-                    return {
-                        duration: audioLength,
-                        file: fileInput.files[0].name,
-                        start: region.start,
-                        end: region.end,
-                        //content: region.content,
-                        label: region.content.querySelector('h3').textContent,
-                        note: region.content.querySelector('p').textContent,
-                        id: region.id,
-                        proba: region.proba,
-                        ai: region.ai
-                    };
-                } else {
-                    return {
-                        duration: audioLength,
-                        file: fileInput.files[0].name,
-                        start: region.start,
-                        end: region.end,
-                        //content: region.content,
-                        label: region.content.querySelector('h3').textContent,
-                        note: region.content.querySelector('p').textContent,
-                        id: region.id,
-                        proba: 0,
-                        ai: region.ai
-                    }
-                }
-            })
-        );
-
-        fetch('/download_csv', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(data) // Convert the data to JSON format
-        }).then(response => response.blob())
-                .then(blob => {
-                    // Create a temporary link
-                    const url = window.URL.createObjectURL(new Blob([blob]));
-                    const link = document.createElement('a');
-                    link.href = url;
-                    link.setAttribute('download', 'data.csv');
-
-                    // Simulate click on the link to trigger download
-                    document.body.appendChild(link);
-                    link.click();
-
-                    // Clean up
-                    document.body.removeChild(link);
-                    window.URL.revokeObjectURL(url);
-                });
+        download_csv(fileInput.files[0].name)
     });    
 
 

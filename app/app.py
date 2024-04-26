@@ -46,6 +46,9 @@ client = MongoClient("localhost", 27017)
 db = client.mymongodb
 annotations = db.annotations
 local_annotations = db.local_annotations
+annotations.create_index({"location": "2dsphere"})
+local_annotations.create_index({"location": "2dsphere"})
+
 
 sslify = SSLify(app)
 """limiter = Limiter(
@@ -146,6 +149,16 @@ def allowed_file(filename):
 @app.route('/retrieve_myfilenames', methods=['GET'])
 def retrieve_myfilenames():
     which_species = request.args.get('arg')
+    coord = request.args.get('arg2')
+    radius = request.args.get('radius')
+    is_validated = request.args.get('validated') == 'true'
+    myfiles = request.args.get('myfiles') == 'true'
+    
+    if coord != "":
+        coord = coord.split(',')
+        coord[0] = float(coord[0])
+        coord[1] = float(coord[1])
+        radius = float(radius)
     which_species = json.loads(which_species)
     if which_species == []:
         which_species = ['all']
@@ -155,20 +168,37 @@ def retrieve_myfilenames():
     lng = []
     validated = []
     validated_by = []
+
+    and_query = [{}]
+    if is_validated:
+        and_query.append({"validated": is_validated})
+    if myfiles:
+        and_query.append({"username": current_user.username})
+
     if which_species == ['all']:
-        documents = local_annotations.find({}, {"_id":1, "old_name": 1, "username":1, 
+        if coord != "":
+            and_query.append({
+                "location": {
+                    "$near": {
+                        "$geometry": {'type': 'Point', 'coordinates': coord},
+                        "$minDistance": 0,
+                        "$maxDistance": radius
+                    }
+                }
+            })
+        documents = local_annotations.find({"$and": and_query}, {"_id":1, "old_name": 1, "username":1, 
                                                 "duration":1, "validated":1, "validated_by":1})
     else:
         orQuery = [{"label": species} for species in which_species]
         print(orQuery)
-        query = {
+        and_query.append({
             "annotations": {
                 "$elemMatch": {
                     "$or": orQuery
                 }
             }
-        }
-        documents = local_annotations.find(query,{"_id": 1, "old_name": 1, "username": 1, "duration": 1, "validated":1, "validated_by":1})
+        })
+        documents = local_annotations.find({"$and": and_query},{"_id": 1, "old_name": 1, "username": 1, "duration": 1, "validated":1, "validated_by":1})
         print(documents)
 
     for doc in documents:
@@ -187,6 +217,16 @@ def retrieve_myfilenames():
 @app.route('/retrieve_allfilenames', methods=['GET'])
 def retrieve_allfilenames():
     which_species = request.args.get('arg')
+    coord = request.args.get('arg2')
+    radius = request.args.get('radius')
+    is_validated = request.args.get('validated') == 'true'
+    myfiles = request.args.get('myfiles') == 'true'
+
+    if coord != "":
+        coord = coord.split(',')
+        coord[0] = float(coord[0])
+        coord[1] = float(coord[1])
+        radius = float(radius)
     which_species = json.loads(which_species)
     if which_species == []:
         which_species = ['all']
@@ -196,20 +236,38 @@ def retrieve_allfilenames():
     lng = []
     validated = []
     validated_by = []
+
+    and_query = [{}]
+    if is_validated:
+        and_query.append({"validated": is_validated})
+    if myfiles:
+        and_query.append({"username": current_user.username})
+
     if which_species == ['all']:    #Si qqun appelle sa region "all" on a un souci
-        documents = annotations.find({}, {"_id":1, "username":1, "duration":1, 
+        
+        if coord != "":
+            and_query.append({
+                "location": {
+                    "$near": {
+                        "$geometry": {'type': 'Point', 'coordinates': coord},
+                        "$minDistance": 0,
+                        "$maxDistance": radius
+                    }
+                }
+            })
+        documents = annotations.find({"$and": and_query}, {"_id":1, "username":1, "duration":1, 
                                           "validated": 1, "old_name": 1, "validated_by":1})
     else:
         orQuery = [{"label": species} for species in which_species]
         print(orQuery)
-        query = {
+        and_query.append({
             "annotations": {
                 "$elemMatch": {
                     "$or": orQuery
                 }
             }
-        }
-        documents = annotations.find(query,{"_id": 1, "old_name": 1, "username": 1, "duration": 1, "validated":1, "old_name": 1, "validated_by":1})
+        })
+        documents = annotations.find({"$and": and_query},{"_id": 1, "old_name": 1, "username": 1, "duration": 1, "validated":1, "old_name": 1, "validated_by":1})
         print(documents)
 
     for doc in documents:
@@ -239,6 +297,36 @@ def retrieve_allspecies():
     print(names)
     return jsonify({'species':names})
 
+@app.route('/delete_annotation', methods=['GET'])
+def delete_annotation():
+    file = request.args.get('file')
+    user = request.args.get('user')
+
+    result = local_annotations.delete_one({'_id': file})
+    doc = annotations.find_one({'_id': file})
+    if doc is None and user==current_user.username:
+        q = File.query.filter_by(hashName=file).first()
+        db.session.delete(q)
+        db.session.commit()
+        try:
+            boto3.client('s3').delete_object(
+                Bucket='biodiversity-lauzelle',
+                Key=user+'/'+file
+            )
+        except Exception as e:
+            print("Error deleting file: ", e)
+
+    return jsonify({'response': "ok"})
+    
+@app.route('/rename_annotation', methods=['GET'])
+def rename_annotation():
+    file = request.args.get('file')
+    new_name = request.args.get('newname')
+
+    doc = local_annotations.find_one({'_id': file})
+    local_annotations.update_one({'_id': doc['_id']}, {'$set': {'old_name': new_name}})
+
+    return jsonify({'response': "ok"})
 
 
 @app.route('/main')
@@ -461,7 +549,10 @@ def annotation(username,path):
         
         data = data.decode('utf-8')
         data = json.loads(data)
-        duration = File.query.filter_by(hashName=hash_name).first().duration
+        q = File.query.filter_by(hashName=hash_name).first()
+        duration = q.duration
+        lat = q.lat
+        lng = q.lng
         
         to_add = {
             "_id": hash_name,
@@ -473,6 +564,8 @@ def annotation(username,path):
             "duration": duration,
             "annotations": data
         }
+        if lat != None:
+            to_add["location"] = {"type": "Point", "coordinates": [lng, lat]}
         doc = annotations.find_one({'filename': hash_name})
         if doc is None:
             doc = local_annotations.find_one({'filename': hash_name})
@@ -495,7 +588,10 @@ def validate(path):
     data = request.data
     data = data.decode('utf-8')
     data = json.loads(data)
-    duration = File.query.filter_by(hashName=hash_name).first().duration
+    q = File.query.filter_by(hashName=hash_name).first()
+    duration = q.duration
+    lat = q.lat
+    lng = q.lng
 
     to_add = {
         "_id": hash_name,
@@ -507,6 +603,8 @@ def validate(path):
         "validated_by": [current_user.username],
         "annotations": data,
     }
+    if lat != None:
+        to_add["location"] = {"type": "Point", "coordinates": [lng, lat]}
     doc = annotations.find_one({'filename': hash_name})
     if doc is None:
         annotations.insert_one(to_add)
@@ -545,7 +643,10 @@ def pending_audio(path):
         data = request.data
         data = data.decode('utf-8')
         data = json.loads(data)  
-        duration = File.query.filter_by(hashName=hash_name).first().duration
+        q = File.query.filter_by(hashName=hash_name).first()
+        duration = q.duration
+        lat = q.lat
+        lng = q.lng
 
         to_add = {
             "_id": hash_name,
@@ -557,6 +658,8 @@ def pending_audio(path):
             "duration": duration,
             "annotations": data
         }
+        if lat != None:
+            to_add["location"] = {"type": "Point", "coordinates": [lng, lat]}
         doc = annotations.find_one({'filename': hash_name})
         if doc is None:
             annotations.insert_one(to_add)
@@ -648,16 +751,10 @@ def split_audio():
 
 @app.route('/download_csv', methods=['POST','GET'])
 def download_csv():
-    data = request.json
-    print('Received data:', data)
-    print('-----------')
-    print(type(data))
-    print(type(list(eval(data))))
-    print(list(eval(data)))
+    file = request.args.get('file')
     
-    # Create a CSV string from the sample data
-    #csv_content = generate_csv_string(list(eval(data)))
-    to_csv = list(eval(data))
+    doc = local_annotations.find_one({'_id': file})
+    to_csv = doc['annotations']
     keys = to_csv[0].keys()
 
     output = StringIO()
@@ -676,17 +773,35 @@ def download_csv():
 
     return response
 
+@app.route('/download/<user>/<filename>', methods=['GET'])
+def download_wav(user,filename):
+    try:
+        print(user)
+        print(filename)
+
+        s3 = boto3.client('s3')
+        #with open('FILE_NAME', 'wb') as f:
+        #    s3.download_fileobj('biodiversity-lauzelle', user+'/'+filename, f)
+
+        # Download the WAV file from S3
+        s3_object = s3.get_object(Bucket='biodiversity-lauzelle', Key=user+'/'+filename)
+        wav_data = s3_object['Body'].read()
+        
+        # Send the file to the client as an attachment
+        return send_file(
+            io.BytesIO(wav_data),
+            mimetype='audio/wav',
+            as_attachment=True,
+            attachment_filename=filename
+        )
+    except Exception as e:
+        return str(e), 404  # Return 404 if file not found or any other error
+
+
 
 import csv
 from io import StringIO
 
-def generate_csv_string(data):
-    # Create a CSV string using the csv module
-    output = []
-    csv_writer = csv.DictWriter(output, fieldnames=data[0].keys())
-    csv_writer.writeheader()
-    csv_writer.writerows(data)
-    return ''.join(output)
 
 if __name__ == '__main__':
     if not os.path.exists(app.config['UPLOAD_FOLDER']):

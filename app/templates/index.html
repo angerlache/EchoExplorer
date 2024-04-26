@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <link rel="stylesheet" href="../static/css/mystyle.css">
-
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
 
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <!--script src="{{ url_for('static', filename='js/lib/jquery-2.2.3.min.js') }}" type="text/javascript"></script>
@@ -248,6 +248,13 @@
                             Select Species
                         </button>
                     </div>
+
+                    <div class="col-sm">
+                        <button class="btn-secondary" type="button" id="resetSearch">
+                            Reset
+                        </button>
+                    </div>
+                    
                     <div class="col-sm">
                             <input type="text" id="autoSearch" class="form-control" placeholder="Search species..">
                             <div class="position-absolute invisible" id="autoSearchComplete"></div>
@@ -255,7 +262,24 @@
                     <div class="col-md-auto">
                         <button type="button" id="autoSearchButton"class="btn btn-outline-primary"><i class="bi bi-search"></i></button>
                     </div>
-                  </div>
+
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="validatedFilesSwitch">
+                        <label class="form-check-label" for="validatedFilesSwitch">Validated files</label>
+                    </div>
+
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="myFilesSwitch">
+                        <label class="form-check-label" for="myFilesSwitch">My files</label>
+                    </div>
+                    <select id="radiusSearchSelector" class="custom-select" style="text-align: left; width: 10%; font-size: 0.8rem;">
+                        <option value="5000">5km</option>
+                        <option value="10000">10km</option>
+                        <option value="20000">20km</option>
+                        <option value="50000">50km</option>
+                        <option value="100000">100km</option>
+                    </select>
+                </div>
                   
 
                 <br>
@@ -271,6 +295,7 @@
                             <th>Posted by</th>
                             <th>Duration[s]</th>
                             <th>Validated by</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -351,6 +376,7 @@
                 <th>Probability</th>
                 <th>AI</th>
                 <th>Id</th>
+                <th>Action</th>
             </tr>
         </thead>
         <tbody>

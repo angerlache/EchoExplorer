@@ -100,23 +100,7 @@ export function renderRegions(chunkLength,currentPosition,wr,regions,SelectedSpe
     
 }
 
-// same as renderRegions but with regions saved in the json of the file
-//export function loadRegions(document,chunkLength,currentPosition,wr,annotations,regions){
-export function loadRegions(document,annotations,regions){
 
-    // todo: check if the id is present in the list, so that
-    // if user repush on the button, the regions are not duplicated
-    annotations.forEach(region => {
-        if (!containsRegion(region, regions)) {
-            regions.push({
-                start: region.start,
-                end: region.end,
-                id: region.id,
-                ai: region.ai,
-                content: createRegionContent(document,region.label,region.note,true)})
-        }
-    });
-}
 
 
 /**
@@ -128,36 +112,20 @@ export function saveAnnotationToServer(audioLength,annotation_name,filename,regi
     let data = JSON.stringify(
         Object.keys(regions).map(function (id) {
             var region = regions[id];
-            if (region.proba !== undefined) {
-                return {
-                    duration: audioLength,
-                    file: filename,
-                    start: region.start,
-                    end: region.end,
-                    //content: region.content,
-                    label: region.content.querySelector('h3').textContent,
-                    note: region.content.querySelector('p').textContent,
-                    id: region.id,
-                    proba: region.proba,
-                    ai: region.ai,
-                    drag: region.drag,
-                    resize: region.resize
-                };
-            } else {
-                return {
-                    duration: audioLength,
-                    file: filename,
-                    start: region.start,
-                    end: region.end,
-                    //content: region.content,
-                    label: region.content.querySelector('h3').textContent,
-                    note: region.content.querySelector('p').textContent,
-                    id: region.id,
-                    ai: region.ai,
-                    drag: region.drag,
-                    resize: region.resize
-                }
-            }
+
+            return {
+                duration: audioLength,
+                file: filename,
+                start: region.start,
+                end: region.end,
+                label: region.content.querySelector('h3').textContent,
+                note: region.content.querySelector('p').textContent,
+                id: region.id,
+                ...(region.proba !== undefined && { proba: region.proba }),
+                ai: region.ai,
+                drag: region.drag,
+                resize: region.resize
+            };
         })
     );
 

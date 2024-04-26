@@ -62,3 +62,12 @@ body {
     transform: scale(0.8); /* Adjust scale factor */
 }
 
+div.circle {
+    background-color: #ff7800;
+    border-color: black;
+    border-radius: 3px;
+    border-style: solid;
+    border-width: 1px;
+    width:5px;
+    height:5px;
+}
