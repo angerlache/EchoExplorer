@@ -775,29 +775,13 @@ def download_csv():
 
 @app.route('/download/<user>/<filename>', methods=['GET'])
 def download_wav(user,filename):
-    try:
-        print(user)
-        print(filename)
-
-        s3 = boto3.client('s3')
-        #with open('FILE_NAME', 'wb') as f:
-        #    s3.download_fileobj('biodiversity-lauzelle', user+'/'+filename, f)
-
-        # Download the WAV file from S3
-        s3_object = s3.get_object(Bucket='biodiversity-lauzelle', Key=user+'/'+filename)
-        wav_data = s3_object['Body'].read()
-        
-        # Send the file to the client as an attachment
-        return send_file(
-            io.BytesIO(wav_data),
-            mimetype='audio/wav',
-            as_attachment=True,
-            attachment_filename=filename
-        )
-    except Exception as e:
-        return str(e), 404  # Return 404 if file not found or any other error
-
-
+    s3 = boto3.client('s3', endpoint_url='https://ceph-gw1.info.ucl.ac.be')
+     
+    f = io.BytesIO()
+    print('file to reload = ' + filename)
+    s3.download_fileobj('biodiversity-lauzelle', user + '/' + filename, f)
+    f.seek(0)
+    return send_file(f, as_attachment=True,mimetype='audio/wav',download_name='audio.wav')
 
 import csv
 from io import StringIO
