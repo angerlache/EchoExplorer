@@ -75,6 +75,17 @@
     <div class="container">
         <h1>Sign up</h1>
 
+        <!-- Flash messages for sign up form -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% for category, message in messages %}
+                {% if category == 'signup_error' %}
+                    <ul class="alert alert-danger">
+                        <li>{{ message }}</li>
+                    </ul>
+                {% endif %}
+            {% endfor %}
+        {% endwith %}
+
         <form id="registerForm" action="{{url_for('register')}}" method="POST">
             {{ regForm.hidden_tag() }}   
             <label for="regUsername">Username:</label>
@@ -90,6 +101,17 @@
         </p>
 
         <h1>Sign in</h1>
+
+        <!-- Flash messages for sign in form -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% for category, message in messages %}
+                {% if category == 'login_error' %}
+                    <ul class="alert alert-danger">
+                        <li>{{ message }}</li>
+                    </ul>
+                {% endif %}
+            {% endfor %}
+        {% endwith %}
 
         <form id="loginForm" action="{{url_for('login')}}" method="POST">
             {{ logForm.hidden_tag() }}

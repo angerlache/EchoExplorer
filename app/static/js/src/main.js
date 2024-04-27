@@ -273,7 +273,13 @@ document.addEventListener('DOMContentLoaded', function () {
         var row = $(this).closest('tr');
         var rowData = FilesDtable.row(row).data();
         var rowIdx = FilesDtable.row(row).index();
-        var newName = prompt("Enter the new name:") + '.wav';
+        var newName = prompt("Enter the new name:");
+        var forbiddenChar = /[\/\\]/;
+        if (forbiddenChar.test(newName)) {
+            alert("ERROR : " + "forbidden chars")
+            return
+        }
+        newName = newName + '.wav'
         rowData[1] = newName;
         //FilesDtable.row(row).data(rowData).draw();
         FilesDtable.row(rowIdx).data(rowData).invalidate();
@@ -1108,6 +1114,10 @@ document.addEventListener('DOMContentLoaded', function () {
         })
         .then(response => response.json())
         .then(async data => {
+            if (data.error != undefined) {
+                alert('ERROR : ' + data.error)
+                return
+            }
             if (marker != null) {
                 map.removeLayer(marker)
             }
@@ -1172,7 +1182,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         })
         .catch(error => {
-            alert("ERROR: if you are using firefox, please try chrome")
+            alert("ERROR")
             console.error('Error:', error);
         });
     }

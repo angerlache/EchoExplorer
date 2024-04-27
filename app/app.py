@@ -129,9 +129,12 @@ class RegisterForm(FlaskForm): # FlaskForm/wtforms protects from CSRF attack tha
         existing_user_username = User.query.filter_by(
             username=username.data).first()
         if existing_user_username:
-            flash('Choose another username !')
+            flash("ERROR : This username already exists, choose another one !")
             raise ValidationError(
                 'That username already exists. Please choose a different one.')
+        if '/' in username.data:
+            flash("ERROR : Cannot use '/' character", 'signup_error')
+            raise ValidationError('Username cannot contain the character "/". Please choose a different one.')
         
 class LoginForm(FlaskForm):
     username = StringField(validators=[InputRequired(), Length(
@@ -352,6 +355,10 @@ def login():
                 login_user(user)
                 session['is_logged_in'] = True
                 return redirect(url_for('index'))
+            else:
+                flash("ERROR : wrong password", 'login_error')
+        else:
+            flash("ERROR : wrong username", 'login_error')
     return render_template('login_register.html', logForm=log_form, regForm=reg_form)
 
 
@@ -440,6 +447,8 @@ def process():
     secured_filename = secure_filename(file.filename)
     if file.filename == '':
         return jsonify({'error': 'No selected file'})
+    if len(secured_filename.split('.')) > 2:
+        return jsonify({"error": "filename cannot contain the character '.' "})
     
     if file and allowed_file(file.filename):
         # TODO : check if file already in server
