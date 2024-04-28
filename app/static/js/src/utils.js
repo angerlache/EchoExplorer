@@ -138,10 +138,14 @@ export function saveAnnotationToServer(audioLength,annotation_name,filename,regi
     //fetch("/annotation/" + annotation_name, {
         method: "POST",
         body: data
-    }).then(res => {
+    })
+    .then(response => response.json())
+    .then(res => {
         //if (!res.ok) throw res;
+        console.log(res)
         if (res.error !== undefined) {
             alert("ERROR : " + res.error)
+            return;
         }
         console.log("upload complete", annotation_name, res);
     }).catch(function (err) {

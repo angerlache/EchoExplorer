@@ -587,7 +587,7 @@ def annotation(username,path):
             doc["annotations"] = data
             local_annotations.update_one({'_id': doc['_id']}, {'$set': {'annotations': doc['annotations'], 'validated': doc['validated'], 'validated_by': doc['validated_by']}})
  
-        return 'ok'
+        return jsonify({'res': 'ok'})
     
 @app.route('/validated/<path:path>', methods=['POST'])
 def validate(path):
@@ -625,7 +625,7 @@ def validate(path):
         annotations.update_one({'_id': doc['_id']}, {'$set': {'validated_by':doc['validated_by'],
                                                                 'validated': doc['validated'], 
                                                                 'annotations': doc['annotations']}})
-    return 'ok'
+    return jsonify({'res': 'ok'})
 
 
 

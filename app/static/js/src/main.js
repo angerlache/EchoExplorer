@@ -1169,6 +1169,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 saveAnnotationToServer(duration,filename.split('.')[0],filename,regions,userName,'local');
                 //saveAnnotationToServer(duration,filename.split('.')[0],filename,unremovableRegions,userName,'other'); 
             }
+            document.getElementById("spinner").style.display = "none";
             if (multipleAudio) {
                 alert("Your file " + filename + " has been processed.\n You can find it in your section 'My Audios'")
             } else {
@@ -1228,6 +1229,7 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     function processButtonRoutine(file,duration,ai) {
+        document.getElementById("spinner").style.display = "inline-block";
         checkAudio(file,duration)
 
         const formData = new FormData();
@@ -1303,7 +1305,8 @@ document.addEventListener('DOMContentLoaded', function () {
     // Function to load waveform
     window.changeAudio = function(filename,whichFiles) {
         console.log("1111 ", '/reload/' + filename);
-        
+        document.getElementById("spinner2").style.display = "inline-block";
+
         fetch('/reload/' + filename)
             .then(response => response.arrayBuffer())
             .then(async arrayBuffer => {
@@ -1344,6 +1347,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 } catch (error) {
                     console.error('Error fetching annotation:', error);
                 }
+                document.getElementById("spinner2").style.display = "none";
+
             })
             .catch(error => console.error('Error loading waveform:', error));
 

@@ -134,7 +134,10 @@
         </div>
 
         <div class="btn-group" id="AIbuttons">
-            <button type="button" id="startAI" class="btn dropdown-toggle" data-bs-toggle="dropdown" style="font-size: 0.8rem;" {% if not is_logged_in %} disabled {% endif %}>Process</button>
+            <button type="button" id="startAI" class="btn dropdown-toggle" data-bs-toggle="dropdown" style="font-size: 0.8rem;" {% if not is_logged_in %} disabled {% endif %}>
+                <span id="spinner" class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="display: none; font-size: 0.8rem;"></span>
+                Process
+            </button>
             <div class="dropdown-menu">
                 <button type="button" title="AI for bats" id="processButton" class="btn dropdown-item" style="font-size: 0.8rem;">BatML</button>
                 <button type="button" title="AI for birds" id="processButton2" class="btn dropdown-item" style="font-size: 0.8rem;">BirdNET</button>
@@ -292,7 +295,7 @@
     </div>
 
     <br>
-      
+    <span id="spinner2" class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="display: none; font-size: 0.8rem;"></span>
             
     <input type="file" id="audioFile" accept=".wav" style="display: none;">
     <button id="visualizeButton" style="display: none;">Visualize Audio</button>
