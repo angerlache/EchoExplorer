@@ -82,7 +82,7 @@ export function renderRegions(chunkLength,currentPosition,wr,regions,SelectedSpe
             // do not show the region if it has a proba and that proba < threshold
         }
         else if (!SelectedSpecies.includes(reg.content.querySelector('h3').textContent) && SpeciesList.includes(reg.content.querySelector('h3').textContent)) {
-            // it is Envsp,Barbarg,...
+            // it is every species possible: Envsp, Nyctalus noctula, Barbarg,...
             // and must not appear on waveform
         } 
         else if (SelectedSpecies.includes(reg.content.querySelector('h3').textContent) || SelectedSpecies.includes('other')) {
@@ -139,7 +139,10 @@ export function saveAnnotationToServer(audioLength,annotation_name,filename,regi
         method: "POST",
         body: data
     }).then(res => {
-        if (!res.ok) throw res;
+        //if (!res.ok) throw res;
+        if (res.error !== undefined) {
+            alert("ERROR : " + res.error)
+        }
         console.log("upload complete", annotation_name, res);
     }).catch(function (err) {
         console.log('Fetch Error :-S', err);

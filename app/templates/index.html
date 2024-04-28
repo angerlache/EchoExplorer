@@ -138,7 +138,7 @@
             <div class="dropdown-menu">
                 <button type="button" title="AI for bats" id="processButton" class="btn dropdown-item" style="font-size: 0.8rem;">BatML</button>
                 <button type="button" title="AI for birds" id="processButton2" class="btn dropdown-item" style="font-size: 0.8rem;">BirdNET</button>
-                <button type="button" title="AI for birds and bats (not the best)" id="processButton3" class="btn dropdown-item" style="font-size: 0.8rem;">BattyBirdNET</button>
+                <button type="button" title="AI for bats" id="processButton3" class="btn dropdown-item" style="font-size: 0.8rem;">BattyBirdNET</button>
                 <button type="button" title="AI for bats" id="processButton4" class="btn dropdown-item" style="font-size: 0.8rem;">batdetect2</button>
             </div>
         </div>
@@ -157,11 +157,11 @@
             </div>
         </div>
 
-        <div class="btn-group">
+        <!--div class="btn-group">
             <button type="button" title="check the species you want to display" id="speciesButton" class="btn dropdown-toggle" aria-expanded="false" data-bs-toggle="dropdown" style="font-size: 0.8rem;">Species</button>
-            <ul class="dropdown-menu" id="specyBoxes" aria-labelledby="dropdownCheckSpecies">
-                <!--if we want the name of specy not clickable--> 
-                <!--li style="font-size: 0.8rem;"> <label> <input type="checkbox" value="Barbarg" checked>  </label> Barbarg </li--> 
+            <ul class="dropdown-menu" id="speciesBoxes" aria-labelledby="dropdownCheckSpecies">
+                <if we want the name of specy not clickable> 
+                <li style="font-size: 0.8rem;"> <label> <input type="checkbox" value="Barbarg" checked>  </label> Barbarg </li> 
                 <li> <label style="font-size: 0.8rem;"> <input type="checkbox" value="Barbarg" checked> Barbarg </label> </li> 
                 <li> <label style="font-size: 0.8rem;"> <input type="checkbox" value="Envsp" checked> Envsp </label> </li> 
                 <li> <label style="font-size: 0.8rem;"> <input type="checkbox" value="Myosp" checked> Myosp </label> </li>
@@ -173,6 +173,91 @@
                 <li> <label title="unannotated regions" style="font-size: 0.8rem;"> <input type="checkbox" value="Region" checked> Region </label> </li> 
                 <button type="button" style="text-align: left; width: 100%; font-size: 0.8rem;" class="btn" id="applySpecies">Apply</button>
             </ul> 
+        </div-->
+
+        <div class="btn-group">
+            <button type="button" id="speciesButton" title="check the species you want to display" class="btn dropdown-toggle" aria-expanded="false" data-bs-auto-close="false" data-bs-toggle="dropdown" style="font-size: 0.8rem;">Species</button>
+                
+            <ul class="dropdown-menu" id="speciesBoxes" aria-labelledby="dropdownCheckSpecies">
+                <li>
+                    <input type="checkbox" id="option1" value="Envsp" checked><label style="font-size: 0.8rem;" for="option1"> Envsp</label>
+                    <button class='btn btn-sm' id="showSubOptions1" style='padding: 0; width: 20px; height: 20px; font-size: 10px;'><i class='fa fa-angle-double-right'></i></button>
+                    <ul class="subOptions1" id="subOptions1" class="dropdown-menu" style="display: none;">
+                        <li><label style="font-size: 0.8rem;"><input type="checkbox" class="subOption1" value="Eptesicus nilssonii" checked> Eptesicus nilssonii</label></li>
+                        <li><label style="font-size: 0.8rem;"><input type="checkbox" class="subOption1" value="Eptesicus serotinus" checked> Eptesicus serotinus</label></li>
+                        <li><label style="font-size: 0.8rem;"><input type="checkbox" class="subOption1" value="Nyctalus lasiopterus" checked> Nyctalus lasiopterus</label></li>
+                        <li><label style="font-size: 0.8rem;"><input type="checkbox" class="subOption1" value="Nyctalus leisleri" checked> Nyctalus leisleri</label></li>
+                        <li><label style="font-size: 0.8rem;"><input type="checkbox" class="subOption1" value="Nyctalus noctula" checked> Nyctalus noctula</label></li>
+                        <li><label style="font-size: 0.8rem;"><input type="checkbox" class="subOption1" value="Vespertilio murinus" checked> Vespertilio murinus</label></li>
+                    </ul>
+                </li>
+                <li>
+                    <input type="checkbox" id="option2" value="Plesp" checked><label style="font-size: 0.8rem;" for="option2"> Plesp</label>
+                    <button class='btn btn-sm' id="showSubOptions2" style='padding: 0; width: 20px; height: 20px; font-size: 10px;'><i class='fa fa-angle-double-right'></i></button>
+                    <ul class="subOptions2" class="dropdown-menu" style="display: none;">
+                        <li><label style="font-size: 0.8rem;"><input type="checkbox" class="subOption2" value="Plecotus auritus" checked> Plecotus auritus</label></li>
+                        <li><label style="font-size: 0.8rem;"><input type="checkbox" class="subOption2" value="Plecotus austriacus" checked> Plecotus austriacus</label></li>
+                    </ul>
+                </li>
+                <li>
+                    <input type="checkbox" id="option3" value="Barbarg" checked><label style="font-size: 0.8rem;" for="option3"> Barbarg</label>
+                    <button class='btn btn-sm' id="showSubOptions3" style='padding: 0; width: 20px; height: 20px; font-size: 10px;'><i class='fa fa-angle-double-right'></i></button>
+                    <ul class="subOptions3" class="dropdown-menu" style="display: none;">
+                        <li><label style="font-size: 0.8rem;"><input type="checkbox" class="subOption3" value="Barbastella barbastellus" checked> Barbastella barbastellus</label></li>
+                    </ul>
+                </li>
+                <li>
+                    <input type="checkbox" id="option4" value="Myosp" checked><label style="font-size: 0.8rem;" for="option4"> Myosp</label>
+                    <button class='btn btn-sm' id="showSubOptions4" style='padding: 0; width: 20px; height: 20px; font-size: 10px;'><i class='fa fa-angle-double-right'></i></button>
+                    <ul class="subOptions4" class="dropdown-menu" style="display: none;">
+                        <li><label style="font-size: 0.8rem;"><input type="checkbox" class="subOption4" value="Myotis alcathoe" checked> Myotis alcathoe</label></li>
+                        <li><label style="font-size: 0.8rem;"><input type="checkbox" class="subOption4" value="Myotis bechsteinii" checked> Myotis bechsteinii</label></li>
+                        <li><label style="font-size: 0.8rem;"><input type="checkbox" class="subOption4" value="Myotis brandtii" checked> Myotis brandtii</label></li>
+                        <li><label style="font-size: 0.8rem;"><input type="checkbox" class="subOption4" value="Myotis capaccinii" checked> Myotis capaccinii</label></li>
+                        <li><label style="font-size: 0.8rem;"><input type="checkbox" class="subOption4" value="Myotis dasycneme" checked> Myotis dasycneme</label></li>
+                        <li><label style="font-size: 0.8rem;"><input type="checkbox" class="subOption4" value="Myotis daubentonii" checked> Myotis daubentonii</label></li>
+                        <li><label style="font-size: 0.8rem;"><input type="checkbox" class="subOption4" value="Myotis emarginatus" checked> Myotis emarginatus</label></li>
+                        <li><label style="font-size: 0.8rem;"><input type="checkbox" class="subOption4" value="Myotis myotis" checked> Myotis myotis</label></li>
+                        <li><label style="font-size: 0.8rem;"><input type="checkbox" class="subOption4" value="Myotis mystacinus" checked> Myotis mystacinus</label></li>
+                        <li><label style="font-size: 0.8rem;"><input type="checkbox" class="subOption4" value="Myotis nattereri" checked> Myotis nattereri</label></li>
+                    </ul>
+                </li>
+                <li>
+                    <input type="checkbox" id="option5" value="Pip35" checked><label style="font-size: 0.8rem;" for="option5"> Pip35</label>
+                    <button class='btn btn-sm' id="showSubOptions5" style='padding: 0; width: 20px; height: 20px; font-size: 10px;'><i class='fa fa-angle-double-right'></i></button>
+                    <ul class="subOptions5" class="dropdown-menu" style="display: none;">
+                        <li><label style="font-size: 0.8rem;"><input type="checkbox" class="subOption5" value="Pipistrellus kuhlii" checked> Pipistrellus kuhlii</label></li>
+                        <li><label style="font-size: 0.8rem;"><input type="checkbox" class="subOption5" value="Pipistrellus nathusii" checked> Pipistrellus nathusii</label></li>
+                    </ul>
+                </li>
+                <li>
+                    <input type="checkbox" id="option6" value="Pip50" checked><label style="font-size: 0.8rem;" for="option6"> Pip50</label>
+                    <button class='btn btn-sm' id="showSubOptions6" style='padding: 0; width: 20px; height: 20px; font-size: 10px;'><i class='fa fa-angle-double-right'></i></button>
+                    <ul class="subOptions6" class="dropdown-menu" style="display: none;">
+                        <li><label style="font-size: 0.8rem;"><input type="checkbox" class="subOption5" value="Pipistrellus pipistrellus" checked> Pipistrellus pipistrellus</label></li>
+                        <li><label style="font-size: 0.8rem;"><input type="checkbox" class="subOption5" value="Pipistrellus pygmaeus" checked> Pipistrellus pygmaeus</label></li>
+                        <li><label style="font-size: 0.8rem;"><input type="checkbox" class="subOption5" value="Pipistrellus maderensis" checked> Pipistrellus maderensis</label></li>
+                    </ul>
+                </li>
+                <li>
+                    <input type="checkbox" id="option7" value="Rhisp" checked><label style="font-size: 0.8rem;" for="option7"> Rhisp</label>
+                    <button class='btn btn-sm' id="showSubOptions7" style='padding: 0; width: 20px; height: 20px; font-size: 10px;'><i class='fa fa-angle-double-right'></i></button>
+                    <ul class="subOptions7" class="dropdown-menu" style="display: none;">
+                        <li><label style="font-size: 0.8rem;"><input type="checkbox" class="subOption5" value="Rhinolophus blasii" checked> Rhinolophus blasii</label></li>
+                        <li><label style="font-size: 0.8rem;"><input type="checkbox" class="subOption5" value="Rhinolophus ferrumequinum" checked> Rhinolophus ferrumequinum</label></li>
+                        <li><label style="font-size: 0.8rem;"><input type="checkbox" class="subOption5" value="Rhinolophus hipposideros" checked> Rhinolophus hipposideros</label></li>
+                    </ul>
+                </li>
+                <li>
+                    <input type="checkbox" id="option8" value="Region" checked><label style="font-size: 0.8rem;" for="option8"> Region</label>
+                </li>
+                <li>
+                    <input type="checkbox" id="option9" value="other" checked><label style="font-size: 0.8rem;" for="option9"> Birds</label>
+                </li>
+                <button type="button" style="text-align: left; width: 100%; font-size: 0.8rem;" class="btn" id="applySpecies">Apply</button>
+
+            </ul>
+
         </div>
 
         <div class="btn-group">
@@ -208,7 +293,7 @@
 
     <br>
       
-      
+            
     <input type="file" id="audioFile" accept=".wav" style="display: none;">
     <button id="visualizeButton" style="display: none;">Visualize Audio</button>
 
@@ -341,14 +426,56 @@
         
         <div>
             <select class="custom-select" id="choiceSelector" name="choiceSelector" style="height: 30px;width: 20%">
-                <option value="Barbarg">Barbarg</option>
-                <option value="Envsp">Envsp</option>
-                <option value="Myosp">Myosp</option>
-                <option value="Pip35">Pip35</option>
-                <option value="Pip50">Pip50</option>
-                <option value="Plesp">Plesp</option>
-                <option value="Rhisp">Rhisp</option>
                 <option value="other" id="customOption">Custom name (type your own...)</option>
+                <optgroup label="Barbarg">
+                    <option value="Barbarg">Barbarg</option>
+                    <option value="Barbastella barbastellus">Barbastella barbastellus</option>
+                </optgroup>
+                <optgroup label="Envsp">
+                    <option value="Envsp">Envsp</option>
+                    <option value="Eptesicus nilssonii">Eptesicus nilssonii</option>
+                    <option value="Eptesicus serotinus">Eptesicus serotinus</option>
+                    <option value="Nyctalus lasiopterus">Nyctalus lasiopterus</option>
+                    <option value="Nyctalus leisleri">Nyctalus leisleri</option>
+                    <option value="Nyctalus noctula">Nyctalus noctula</option>
+                    <option value="Vespertilio murinus">Vespertilio murinus</option>
+                </optgroup>
+                <optgroup label="Myosp">
+                    <option value="Myosp">Myosp</option>
+                    <option value="Myotis alcathoe">Myotis alcathoe</option>
+                    <option value="Myotis bechsteinii">Myotis bechsteinii</option>
+                    <option value="Myotis brandtii">Myotis brandtii</option>
+                    <option value="Myotis capaccinii">Myotis capaccinii</option>
+                    <option value="Myotis dasycneme">Myotis dasycneme</option>
+                    <option value="Myotis daubentonii">Myotis daubentonii</option>
+                    <option value="Myotis emarginatus">Myotis emarginatus</option>
+                    <option value="Myotis myotis">Myotis myotis</option>
+                    <option value="Myotis mystacinus">Myotis mystacinus</option>
+                    <option value="Myotis nattereri">Myotis nattereri</option>    
+                </optgroup>
+                <optgroup label="Pip35">
+                    <option value="Pip35">Pip35</option>
+                    <option value="Pipistrellus kuhlii">Pipistrellus kuhlii</option>
+                    <option value="Pipistrellus nathusii">Pipistrellus nathusii</option>
+                </optgroup>
+                <optgroup label="Pip50">
+                    <option value="Pip50">Pip50</option>
+                    <option value="Pipistrellus maderensis">Pipistrellus maderensis</option>
+                    <option value="Pipistrellus pipistrellus">Pipistrellus pipistrellus</option>
+                    <option value="Pipistrellus pygmaeus">Pipistrellus pygmaeus</option>
+                </optgroup>
+                <optgroup label="Rhisp">
+                    <option value="Rhisp">Rhisp</option>
+                    <option value="Rhinolophus blasii">Rhinolophus blasii</option>
+                    <option value="Rhinolophus ferrumequinum">Rhinolophus ferrumequinum</option>
+                    <option value="Rhinolophus hipposideros">Rhinolophus hipposideros</option>    
+                </optgroup>
+                <optgroup label="Plesp">
+                    <option value="Plesp">Plesp</option>
+                    <option value="Plecotus auritus">Plecotus auritus</option>
+                    <option value="Plecotus austriacus">Plecotus austriacus</option>
+                </optgroup>
+                
             </select>
         </div>
 

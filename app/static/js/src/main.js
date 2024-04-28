@@ -56,15 +56,11 @@ document.addEventListener('DOMContentLoaded', function () {
     let sR = 44100; 
     
     //const checkBoxes = document.querySelectorAll('.dropdown-menu input[type="checkbox"]'); 
-    let modalCheckedBoxes = [];
-    const checkBoxes = document.querySelectorAll('#specyBoxes input[type="checkbox"]');
+    let modalCheckedBoxes = []; 
+    const checkBoxes = document.querySelectorAll('#speciesBoxes input[type="checkbox"]');
     const AIcheckBoxes = document.querySelectorAll('#aiBoxes input[type="checkbox"]');
-    let SelectedSpecies = ['Barbarg', 'Envsp', 'Myosp', 'Pip35', 'Pip50', 'Plesp', 'Rhisp','Region','other']; 
-    let SpeciesList = ['Barbarg', 'Envsp', 'Myosp', 'Pip35', 'Pip50', 'Plesp', 'Rhisp','Region','other']; 
-    let battyBirdList = {'Barbastella':'Barbarg', 'Eptesicus':'Envsp', 'Myotis':'Myosp', 'Nyctalus':'Envsp','Plecotus':'Plesp','Rhinolophus':'Rhisp','Vespertilio':'Envsp',
-                        'Pipistrellus kuhlii':'Pip35', 'Pipistrellus nathusii':'Pip35', 'Pipistrellus pipistrellus':'Pip50', 'Pipistrellus pygmaeus':'Pip50',
-                        'Hypsugo savii_Alpenfledermaus':'Pip35', //see https://de.wikipedia.org/wiki/Alpenfledermaus for pip35
-                        'Miniopterus schreibersii_Langflügelfledermaus':'Rhisp'} 
+    let SelectedSpecies = ['Barbarg', 'Envsp', 'Myosp', 'Pip35', 'Pip50', 'Plesp', 'Rhisp','Region','other',"Barbastella barbastellus", "Eptesicus nilssonii", "Eptesicus serotinus", "Myotis alcathoe", "Myotis bechsteinii", "Myotis brandtii", "Myotis capaccinii", "Myotis dasycneme", "Myotis daubentonii", "Myotis emarginatus", "Myotis myotis", "Myotis mystacinus", "Myotis nattereri", "Nyctalus lasiopterus", "Nyctalus leisleri", "Nyctalus noctula", "Pipistrellus kuhlii", "Pipistrellus maderensis", "Pipistrellus nathusii", "Pipistrellus pipistrellus", "Pipistrellus pygmaeus", "Rhinolophus blasii", "Rhinolophus ferrumequinum", "Rhinolophus hipposideros", "Vespertilio murinus",'Plecotus auritus','Plecotus austriacus']; 
+    let SpeciesList = ['Barbarg', 'Envsp', 'Myosp', 'Pip35', 'Pip50', 'Plesp', 'Rhisp','Region','other',"Barbastella barbastellus", "Eptesicus nilssonii", "Eptesicus serotinus", "Myotis alcathoe", "Myotis bechsteinii", "Myotis brandtii", "Myotis capaccinii", "Myotis dasycneme", "Myotis daubentonii", "Myotis emarginatus", "Myotis myotis", "Myotis mystacinus", "Myotis nattereri", "Nyctalus lasiopterus", "Nyctalus leisleri", "Nyctalus noctula", "Pipistrellus kuhlii", "Pipistrellus maderensis", "Pipistrellus nathusii", "Pipistrellus pipistrellus", "Pipistrellus pygmaeus", "Rhinolophus blasii", "Rhinolophus ferrumequinum", "Rhinolophus hipposideros", "Vespertilio murinus",'Plecotus auritus','Plecotus austriacus'];  
 
     let SelectedAI = ['Human', 'BatML', 'BirdNET', 'BattyBirdNET', 'batdetect2'];
     let AIlist = ['Human', 'BatML', 'BirdNET', 'BattyBirdNET', 'batdetect2'];
@@ -113,7 +109,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     });
 
-
+  
 
     taxDiv.appendChild(ul);
 
@@ -274,7 +270,7 @@ document.addEventListener('DOMContentLoaded', function () {
         var rowData = FilesDtable.row(row).data();
         var rowIdx = FilesDtable.row(row).index();
         var newName = prompt("Enter the new name:");
-        var forbiddenChar = /[\/\\]/;
+        var forbiddenChar = /[\/.\\]/;
         if (forbiddenChar.test(newName)) {
             alert("ERROR : " + "forbidden chars")
             return
@@ -1399,6 +1395,16 @@ document.addEventListener('DOMContentLoaded', function () {
         //Dtable.columns(0).search(SelectedSpecies.join('|'), true, false).draw();
     } 
     
+    for (var i = 1; i <= 7; i++) {
+        var showSubOptions = document.getElementById('showSubOptions' + i);
+        var subOptions = document.querySelector('.subOptions' + i);
+      
+        showSubOptions.onclick = function(subOptions) {
+            return function() {
+                subOptions.style.display = subOptions.style.display == 'none' ? 'block' : 'none';
+            };
+        }(subOptions);
+    }    
     checkBoxes.forEach((checkbox) => { 
         checkbox.addEventListener('change', handleCB); 
     }); 

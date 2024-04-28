@@ -676,8 +676,9 @@ def pending_audio(path):
             if current_user.isExpert or (doc.get('username') == current_user.username and not doc.get('validated')):
                 doc["annotations"] = data
                 annotations.update_one({'_id': doc['_id']}, {'$set': {'annotations': doc['annotations']}})
-
-        return 'ok' 
+            else:
+                return jsonify({'error': 'You are not allowed to modify this file : either validated or not yours'})
+        return jsonify({'res': 'ok'})  
 
 
 @app.route('/reload/<user>/<filename>',methods=['POST','GET'])

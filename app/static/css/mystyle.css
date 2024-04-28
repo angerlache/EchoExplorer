@@ -24,10 +24,6 @@
     border-color: #4d90fe;
 }
 
-/* Hide the first option */
-.custom-select option:first-child {
-    display: none;
-}
 
 
 body {
@@ -46,10 +42,8 @@ body {
 /* Custom styles for the select element */
 .dropdown-menu .custom-select {
     display: block;
-    /*width: 100%;*/
     padding: 0.375rem 1rem;
     font-size: 0.8rem;
-    /*line-height: 1.5;*/
     color: #212529;
     background-color: transparent;
     background-clip: padding-box;
@@ -71,3 +65,7 @@ div.circle {
     width:5px;
     height:5px;
 }
+
+.subOptions {
+    display: none;
+}  

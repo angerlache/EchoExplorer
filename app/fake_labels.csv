@@ -1,18 +1,19 @@
 file_name,start,end,predicted_species,predicted_prob
 Noctule.wav,0.0820,0.0820,Envsp,0.983
+Noctule.wav,2.0820,2.0820,Nyctalus noctula,0.983
 Noctule.wav,5.3770,5.3770,Barbarg,0.998
-Noctule.wav,10.636,10.636,Envsp,0.942
+Noctule.wav,10.636,10.636,Eptesicus nilssonii,0.942
 Noctule.wav,20.910,20.910,Barbarg,0.959
-Noctule.wav,30.171,30.171,Envsp,0.773
+Noctule.wav,30.171,30.171,Myotis alcathoe,0.773
 Noctule.wav,40.455,40.455,Barbarg,0.95
 Noctule.wav,50.725,50.725,Envsp,0.934
 Noctule.wav,55.999,55.999,Barbarg,0.82
-Noctule.wav,65.166,65.166,Envsp,0.9
-Noctule.wav,70.318,70.318,Envsp,0.867
+Noctule.wav,65.166,65.166,Pipistrellus pipistrellus,0.9
+Noctule.wav,70.318,70.318,Pipistrellus kuhlii,0.867
 Noctule.wav,75.462,75.462,Envsp,0.914
-Noctule.wav,80.616,80.616,Envsp,0.918
-Noctule.wav,85.875,85.875,Barbarg,0.983
-Noctule.wav,90.046,90.046,Barbarg,0.937
+Noctule.wav,80.616,80.616,Rhinolophus blasii,0.918
+Noctule.wav,85.875,85.875,Barbastella barbastellus,0.983
+Noctule.wav,90.046,90.046,A bird,0.937
 Noctule.wav,95.059,95.059,Barbarg,0.745
 Noctule.wav,100.313,100.313,Envsp,0.963
 Noctule.wav,105.362,105.362,Envsp,0.824
