@@ -441,7 +441,10 @@ document.addEventListener('DOMContentLoaded', function () {
     // same as renderRegions but with regions saved in the json of the file
     //export function loadRegions(document,chunkLength,currentPosition,wr,annotations,regions){
     function loadRegions(document,annotations,regions,addRow){
-
+        if (!Array.isArray(annotations)) {
+            // it is {'error':'some error description'} and not an array
+            return
+        }
         annotations.forEach(region => {
             if (!containsRegion(region, regions)) {
                 
