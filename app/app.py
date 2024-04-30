@@ -555,10 +555,10 @@ def annotation(username,path):
         # use secure_filename (everywhere I read filename from a client) 
         hash_name = get_hashname(path+'.wav')
         if hash_name is None:
-            return
+            return jsonify({"error": "file is not in the database"})
         doc = local_annotations.find_one({'filename': hash_name})
         if doc is None:
-            return
+            return jsonify({"error": "no save for this file"})
         return jsonify(doc.get('annotations',{}))
     
     else:
@@ -645,14 +645,17 @@ def pending_audio(path):
     print('path = '+path)
     if request.method == 'GET':
         hash_name = get_hashname(path+'.wav')
-        if hash_name is None: return
+        if hash_name is None: 
+            return jsonify({"error": "file is not in the database"})
         
         if which_files == 'all':
             doc = annotations.find_one({'filename': hash_name})
         else:
             doc = local_annotations.find_one({'filename': hash_name})
 
-        if doc is None: return
+        if doc is None: 
+            return jsonify({"error": "no save for this file"})
+
         return jsonify(doc.get('annotations',{}))
     
     elif request.method == 'POST':
