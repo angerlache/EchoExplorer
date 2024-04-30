@@ -101,6 +101,7 @@ export function renderRegions(chunkLength,currentPosition,wr,regions,SelectedSpe
 }
 
 
+const csrfToken = document.getElementById('csrf_token').value;
 
 
 /**
@@ -137,7 +138,10 @@ export function saveAnnotationToServer(audioLength,annotation_name,filename,regi
     fetch(path, {
     //fetch("/annotation/" + annotation_name, {
         method: "POST",
-        body: data
+        body: data,
+        headers: {
+            'X-CSRFToken': csrfToken
+        }
     })
     .then(response => response.json())
     .then(res => {

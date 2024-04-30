@@ -2,7 +2,7 @@ from flask import Flask, render_template, request, jsonify,send_from_directory, 
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.schema import PrimaryKeyConstraint
 from flask_login import UserMixin, login_user, LoginManager, login_required, logout_user, current_user
-from flask_wtf import FlaskForm
+from flask_wtf import FlaskForm, CSRFProtect
 from flask_login import current_user
 from flask_sslify import SSLify
 from flask_limiter import Limiter
@@ -40,7 +40,8 @@ os.environ['NO_PROXY'] = 'https://gotham.inl.ovh'
 
 abs_instance_path = os.path.abspath(os.path.join(os.path.dirname( __file__ ), 'instance')) #<--- this will be the instance directory
 app = Flask(__name__, instance_path=abs_instance_path)
-
+csrf = CSRFProtect()
+csrf.init_app(app)
 
 client = MongoClient("localhost", 27017)
 db = client.mymongodb
@@ -51,12 +52,12 @@ local_annotations.create_index({"location": "2dsphere"})
 
 
 sslify = SSLify(app)
-"""limiter = Limiter(
+limiter = Limiter(
     get_remote_address,
     app=app,
-    default_limits=["200 per day", "50 per hour"],
-    storage_uri="memory://", # change storage for production
-)"""
+    #default_limits=["200 per day", "50 per hour"],
+    #storage_uri="memory://", # change storage for production
+)
 
 work_dir = ""
 
@@ -300,7 +301,7 @@ def retrieve_allspecies():
     print(names)
     return jsonify({'species':names})
 
-@app.route('/delete_annotation', methods=['GET'])
+@app.route('/delete_annotation', methods=['POST'])
 def delete_annotation():
     file = request.args.get('file')
     user = request.args.get('user')
@@ -321,7 +322,7 @@ def delete_annotation():
 
     return jsonify({'response': "ok"})
     
-@app.route('/rename_annotation', methods=['GET'])
+@app.route('/rename_annotation', methods=['POST'])
 def rename_annotation():
     file = request.args.get('file')
     new_name = request.args.get('newname')
@@ -344,7 +345,8 @@ def index():
     return render_template('index.html',is_logged_in=False)
         
 
-@app.route('/login', methods=['GET', 'POST'])
+@app.route('/login', methods=['POST'])
+@limiter.limit("5/minute")
 def login():
     log_form = LoginForm()
     reg_form = RegisterForm()
@@ -395,6 +397,7 @@ def logout():
 
 
 @app.route('/register', methods=['GET', 'POST'])
+@limiter.limit("5/minute")
 def register():
     log_form = LoginForm()
     reg_form = RegisterForm()
@@ -442,6 +445,12 @@ def process():
     file = request.files['audio']
     session['AI'] = request.form.get('chosenAI')
     duration = request.form.get('duration')
+
+    import wave
+    # trying to open it checks if it has a valid header
+    with wave.open(file, 'rb') as wav_file:
+        print(wav_file)
+        pass
 
     # use secure_filename (everywhere I read filename from a client) 
     secured_filename = secure_filename(file.filename)

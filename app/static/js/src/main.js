@@ -44,6 +44,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const validatedFilesSwitch = document.getElementById('validatedFilesSwitch')
     const myFilesSwitch = document.getElementById('myFilesSwitch')
     
+    const csrfToken = document.getElementById('csrf_token').value;
 
     let chunkLength = 20;
     chunkLengthSelector.value = chunkLength;
@@ -244,7 +245,10 @@ document.addEventListener('DOMContentLoaded', function () {
         var rowData = FilesDtable.row(row).data();
         console.log(rowData);
         fetch(`/delete_annotation?file=${rowData[0]}&user=${rowData[2]}`, {
-            method: 'GET'
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrfToken
+            }
         })
         .then(response => response.json())
         .then(res => {
@@ -281,7 +285,10 @@ document.addEventListener('DOMContentLoaded', function () {
         FilesDtable.row(rowIdx).data(rowData).invalidate();
 
         fetch(`/rename_annotation?file=${rowData[0]}&newname=${newName}`, {
-            method: 'GET'
+            method: 'POST',
+            headers: {
+            'X-CSRFToken': csrfToken
+        }
         })
         .then(response => response.json())
         .then(res => {
@@ -1106,7 +1113,10 @@ document.addEventListener('DOMContentLoaded', function () {
     function processRequest(formData, filename, duration) {
         fetch('/process', {
             method: 'POST',
-            body: formData
+            body: formData,
+            headers: {
+                'X-CSRFToken': csrfToken
+            }
         })
         .then(response => response.json())
         .then(async data => {
@@ -1114,10 +1124,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 alert('ERROR : ' + data.error)
                 return
             }
-            if (marker != null) {
-                map.removeLayer(marker)
-            }
-            marker = null;
+            
             console.log(data);
             if (multipleAudio) {
                 regions = []
@@ -1125,7 +1132,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 try {
                     const response = await fetch('users/' + userName + '/annotation/' + filename.split('.')[0]);
                     const data = await response.json();
-                    loadRegions(document,data,regions,true);
+                    loadRegions(document,data,regions,false);
                     loadRegions(document,data,unremovableRegions,false);
                 } catch (error) {
                     console.error('Error fetching annotation:', error);
@@ -1134,7 +1141,7 @@ document.addEventListener('DOMContentLoaded', function () {
             if (userName && !multipleAudio) {uploadButton.disabled = false;save.disabled = false;}
             
             data.start.forEach((start, index) => {
-                console.log('Adding region:', start);
+                //console.log('Adding region:', start);
                 let note = ""
                 let specy = data.result[index]
                 
@@ -1169,10 +1176,21 @@ document.addEventListener('DOMContentLoaded', function () {
                 saveAnnotationToServer(duration,filename.split('.')[0],filename,regions,userName,'local');
                 //saveAnnotationToServer(duration,filename.split('.')[0],filename,unremovableRegions,userName,'other'); 
             }
-            document.getElementById("spinner").style.display = "none";
             if (multipleAudio) {
+                if (duration == multipleAudioLength[multipleAudioLength.length - 1]) {
+                    document.getElementById("spinner").style.display = "none";
+                    if (marker != null) {
+                        map.removeLayer(marker)
+                    }
+                    marker = null;
+                }
                 alert("Your file " + filename + " has been processed.\n You can find it in your section 'My Audios'")
             } else {
+                document.getElementById("spinner").style.display = "none";
+                if (marker != null) {
+                    map.removeLayer(marker)
+                }
+                marker = null;
                 alert("Your file has been processed")
                 updateWaveform()
             }
@@ -1189,6 +1207,7 @@ document.addEventListener('DOMContentLoaded', function () {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json', 
+                'X-CSRFToken': csrfToken
             },
             body: JSON.stringify({'time':duration,'AI':ai,'bytes':size}) 
         })
