@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify,send_from_directory, url_for, redirect, flash, session, send_file, make_response
+from flask import Flask, render_template, request, jsonify,send_from_directory, url_for, redirect, flash, session, send_file, make_response, abort
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.schema import PrimaryKeyConstraint
 from flask_login import UserMixin, login_user, LoginManager, login_required, logout_user, current_user
@@ -18,7 +18,7 @@ import urllib.request
 import http.client
 import subprocess
 
-from wtforms import StringField, PasswordField, SubmitField
+from wtforms import StringField, PasswordField, SubmitField, BooleanField
 from wtforms.validators import InputRequired, Length, ValidationError
 from flask_bcrypt import Bcrypt
 
@@ -86,6 +86,7 @@ class User(db.Model, UserMixin):
     username: Mapped[str] = mapped_column(unique=True,nullable=False) # db.Column(db.String(20), nullable=False)
     password: Mapped[str] = mapped_column(nullable=False) # db.Column(db.String(80), nullable=False)
     isExpert: Mapped[bool] = mapped_column(default=False,nullable=False)
+    audioVisible: Mapped[bool] = mapped_column(nullable=False)
 
 class File(db.Model):
     name: Mapped[str] = mapped_column(primary_key=True) # name on client's computer
@@ -124,6 +125,8 @@ class RegisterForm(FlaskForm): # FlaskForm/wtforms protects from CSRF attack tha
     password = PasswordField(validators=[InputRequired(), Length(
         min=4, max=20)], render_kw={"placeholder": "Password"})
     
+    audio_visible = BooleanField('I agree to the terms and conditions',default=True)
+
     submit = SubmitField("Register")
 
     def validate_username(self, username):
@@ -149,6 +152,8 @@ class LoginForm(FlaskForm):
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+species_list = ['Barbarg', 'Envsp', 'Myosp', 'Pip35', 'Pip50', 'Plesp', 'Rhisp','Region',"Barbastella barbastellus", "Eptesicus nilssonii", "Eptesicus serotinus", "Myotis alcathoe", "Myotis bechsteinii", "Myotis brandtii", "Myotis capaccinii", "Myotis dasycneme", "Myotis daubentonii", "Myotis emarginatus", "Myotis myotis", "Myotis mystacinus", "Myotis nattereri", "Nyctalus lasiopterus", "Nyctalus leisleri", "Nyctalus noctula", "Pipistrellus kuhlii", "Pipistrellus maderensis", "Pipistrellus nathusii", "Pipistrellus pipistrellus", "Pipistrellus pygmaeus", "Rhinolophus blasii", "Rhinolophus ferrumequinum", "Rhinolophus hipposideros", "Vespertilio murinus",'Plecotus auritus','Plecotus austriacus']
 
 @app.route('/retrieve_myfilenames', methods=['GET'])
 def retrieve_myfilenames():
@@ -194,17 +199,27 @@ def retrieve_myfilenames():
                                                 "duration":1, "validated":1, "validated_by":1})
     else:
         orQuery = [{"label": species} for species in which_species]
-        print(orQuery)
-        and_query.append({
+        q1 = {
             "annotations": {
                 "$elemMatch": {
                     "$or": orQuery
                 }
             }
-        })
+        }
+        if 'Bird' in which_species:
+            q2 = {
+                'annotations': {
+                    '$elemMatch': {
+                        'label': {'$nin': species_list}
+                    }
+                }
+            }
+            and_query.append({'$or': [q1, q2]})
+        else:
+            and_query.append(q1)
+        
         documents = local_annotations.find({"$and": and_query},{"_id": 1, "old_name": 1, "username": 1, "duration": 1, "validated":1, "validated_by":1})
-        print(documents)
-
+        print("documents = ", documents)
     for doc in documents:
         if doc.get('username') == current_user.username:
             durations.append(doc.get("duration"))
@@ -214,7 +229,6 @@ def retrieve_myfilenames():
             lat.append(File.query.filter_by(hashName=doc.get("_id")).first().lat)
             lng.append(File.query.filter_by(hashName=doc.get("_id")).first().lng)
 
-    print("files", userfiles)
     return jsonify({'audios':userfiles, 'durations': durations, 'lat': lat, 'lng': lng, 
                     'validated': validated, 'validated_by': validated_by})
 
@@ -263,14 +277,24 @@ def retrieve_allfilenames():
                                           "validated": 1, "old_name": 1, "validated_by":1})
     else:
         orQuery = [{"label": species} for species in which_species]
-        print(orQuery)
-        and_query.append({
+        q1 = {
             "annotations": {
                 "$elemMatch": {
                     "$or": orQuery
                 }
             }
-        })
+        }
+        if 'Bird' in which_species:
+            q2 = {
+                'annotations': {
+                    '$elemMatch': {
+                        'label': {'$nin': species_list}
+                    }
+                }
+            }
+            and_query.append({'$or': [q1, q2]})
+        else:
+            and_query.append(q1)
         documents = annotations.find({"$and": and_query},{"_id": 1, "old_name": 1, "username": 1, "duration": 1, "validated":1, "old_name": 1, "validated_by":1})
         print(documents)
 
@@ -298,7 +322,7 @@ def retrieve_allspecies():
         names = annotations.distinct("annotations.label")
     else:
         names = local_annotations.distinct("annotations.label")
-    print(names)
+    print("all species in db :",names)
     return jsonify({'species':names})
 
 @app.route('/delete_annotation', methods=['POST'])
@@ -332,6 +356,14 @@ def rename_annotation():
 
     return jsonify({'response': "ok"})
 
+@app.route('/update_audioVisible', methods=['POST'])
+def update_audioVisible():
+    arg = request.args.get('arg')
+    user = User.query.filter_by(username=current_user.username).first()
+    if user:
+        user.audioVisible = arg=='true'
+        db.session.commit()
+    return jsonify({'response': "ok"})
 
 @app.route('/main')
 @login_required
@@ -339,8 +371,7 @@ def index():
     
     if current_user.is_authenticated:
 
-        #files = [filename for filename in os.listdir(app.config['UPLOAD_FOLDER']) if filename.endswith('.wav')]       
-        return render_template('index.html',username=current_user.username,isExpert=current_user.isExpert,is_logged_in=True)
+        return render_template('index.html',username=current_user.username,isExpert=current_user.isExpert,is_logged_in=True,audio_visible=current_user.audioVisible)
     
     return render_template('index.html',is_logged_in=False)
         
@@ -403,7 +434,7 @@ def register():
     reg_form = RegisterForm()
     if reg_form.validate_on_submit():
         hashed_password = bcrypt.generate_password_hash(reg_form.password.data)
-        new_user = User(username=reg_form.username.data, password=hashed_password)
+        new_user = User(username=reg_form.username.data, password=hashed_password, audioVisible=reg_form.audio_visible.data)
         db.session.add(new_user)
         db.session.commit()
 
@@ -451,6 +482,7 @@ def process():
     with wave.open(file, 'rb') as wav_file:
         print(wav_file)
         pass
+    file.seek(0)
 
     # use secure_filename (everywhere I read filename from a client) 
     secured_filename = secure_filename(file.filename)
@@ -798,9 +830,13 @@ def download_csv():
 @app.route('/download/<user>/<filename>', methods=['GET'])
 def download_wav(user,filename):
     s3 = boto3.client('s3', endpoint_url='https://ceph-gw1.info.ucl.ac.be')
+
+    q = User.query.filter_by(username=user).first()
+    if not q.audioVisible:
+        abort(403, "Audio downloads are not allowed for this user.")
      
     f = io.BytesIO()
-    print('file to reload = ' + filename)
+    print('file to reloadddd = ' + filename)
     s3.download_fileobj('biodiversity-lauzelle', user + '/' + filename, f)
     f.seek(0)
     return send_file(f, as_attachment=True,mimetype='audio/wav',download_name='audio.wav')

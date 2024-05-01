@@ -157,6 +157,7 @@
                     Classification proba: <input type="range" id="proba-slider" min="0" max="100" value="50"  oninput="this.nextElementSibling.value = this.value + ' %'" /> <output id="probaout">50 %</output>
                 </label> 
                 <label style="font-size: 0.8rem;"> <input type="checkbox" id="saveAfterAI" checked> Save after AI </label>
+                <label style="font-size: 0.8rem;"> <input type="checkbox" id="audioVisible"> I share my audios</label>
             </div>
         </div>
 
@@ -522,6 +523,7 @@
         var userName = "{{ username }}";
         var isLoggedIn = "{{ is_logged_in }}"
         var isExpert = "{{ isExpert }}"
+        var audioVisible = "{{ audio_visible }}"
     </script>
 
     <script src="{{ url_for('static', filename='js/src/main.js') }}" type="module"></script>

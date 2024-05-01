@@ -92,6 +92,10 @@
             {{ regForm.username }}
             <label for="regPassword">Password:</label>
             {{ regForm.password }}
+            <div class="form-check">
+                {{ regForm.audio_visible(class="form-check-input") }}
+                <label class="form-check-label" for="agreeTerms">I authorize the sharing of my audio files</label>
+            </div>
             <input type="submit" value="Sign Up">
         </form>
 

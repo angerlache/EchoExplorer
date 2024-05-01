@@ -33,7 +33,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const zoomOut = document.getElementById('zoomOut');
     const applySpecies = document.getElementById('applySpecies')
     const applyAI = document.getElementById('applyAI')
-    
+    const audioVisibleBox = document.getElementById('audioVisible'); audioVisibleBox.checked = audioVisible=='True'
 
     const zoomButton = document.getElementById('zoomButton')
     const optionsButton = document.getElementById('optionsButton')
@@ -66,9 +66,8 @@ document.addEventListener('DOMContentLoaded', function () {
     let SelectedAI = ['Human', 'BatML', 'BirdNET', 'BattyBirdNET', 'batdetect2'];
     let AIlist = ['Human', 'BatML', 'BirdNET', 'BattyBirdNET', 'batdetect2'];
     const TaxonomyList = [
-        ['Bird', ['bird1', 'bird2', 'bird3']],
-        'Insect',
-        ['Bat', [['Barbastella',['Barbarg','Barbarg2']], ['Pipistrellus',['Pip35','Pip50']], ['Nyctalus',['Envsp']],['Eptesicus',['Envsp']],['Myotis',['Myosp']],['Plecotus',['Plesp']],['Rhinolophus',['Rhisp']]]]
+        'Bird',
+        ['Bat', [['Barbarg',['Barbastella barbastellus']], ['Pip35',['Pipistrellus kuhlii','Pipistrellus nathusii']], ['Pip50',['Pipistrellus maderensis','Pipistrellus pipistrellus','Pipistrellus pygmaeus']], ['Envsp',['Eptesicus nilssonii','Eptesicus serotinus','Nyctalus lasiopterus','Nyctalus leisleri','Nyctalus noctula','Vespertilio murinus']],['Myosp',['Myotis alcathoe','Myotis bechsteinii','Myotis brandtii','Myotis capaccinii','Myotis dasycneme','Myotis daubentonii','Myotis emarginatus','Myotis myotis','Myotis mystacinus','Myotis nattereri']],['Plesp',['Plecotus austriacus','Plecotus auritus']],['Rhisp',['Rhinolophus blasii','Rhinolophus ferrumequinum','Rhinolophus hipposideros']]]]
     ];
     const taxDiv = document.getElementById('taxDiv')
     const ul = addTaxonomy(TaxonomyList)
@@ -84,7 +83,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                 }
                 FilesDtable.clear().draw();
-                getFiles(modalCheckedBoxes,"");
+                getFiles(modalCheckedBoxes);
 
             })
         }
@@ -103,7 +102,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                 });
                 FilesDtable.clear().draw();
-                getFiles(modalCheckedBoxes,"");
+                getFiles(modalCheckedBoxes);
                 console.log(modalCheckedBoxes);
             })
         }
@@ -135,6 +134,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var mapFiles = L.map('mapFiles').setView([50.8503, 4.3517], 8);
     var markers = L.layerGroup()
     let marker = null;
+    let markerQuery = null;
 
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
@@ -156,9 +156,12 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function showFilesFromDistance(e) {
+        if (markerQuery != null) {
+            mapFiles.removeLayer(markerQuery)
+        }
+        markerQuery = L.marker(e.latlng).addTo(mapFiles).on('click', e => {e.target.remove();markerQuery=null});
         FilesDtable.clear().draw();
-        let coord = [e.latlng.lng, e.latlng.lat].join(',') // becomes the string "lat, lng"
-        getFiles('all', coord)
+        getFiles('all')
     }
     
     map.on('click', onMapClick);
@@ -308,7 +311,11 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
 
-    function getFiles(whichSpecies,geoCoord) {
+    function getFiles(whichSpecies) {
+        var geoCoord = ""
+        if (markerQuery != null) {
+            geoCoord = `${markerQuery._latlng.lng},${markerQuery._latlng.lat}`
+        }
         if (!Array.isArray(whichSpecies)) {
             whichSpecies = [whichSpecies]
         }
@@ -336,12 +343,11 @@ document.addEventListener('DOMContentLoaded', function () {
                 ]).draw().node();
                 if (res.lat[i] != null) {
                     var color = 'orange'
-                    if (res.validated[i] == 'True' || res.validated[i] == true) {console.log("he"); color = 'green'}
-                    var circleMarker = L.circle([res.lat[i], res.lng[i]],{
-                        radius: 5000,color: color
+                    var circleMarker = L.rectangle([[Math.trunc(res.lat[i]*10)/10, Math.trunc(res.lng[i]*10)/10],
+                                                    [Math.trunc(res.lat[i]*10)/10 + 0.1, Math.trunc(res.lng[i]*10)/10 + 0.1]],{
+                        color: color
                     }).bindTooltip(file.split('/')[2])
                     circleMarker._id = file.split('/')[1]
-                    
                     markers.addLayer(circleMarker)
                     
                 }
@@ -370,25 +376,25 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('myAudios').addEventListener('click', () => {
         mapFiles.invalidateSize();
         whichFiles = 'my'
-        getFiles('all',"")
+        getFiles('all')
     })
 
     document.getElementById('resetSearch').addEventListener('click', () => {
         FilesDtable.clear().draw();
-        getFiles('all',"")
+        getFiles('all')
     })
 
     
     document.getElementById('autoSearchButton').addEventListener('click', () => {
         FilesDtable.clear().draw();
-        getFiles(document.getElementById('autoSearch').value,"")
+        getFiles(document.getElementById('autoSearch').value)
     });
 
 
     document.getElementById('allAudios').addEventListener('click', () => {
         mapFiles.invalidateSize();
         whichFiles = 'all'
-        getFiles('all',"")
+        getFiles('all')
     })
 
     document.getElementById('closeModalAudios').addEventListener('click', () => {
@@ -1446,6 +1452,20 @@ document.addEventListener('DOMContentLoaded', function () {
 
     applyAI.addEventListener('click', () => {
         updateWaveform();
+    });
+    audioVisibleBox.addEventListener('change', () => {
+        fetch(`/update_audioVisible?arg=${audioVisibleBox.checked}`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrfToken
+            }
+        })
+        .then(response => response.json())
+        .then(res => {
+
+        }).catch(function (err) {
+            console.log('Fetch Error :-S', err);
+        });
     });
 
 });
