@@ -506,12 +506,20 @@ def process():
         if query1:
             print('HASHNAME FOUND')
             filename = query1.hashName
+            if request.form.get('lat') is not None:
+                query1.lat = request.form.get('lat')
+                query1.lng = request.form.get('lng')
+                db.session.commit()
         elif query2:
             print('USERNAME AND NAME FOUND')
             filename = query2.hashName
+            if request.form.get('lat') is not None:
+                query2.lat = request.form.get('lat')
+                query2.lng = request.form.get('lng')
+                db.session.commit()
         else:
             print('FILE NOT FOUND IN DB')
-            filename = str(hash(secured_filename))+".wav"
+            filename = str(hash(secured_filename+current_user.username))+".wav"
             if request.form.get('lat') is not None:
                 new_file = File(name=secured_filename, hashName=filename, username=current_user.username,lat=request.form.get('lat'),lng=request.form.get('lng'),duration=duration)
             else:
