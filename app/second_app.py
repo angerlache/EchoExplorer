@@ -13,17 +13,6 @@ CORS(app, resources={r"/process_on_second_machine": {"origins": "http://tfe-anth
 app.config['UPLOAD_FOLDER'] = '../AI/data/samples'
 #app.config['ALTERNATE_UPLOAD_FOLDER'] = '/path/to/alternate/upload/folder'
 
-@app.route('/send_csv', methods=['POST','GET'])
-def send_csv():
-    # Assuming the CSV file is saved in the same directory as run_classifier.py
-    csv_filepath = '../AI/results/classification_result.csv'
-    while not os.path.exists(csv_filepath):
-        time.sleep(5)
-        print('sleeping')
-
-    # Send the CSV file as an attachment in the response
-    return send_file(csv_filepath, as_attachment=True)
-
 
 @app.route('/process_on_second_machine', methods=['POST','GET'])
 def process_on_second_machine():
@@ -39,33 +28,29 @@ def process_on_second_machine():
     AI = data.get('AI')
     print('Received message:', message)
 
-    filename = message.split('/')[1]
-    username = message.split('/')[0]
+    #filename = message.split('/')[1]
+    #username = message.split('/')[0]
+    username = message[0].split('/')[0]
     print(username)
-    print(filename)
-    #path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-    #print(path)
-    """with open(path, 'wb') as f:
-        s3 = boto3.resource('s3', endpoint_url='https://ceph-gw1.info.ucl.ac.be')
-        #s3.download_fileobj('biodiversity-lauzelle', filename, f)
-        for obj in s3.Bucket('biodiversity-lauzelle').objects.all():
-            key = obj.key"""
+    #print(filename)
+
 
     s3 = boto3.resource('s3', endpoint_url='https://ceph-gw1.info.ucl.ac.be')
     if AI == 'BatML':
-        if not os.path.exists('../AI/data/samples/' + filename[:-4]):
-            os.mkdir('../AI/data/samples/' + filename[:-4])
-        s3.Bucket('biodiversity-lauzelle').download_file(message,'../AI/data/samples/'+filename[:-4]+'/'+filename) # has .wav
+        if not os.path.exists('../AI/data/samples/' + username):
+            os.mkdir('../AI/data/samples/' + username)
+        for m in message:
+            s3.Bucket('biodiversity-lauzelle').download_file(m,'../AI/data/samples/'+username+'/'+m.split('/')[1]) # has .wav
         print("file from s3")
         os.chdir('../AI')
         print(os.getcwd())
-        subprocess.run('{} {} {}'.format('python3', 'run_classifier.py', filename) + " && rm -rf data/samples/" + filename[:-4],shell=True,check=True)
+        subprocess.run('{} {} {}'.format('python3', 'run_classifier.py', username) + " && rm -rf data/samples/" + username,shell=True,check=True)
         print("---------------------------------------------------")
         os.chdir('../app')
-        #csv_filepath = '../AI/results/classification_result_' + username + '.csv'
-        csv_filepath = '../AI/results/classification_result_' + filename + '.csv'
+        csv_filepath = '../AI/results/classification_result_' + username + '.csv'
+        #csv_filepath = '../AI/results/classification_result_' + filename + '.csv'
 
-    elif AI == 'BirdNET':
+    """elif AI == 'BirdNET':
         if not os.path.exists('../BirdNET/samples/' + filename[:-4]):
             os.mkdir('../BirdNET/samples/' + filename[:-4])
         if not os.path.exists('../BirdNET/results/' + username):
@@ -107,30 +92,23 @@ def process_on_second_machine():
         os.chdir('../app')
         #csv_filepath = '../batdetect2/results/'+username+'/classification_result_' + username + '.csv'
         csv_filepath = '../batdetect2/results/'+username+'/classification_result_' + filename + '.csv'
-
-    results = [[],[],[],[]]
+        """
+    results = [[],[],[],[],[]]
     with open(csv_filepath) as resultfile:
     #with open('fake_labels.csv') as resultfile:
         next(resultfile)
         for line in resultfile:
             line = line.strip().split(',')
             if float(line[4]) > 0.5: 
-                results[0].append(line[1])
-                results[1].append(line[2])
-                results[2].append(line[3])
-                results[3].append(line[4])
+                results[0].append(line[0])
+                results[1].append(line[1])
+                results[2].append(line[2])
+                results[3].append(line[3])
+                results[4].append(line[4])
 
 
     print(results)
-    return jsonify({'result': results[2], 'start': results[0], 'end': results[1], 'probability':results[3], 'AI':AI})
-    
-    #time.sleep(108)
-    #print('DURATION = ', time.time()-s)
-    #return send_file(
-     #       csv_filepath,
-      #      mimetype='text/csv',
-       #     as_attachment=True,
-        #    attachment_filename='resulte.csv')
+    return jsonify({'result': results[3], 'start': results[1], 'end': results[2], 'probability':results[4], 'AI':AI, 'files':results[0]})
 
 if __name__ == '__main__':
     app.run(debug=True,host="0.0.0.0",threaded=True)

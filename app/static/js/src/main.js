@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const processButton2 = document.getElementById('processButton2');
     const processButton3 = document.getElementById('processButton3');
     const processButton4 = document.getElementById('processButton4');
+    const processButton5 = document.getElementById('processButton5');
     const startAI = document.getElementById('startAI');
     const visualizeButton = document.getElementById('visualizeButton');
     const playButton = document.getElementById('playButton');
@@ -1134,7 +1135,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 return
             }
             
-            console.log(data);
+            /*console.log(data);
             if (multipleAudio) {
                 regions = []
                 unremovableRegions = []
@@ -1202,7 +1203,56 @@ document.addEventListener('DOMContentLoaded', function () {
                 marker = null;
                 alert("Your file has been processed")
                 updateWaveform()
+            }*/
+
+            if (userName && !multipleAudio) {uploadButton.disabled = false;save.disabled = false;}
+            
+            regions = []
+            unremovableRegions = []
+            try {
+                const response = await fetch('users/' + userName + '/annotation/' + data.files[0].split('.')[0]);
+                const d = await response.json();
+                loadRegions(document,d,regions,false);
+                loadRegions(document,d,unremovableRegions,false);
+            } catch (error) {
+                console.error('Error fetching annotation:', error);
             }
+
+            data.start.forEach(async (start, index) => {
+                if (index != 0 && data.files[index] != data.files[index-1]) {
+                    saveAnnotationToServer(duration,data.files[index-1].split('.')[0],data.files[index-1],regions,userName,'local');
+                    regions = []
+                    unremovableRegions = []
+                    try {
+                        const response = await fetch('users/' + userName + '/annotation/' + data.files[index].split('.')[0]);
+                        const d = await response.json();
+                        loadRegions(document,d,regions,false);
+                        loadRegions(document,d,unremovableRegions,false);
+                    } catch (error) {
+                        console.error('Error fetching annotation:', error);
+                    }
+                }
+                let note = ""
+                let specy = data.result[index]
+                
+                var idn = `bat-${Math.random().toString(32).slice(2)}`
+                var obj = {
+                    id: idn,
+                    start: parseFloat(start), //timestamp-currentPosition,
+                    end: parseFloat(data.end[index]), //timestamp-currentPosition,
+                    content: createRegionContent(document,`${specy}`, note, true),
+                    drag: false,
+                    resize: false,
+                    proba: data.probability[index],
+                    ai: data.AI,
+                }
+                regions.push(obj)
+                unremovableRegions.push(obj)
+                
+                
+            })
+            
+            
 
         })
         .catch(error => {
@@ -1314,6 +1364,28 @@ document.addEventListener('DOMContentLoaded', function () {
                 processButtonRoutine(file,multipleAudioLength[i],'batdetect2')
             })
         }
+    });
+
+    processButton5.addEventListener('click', function () {
+        const formData = new FormData();
+
+        Array.from(multipleAudioFile.files).forEach((file, index) => {
+            formData.append(`audio`, file)
+            formData.append(`duration`, multipleAudioLength[index])
+        })
+        //formData.append(`audio`, multipleAudioFile.files)
+        //formData.append(`duration`, multipleAudioLength)
+
+
+        formData.append('chosenAI', 'BatML');
+        console.log('marker = ', marker);
+        if (marker != null) {
+            formData.append('lat', marker._latlng.lat);
+            formData.append('lng', marker._latlng.lng);
+        }
+
+
+        processRequest(formData,"blabla",100)
     });
 
     validateButton.addEventListener('click', function () {

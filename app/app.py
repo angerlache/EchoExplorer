@@ -470,69 +470,74 @@ def predicted_time():
 
 @app.route('/process', methods=['POST'])
 def process():
-    if 'audio' not in request.files:
-        return jsonify({'error': 'No file provided'})
+    #if 'audio' not in request.files:
+     #   return jsonify({'error': 'No file provided'})
 
-    file = request.files['audio']
+    files = request.files.getlist("audio")
+    durations = request.form.getlist("duration")
     session['AI'] = request.form.get('chosenAI')
-    duration = request.form.get('duration')
+    print(files)
+    print(durations)
+    #return
 
     import wave
     # trying to open it checks if it has a valid header
-    with wave.open(file, 'rb') as wav_file:
-        print(wav_file)
-        pass
-    file.seek(0)
+    data = {'AI': session['AI'],'message':[]}
+    for file in files:
+        with wave.open(file, 'rb') as wav_file:
+            print(wav_file)
+            pass
+        file.seek(0)
 
-    # use secure_filename (everywhere I read filename from a client) 
-    secured_filename = secure_filename(file.filename)
-    if file.filename == '':
-        return jsonify({'error': 'No selected file'})
-    if len(secured_filename.split('.')) > 2:
-        return jsonify({"error": "filename cannot contain the character '.' "})
-    
-    if file and allowed_file(file.filename):
-        # TODO : check if file already in server
-
-        if not current_user.is_authenticated:
-            return jsonify({'error': 'user not logged in'})
+        # use secure_filename (everywhere I read filename from a client) 
+        secured_filename = secure_filename(file.filename)
+        if file.filename == '':
+            return jsonify({'error': 'No selected file'})
+        if len(secured_filename.split('.')) > 2:
+            return jsonify({"error": "filename cannot contain the character '.' "})
         
-        bucket_name = "biodiversity-lauzelle"
-        print('filename = ' + secured_filename)
-        query1 = File.query.filter_by(hashName=secured_filename).first()
-        query2 = File.query.filter_by(name=secured_filename, username=current_user.username).first()
-        print(query1)
-        print(query2)
-        if query1:
-            print('HASHNAME FOUND')
-            filename = query1.hashName
-            if request.form.get('lat') is not None:
-                query1.lat = request.form.get('lat')
-                query1.lng = request.form.get('lng')
-                db.session.commit()
-        elif query2:
-            print('USERNAME AND NAME FOUND')
-            filename = query2.hashName
-            if request.form.get('lat') is not None:
-                query2.lat = request.form.get('lat')
-                query2.lng = request.form.get('lng')
-                db.session.commit()
-        else:
-            print('FILE NOT FOUND IN DB')
-            filename = str(hash(secured_filename+current_user.username))+".wav"
-            if request.form.get('lat') is not None:
-                new_file = File(name=secured_filename, hashName=filename, username=current_user.username,lat=request.form.get('lat'),lng=request.form.get('lng'),duration=duration)
+        if file and allowed_file(file.filename):
+            # TODO : check if file already in server
+
+            if not current_user.is_authenticated:
+                return jsonify({'error': 'user not logged in'})
+            
+            bucket_name = "biodiversity-lauzelle"
+            print('filename = ' + secured_filename)
+            query1 = File.query.filter_by(hashName=secured_filename).first()
+            query2 = File.query.filter_by(name=secured_filename, username=current_user.username).first()
+            print(query1)
+            print(query2)
+            if query1:
+                print('HASHNAME FOUND')
+                filename = query1.hashName
+                if request.form.get('lat') is not None:
+                    query1.lat = request.form.get('lat')
+                    query1.lng = request.form.get('lng')
+                    db.session.commit()
+            elif query2:
+                print('USERNAME AND NAME FOUND')
+                filename = query2.hashName
+                if request.form.get('lat') is not None:
+                    query2.lat = request.form.get('lat')
+                    query2.lng = request.form.get('lng')
+                    db.session.commit()
             else:
-                new_file = File(name=secured_filename, hashName=filename, username=current_user.username, duration=duration)
-            db.session.add(new_file)
-            db.session.commit()
+                print('FILE NOT FOUND IN DB')
+                filename = str(hash(secured_filename+current_user.username))+".wav"
+                if request.form.get('lat') is not None:
+                    new_file = File(name=secured_filename, hashName=filename, username=current_user.username,lat=request.form.get('lat'),lng=request.form.get('lng'),duration=duration)
+                else:
+                    new_file = File(name=secured_filename, hashName=filename, username=current_user.username, duration=duration)
+                db.session.add(new_file)
+                db.session.commit()
 
-        ## comment these lines for testing locally because s3 not available with localhost
-        s3 = boto3.resource('s3', endpoint_url='https://ceph-gw1.info.ucl.ac.be')
-        s3.Bucket(bucket_name).put_object(Key=current_user.username+'/'+filename,Body=file)
+            ## comment these lines for testing locally because s3 not available with localhost
+            s3 = boto3.resource('s3', endpoint_url='https://ceph-gw1.info.ucl.ac.be')
+            s3.Bucket(bucket_name).put_object(Key=current_user.username+'/'+filename,Body=file)
+            data['message'].append(current_user.username+'/'+filename)
 
-
-        data = {'message': current_user.username+'/'+filename, 'AI': session['AI']}
+        #data = {'message': current_user.username+'/'+filename, 'AI': session['AI']}
         json_data = json.dumps(data)
         print("request posted !")
         
