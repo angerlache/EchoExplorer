@@ -1220,7 +1220,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             data.start.forEach(async (start, index) => {
                 if (index != 0 && data.files[index] != data.files[index-1]) {
-                    saveAnnotationToServer(duration,data.files[index-1].split('.')[0],data.files[index-1],regions,userName,'local');
+                    saveAnnotationToServer(duration,multipleAudioFile.files[index-1].name.split('.')[0],multipleAudioFile.files[index-1].name,regions,userName,'local');
                     regions = []
                     unremovableRegions = []
                     try {
@@ -1249,10 +1249,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 regions.push(obj)
                 unremovableRegions.push(obj)
                 
-                
             })
-            
-            
+            saveAnnotationToServer(duration,data.files[data.files.length-1].split('.')[0],data.files[data.files.length-1],regions,userName,'local');
 
         })
         .catch(error => {
