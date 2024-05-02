@@ -1220,7 +1220,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
             data.start.forEach(async (start, index) => {
                 if (index != 0 && data.files[index] != data.files[index-1]) {
-                    saveAnnotationToServer(duration,multipleAudioFile.files[index-1].name.split('.')[0],multipleAudioFile.files[index-1].name,regions,userName,'local');
+                    console.log(111, multipleAudioFile.files[0])
+                    saveAnnotationToServer(duration,Array.from(multipleAudioFile.files)[index-1].name.split('.')[0],Array.from(multipleAudioFile.files)[index-1].name,regions,userName,'local');
                     regions = []
                     unremovableRegions = []
                     try {
@@ -1250,7 +1251,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 unremovableRegions.push(obj)
                 
             })
-            saveAnnotationToServer(duration,data.files[data.files.length-1].split('.')[0],data.files[data.files.length-1],regions,userName,'local');
+            saveAnnotationToServer(duration,Array.from(multipleAudioFile.files)[multipleAudioLength.length-1].name.split('.')[0],Array.from(multipleAudioFile.files)[multipleAudioLength.length-1].name,regions,userName,'local');
 
         })
         .catch(error => {
