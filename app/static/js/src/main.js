@@ -1351,48 +1351,53 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     processButton.addEventListener('click', function () {
-        if (!multipleAudio) {
+        routine('BatML')
+        /*if (!multipleAudio) {
             processButtonRoutine(fileInput.files[0],audioLength,'BatML')
         } else {
             Array.from(multipleAudioFile.files).forEach((file, i) => {
                 processButtonRoutine(file,multipleAudioLength[i],'BatML')
             })
-        }
+        }*/
     });
 
     processButton2.addEventListener('click', function () {
-        if (!multipleAudio) {
+        routine('BirdNET')
+        /*if (!multipleAudio) {
             processButtonRoutine(fileInput.files[0],audioLength,'BirdNET')
         } else {
             Array.from(multipleAudioFile.files).forEach((file, i) => {
                 processButtonRoutine(file,multipleAudioLength[i],'BirdNET')
             })
-        }
+        }*/
     });
 
 
     processButton3.addEventListener('click', function () {
-        if (!multipleAudio) {
+        routine('BattyBirdNET')
+        /*if (!multipleAudio) {
             processButtonRoutine(fileInput.files[0],audioLength,'BattyBirdNET')
         } else {
             Array.from(multipleAudioFile.files).forEach((file, i) => {
                 processButtonRoutine(file,multipleAudioLength[i],'BattyBirdNET')
             })
-        }
+        }*/
     });
 
     processButton4.addEventListener('click', function () {
-        if (!multipleAudio) {
+        routine('batdetect2')
+        /*if (!multipleAudio) {
             processButtonRoutine(fileInput.files[0],audioLength,'batdetect2')
         } else {
             Array.from(multipleAudioFile.files).forEach((file, i) => {
                 processButtonRoutine(file,multipleAudioLength[i],'batdetect2')
             })
-        }
+        }*/
     });
 
     processButton5.addEventListener('click', function () {
-        const formData = new FormData();
+        routine('BatML')
+        /*const formData = new FormData();
 
         if (multipleAudio) {
             Array.from(multipleAudioFile.files).forEach((file, index) => {
@@ -1416,8 +1421,36 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         
 
-        processRequest(formData,"gfdvg",123)
+        processRequest(formData,"gfdvg",123)*/
     });
+
+    function routine(ai) {
+        const formData = new FormData();
+
+        if (multipleAudio) {
+            Array.from(multipleAudioFile.files).forEach((file, index) => {
+                checkAudio(file,multipleAudioLength[index])
+                formData.append(`audio`, file)
+                formData.append(`duration`, multipleAudioLength[index])
+            })
+            predictedTime(multipleAudioLength,ai,Array.from(multipleAudioFile.files).map((f) => f.size),"grjf")
+        } else {
+            checkAudio(fileInput.files[0],audioLength)
+            formData.append('audio',fileInput.files[0])
+            formData.append('duration',audioLength)
+            predictedTime([audioLength],ai,[fileInput.files[0].size],"greg")
+
+        }
+
+        formData.append('chosenAI', ai);
+        if (marker != null) {
+            formData.append('lat', marker._latlng.lat);
+            formData.append('lng', marker._latlng.lng);
+        }
+        
+
+        processRequest(formData,"gfdvg",123)
+    }
 
     validateButton.addEventListener('click', function () {
         // in isExpert case : regions==unremovableRegions
