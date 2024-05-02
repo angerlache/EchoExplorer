@@ -355,7 +355,8 @@ def save_results_to_file(results, op_path: str, result_path: str) -> None:
     if "class_prob" in results_df.columns:
         preds_df = results_df[
             [
-                "det_prob",
+                #"det_prob",
+                "file_name",
                 "start_time",
                 "end_time",
                 #"high_freq",

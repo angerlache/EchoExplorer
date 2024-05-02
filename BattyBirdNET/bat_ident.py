@@ -152,7 +152,8 @@ def save_result_file(r: Dict[str, list], path: str, afile_path: str):
 
     else:
         # CSV output file
-        header = "Useless, Start (s),End (s),Scientific name,Confidence\n"
+        header = "Filename, Start (s),End (s),Scientific name,Confidence\n"
+        folder_path, filename = os.path.split(afile_path)
 
         # Write header
         out_string += header
@@ -165,7 +166,7 @@ def save_result_file(r: Dict[str, list], path: str, afile_path: str):
 
                 if c[1] > cfg.MIN_CONFIDENCE and (not cfg.SPECIES_LIST or c[0] in cfg.SPECIES_LIST):
                     label = cfg.TRANSLATED_LABELS[cfg.LABELS.index(c[0])]
-                    rstring += "{},{},{},{},{:.4f}\n".format(0,start, end, label.split("_", 1)[0], c[1])
+                    rstring += "{},{},{},{},{:.4f}\n".format(filename,start, end, label.split("_", 1)[0], c[1])
 
             # Write result string to file
             out_string += rstring
@@ -325,7 +326,7 @@ def analyze_file(item):
                 rtype = ".bat.results.csv"
 
             #out_string = save_result_file(results, os.path.join(cfg.OUTPUT_PATH, rpath.rsplit(".", 1)[0] + rtype), fpath)
-            out_string = save_result_file(results, os.path.join(cfg.OUTPUT_PATH, 'classification_result_'+args.user+'.csv'), fpath)
+            out_string = save_result_file(results, os.path.join(cfg.OUTPUT_PATH, fpath.split('/')[2]+'.csv'), fpath)
             #out_string = save_result_file(results, os.path.join(cfg.OUTPUT_PATH, 'classification_result_'+fpath.split('/')[2]+'.csv'), fpath)
         else:
             out_string = save_result_file(results, cfg.OUTPUT_PATH, fpath)
@@ -666,6 +667,26 @@ if __name__ == "__main__":
     else:
         with Pool(cfg.CPU_THREADS) as p:
             p.map(analyze_file, flist)
+
+    import os
+
+    # Directory containing CSV files
+    directory = args.o
+
+    # Output file to store concatenated data
+    output_file = args.o + '/classification_result_'+args.user+'.csv'
+
+    # Iterate through each file in the directory
+    with open(output_file, 'w') as output_csv:
+        for file_name in os.listdir(directory):
+            if file_name.endswith('.csv'):
+                with open(os.path.join(directory, file_name), 'r') as input_csv:
+                    # Skip the header line if it's not the first file
+                    if output_csv.tell() != 0:
+                        next(input_csv)
+                    # Copy the contents of the file to the output file
+                    for line in input_csv:
+                        output_csv.write(line)
 
     """if args.segment == "on" or args.spectrum == "on":
         script_dir = os.path.dirname(os.path.abspath(sys.argv[0]))

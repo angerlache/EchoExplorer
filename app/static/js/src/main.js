@@ -1225,7 +1225,8 @@ document.addEventListener('DOMContentLoaded', function () {
             var idx = 0;
             data.start.forEach(async (start, index) => {
                 if (index != 0 && data.files[index] != data.files[index-1]) {
-                    saveAnnotationToServer(multipleAudioFile.files[idx].name.split('.')[0],multipleAudioFile.files[idx].name,regions,userName,'local');
+                    saveAnnotationToServer(data.files[index-1].name.split('.')[0],data.files[index-1].name,regions,userName,'local');
+                    //saveAnnotationToServer(multipleAudioFile.files[idx].name.split('.')[0],multipleAudioFile.files[idx].name,regions,userName,'local');
                     idx = idx + 1;
                     regions = []
                     unremovableRegions = []
@@ -1271,7 +1272,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 
             })
             if (multipleAudio) {
-                saveAnnotationToServer(multipleAudioFile.files[idx].name.split('.')[0],multipleAudioFile.files[idx].name,regions,userName,'local');
+                saveAnnotationToServer(data.files[data.files.length-1].name.split('.')[0],data.files[data.files.length-1].name,regions,userName,'local');
+                //saveAnnotationToServer(multipleAudioFile.files[idx].name.split('.')[0],multipleAudioFile.files[idx].name,regions,userName,'local');
             } else {
                 saveAnnotationToServer(fileInput.files[0].name.split('.')[0],fileInput.files[0].name,regions,userName,'local');
                 updateWaveform()

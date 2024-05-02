@@ -622,7 +622,8 @@ def annotation(username,path):
         to_add = {
             "_id": hash_name,
             "filename": hash_name,
-            "old_name": path+'.wav',
+            "old_name": q.name,
+            #"old_name": path+'.wav',
             "username": current_user.username,
             "validated": False,
             "validated_by": [],
@@ -661,7 +662,8 @@ def validate(path):
     to_add = {
         "_id": hash_name,
         "filename": hash_name,
-        "old_name": path+'.wav',
+        "old_name": q.name,
+        #"old_name": path+'.wav',
         "username": current_user.username,
         "validated": True,
         "duration": duration,
@@ -719,7 +721,8 @@ def pending_audio(path):
         to_add = {
             "_id": hash_name,
             "filename": hash_name,
-            "old_name": path+'.wav',
+            "old_name": q.name,
+            #"old_name": path+'.wav',
             "username": current_user.username,
             "validated": False,
             "validated_by": [],

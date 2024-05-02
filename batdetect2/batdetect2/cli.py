@@ -133,7 +133,7 @@ def detect(
                 len(results["pred_dict"]["annotation"]) > 0
             ):
                 results_path = audio_file.replace(audio_dir, ann_dir)
-                save_results_to_file(results, results_path, ann_dir+'/classification_result_'+user)
+                save_results_to_file(results, results_path, ann_dir+'/'+audio_file.split('/')[2])
                 #save_results_to_file(results, results_path, ann_dir+'/classification_result_'+audio_file.split('/')[2])
         except (RuntimeError, ValueError, LookupError) as err:
             error_files.append(audio_file)
@@ -141,6 +141,26 @@ def detect(
             raise err
 
     click.echo(f"\nResults saved to: {ann_dir}")
+
+    import os
+
+    # Directory containing CSV files
+    directory = ann_dir
+
+    # Output file to store concatenated data
+    output_file = ann_dir + '/classification_result_'+user+'.csv'
+
+    # Iterate through each file in the directory
+    with open(output_file, 'w') as output_csv:
+        for file_name in os.listdir(directory):
+            if file_name.endswith('.csv'):
+                with open(os.path.join(directory, file_name), 'r') as input_csv:
+                    # Skip the header line if it's not the first file
+                    if output_csv.tell() != 0:
+                        next(input_csv)
+                    # Copy the contents of the file to the output file
+                    for line in input_csv:
+                        output_csv.write(line)
 
     if len(error_files) > 0:
         click.secho("\nUnable to process the follow files:", fg="red")
