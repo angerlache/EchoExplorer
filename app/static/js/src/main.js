@@ -1117,7 +1117,7 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     save.addEventListener('click', function () {
-        saveAnnotationToServer(audioLength,annotation_name,fileInput.files[0].name,regions,userName,'local');
+        saveAnnotationToServer(annotation_name,fileInput.files[0].name,regions,userName,'local');
     });
     
     function processRequest(formData, filename, duration) {
@@ -1183,8 +1183,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 
             })
             if (multipleAudio || document.getElementById('saveAfterAI').checked) {
-                saveAnnotationToServer(duration,filename.split('.')[0],filename,regions,userName,'local');
-                //saveAnnotationToServer(duration,filename.split('.')[0],filename,unremovableRegions,userName,'other'); 
+                saveAnnotationToServer(filename.split('.')[0],filename,regions,userName,'local');
+                //saveAnnotationToServer(filename.split('.')[0],filename,unremovableRegions,userName,'other'); 
             }
             if (multipleAudio) {
                 if (duration == multipleAudioLength[multipleAudioLength.length - 1]) {
@@ -1207,20 +1207,24 @@ document.addEventListener('DOMContentLoaded', function () {
 
             if (userName && !multipleAudio) {uploadButton.disabled = false;save.disabled = false;}
             
-            regions = []
-            unremovableRegions = []
-            try {
-                const response = await fetch('users/' + userName + '/annotation/' + data.files[0].split('.')[0]);
-                const d = await response.json();
-                loadRegions(document,d,regions,false);
-                loadRegions(document,d,unremovableRegions,false);
-            } catch (error) {
-                console.error('Error fetching annotation:', error);
+            if (multipleAudio) {
+                regions = []
+                unremovableRegions = []
+                try {
+                    const response = await fetch('users/' + userName + '/annotation/' + multipleAudioFile.files[0].name.split('.')[0]);
+                    const d = await response.json();
+                    loadRegions(document,d,regions,false);
+                    loadRegions(document,d,unremovableRegions,false);
+                } catch (error) {
+                    console.error('Error fetching annotation:', error);
+                }
             }
 
+            var idx = 0;
             data.start.forEach(async (start, index) => {
                 if (index != 0 && data.files[index] != data.files[index-1]) {
-                    saveAnnotationToServer(duration,multipleAudioFile.files[index-1].name.split('.')[0],multipleAudioFile.files[index-1].name,regions,userName,'local');
+                    saveAnnotationToServer(multipleAudioFile.files[idx].name.split('.')[0],multipleAudioFile.files[idx].name,regions,userName,'local');
+                    idx = idx + 1;
                     regions = []
                     unremovableRegions = []
                     try {
@@ -1249,9 +1253,27 @@ document.addEventListener('DOMContentLoaded', function () {
                 regions.push(obj)
                 unremovableRegions.push(obj)
                 
+                //Populate DataTable
+                if (!multipleAudio) {
+                    var row = Dtable.row.add([
+                        //data.result[index],
+                        specy,
+                        data.start[index],
+                        data.probability[index],
+                        data.AI,
+                        idn,
+                        "<button class='btn btn-sm delete-btn'><i class='fa fa-trash'></i></button>"
+                    ]).draw().node();
+                }
+                
+                
             })
-            saveAnnotationToServer(duration,data.files[data.files.length-1].split('.')[0],data.files[data.files.length-1],regions,userName,'local');
+            if (multipleAudio) {
+                saveAnnotationToServer(multipleAudioFile.files[idx].name.split('.')[0],multipleAudioFile.files[idx].name,regions,userName,'local');
+            } else {
+                saveAnnotationToServer(fileInput.files[0].name.split('.')[0],fileInput.files[0].name,regions,userName,'local');
 
+            }
         })
         .catch(error => {
             alert("ERROR")
@@ -1367,34 +1389,33 @@ document.addEventListener('DOMContentLoaded', function () {
     processButton5.addEventListener('click', function () {
         const formData = new FormData();
 
-        Array.from(multipleAudioFile.files).forEach((file, index) => {
-            formData.append(`audio`, file)
-            formData.append(`duration`, multipleAudioLength[index])
-        })
-        //formData.append(`audio`, multipleAudioFile.files)
-        //formData.append(`duration`, multipleAudioLength)
-
+        if (multipleAudio) {
+            Array.from(multipleAudioFile.files).forEach((file, index) => {
+                formData.append(`audio`, file)
+                formData.append(`duration`, multipleAudioLength[index])
+            })
+        } else {
+            formData.append('audio',fileInput.files[0])
+            formData.append('duration',audioLength)
+        }
 
         formData.append('chosenAI', 'BatML');
-        console.log('marker = ', marker);
         if (marker != null) {
             formData.append('lat', marker._latlng.lat);
             formData.append('lng', marker._latlng.lng);
         }
 
 
-        processRequest(formData,"blabla",100)
+        processRequest(formData,fileInput.files[0].name,audioLength)
     });
 
     validateButton.addEventListener('click', function () {
-        //saveAnnotationToServer(audioLength,annotation_name,fileInput,regions,userName,'validated');
         // in isExpert case : regions==unremovableRegions
-        saveAnnotationToServer(audioLength,annotation_name,fileInput.files[0].name,unremovableRegions,userName,'validated');
+        saveAnnotationToServer(annotation_name,fileInput.files[0].name,unremovableRegions,userName,'validated');
     });
 
     uploadButton.addEventListener('click', function () {
-        //saveAnnotationToServer(audioLength,annotation_name,fileInput,regions,userName,"other");
-        saveAnnotationToServer(audioLength,annotation_name,fileInput.files[0].name,unremovableRegions,userName,"other");
+        saveAnnotationToServer(annotation_name,fileInput.files[0].name,unremovableRegions,userName,"other");
 
     });
 
