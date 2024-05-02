@@ -450,20 +450,22 @@ def predicted_time():
     data = request.json
 
     print('Recieved data :', data)
-    duration = int(data.get('time')) # used to predict time for the AI
-    size = int(data.get('bytes')) # used to predict time for the server getting the uploaded file
+    duration = data.get('time') # used to predict time for the AI
+    size = data.get('bytes') # used to predict time for the server getting the uploaded file
+    duration = [int(d) for d in duration]
+    size = [int(s) for s in size]
 
     if data.get('AI') == 'BatML':
-        response_data = {'predicted_time': max(10,duration/3 + size/1e6/1.15)}
+        response_data = {'predicted_time': max(10,sum(duration)/3 + sum(size)/1e6/1.15)}
 
     elif data.get('AI') == 'BirdNET':
-        response_data = {'predicted_time': max(10,duration/54 + size/1e6/1.15)}
+        response_data = {'predicted_time': max(10,sum(duration)/54 + sum(size)/1e6/1.15)}
 
     elif data.get('AI') == 'batdetect2':
-        response_data = {'predicted_time': max(10,duration/10 + size/1e6/1.15)}
+        response_data = {'predicted_time': max(10,sum(duration)/10 + sum(size)/1e6/1.15)}
 
     elif data.get('AI') == 'BattyBirdNET':
-        response_data = {'predicted_time': max(10,duration/5.5 + size/1e6/1.15)}
+        response_data = {'predicted_time': max(10,sum(duration)/5.5 +sum(size)/1e6/1.15)}
 
 
     return jsonify(response_data)

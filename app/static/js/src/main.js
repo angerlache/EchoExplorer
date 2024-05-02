@@ -1121,6 +1121,8 @@ document.addEventListener('DOMContentLoaded', function () {
     });
     
     function processRequest(formData, filename, duration) {
+        document.getElementById("spinner").style.display = "inline-block";
+
         fetch('/process', {
             method: 'POST',
             body: formData,
@@ -1272,10 +1274,13 @@ document.addEventListener('DOMContentLoaded', function () {
                 saveAnnotationToServer(multipleAudioFile.files[idx].name.split('.')[0],multipleAudioFile.files[idx].name,regions,userName,'local');
             } else {
                 saveAnnotationToServer(fileInput.files[0].name.split('.')[0],fileInput.files[0].name,regions,userName,'local');
-
+                updateWaveform()
             }
+            document.getElementById("spinner").style.display = "none";
+
         })
         .catch(error => {
+            document.getElementById("spinner").style.display = "none";
             alert("ERROR")
             console.error('Error:', error);
         });
@@ -1297,7 +1302,7 @@ document.addEventListener('DOMContentLoaded', function () {
             seconds = Math.round(seconds % 60)
             let paddedSeconds = `${seconds < 10 ? '0' : ''}${seconds}`
 
-            alert(`The predicted time to analyse ${filename} is ${minutes} min ${paddedSeconds} sec.`);
+            alert(`The predicted time to analyse is ${minutes} min ${paddedSeconds} sec.`);
         })
         .catch(error => {
             console.error('Error:', error);
@@ -1391,12 +1396,17 @@ document.addEventListener('DOMContentLoaded', function () {
 
         if (multipleAudio) {
             Array.from(multipleAudioFile.files).forEach((file, index) => {
+                checkAudio(file,multipleAudioLength[index])
                 formData.append(`audio`, file)
                 formData.append(`duration`, multipleAudioLength[index])
             })
+            predictedTime(multipleAudioLength,'BatML',Array.from(multipleAudioFile.files).map((f) => f.size),"grjf")
         } else {
+            checkAudio(fileInput.files[0],audioLength)
             formData.append('audio',fileInput.files[0])
             formData.append('duration',audioLength)
+            predictedTime([audioLength],'BatML',[fileInput.files[0].size],"greg")
+
         }
 
         formData.append('chosenAI', 'BatML');
@@ -1404,9 +1414,9 @@ document.addEventListener('DOMContentLoaded', function () {
             formData.append('lat', marker._latlng.lat);
             formData.append('lng', marker._latlng.lng);
         }
+        
 
-
-        processRequest(formData,fileInput.files[0].name,audioLength)
+        processRequest(formData,"gfdvg",123)
     });
 
     validateButton.addEventListener('click', function () {
