@@ -325,8 +325,8 @@ def analyze_file(item):
                 rtype = ".bat.results.csv"
 
             #out_string = save_result_file(results, os.path.join(cfg.OUTPUT_PATH, rpath.rsplit(".", 1)[0] + rtype), fpath)
-            #out_string = save_result_file(results, os.path.join(cfg.OUTPUT_PATH, 'classification_result_'+args.user+'.csv'), fpath)
-            out_string = save_result_file(results, os.path.join(cfg.OUTPUT_PATH, 'classification_result_'+fpath.split('/')[2]+'.csv'), fpath)
+            out_string = save_result_file(results, os.path.join(cfg.OUTPUT_PATH, 'classification_result_'+args.user+'.csv'), fpath)
+            #out_string = save_result_file(results, os.path.join(cfg.OUTPUT_PATH, 'classification_result_'+fpath.split('/')[2]+'.csv'), fpath)
         else:
             out_string = save_result_file(results, cfg.OUTPUT_PATH, fpath)
             # Save as file

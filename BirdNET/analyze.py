@@ -623,7 +623,8 @@ if __name__ == "__main__":
         cfg.OUTPUT_FILE = args.output_file
     else:
         #cfg.OUTPUT_FILE = None
-        cfg.OUTPUT_FILE = "classification_result_" + cfg.FILE_LIST[0].split('/')[2] + ".csv"
+        cfg.OUTPUT_FILE = "classification_result_" + args.user + ".csv"
+        #cfg.OUTPUT_FILE = "classification_result_" + cfg.FILE_LIST[0].split('/')[2] + ".csv"
         #cfg.OUTPUT_FILE = "classification_result.csv"
 
     # Set number of threads

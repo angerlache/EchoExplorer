@@ -38,6 +38,10 @@ def cli():
     "detection_threshold",
     type=float,
 )
+@click.argument(
+    "user",
+    type=str,
+)
 @click.option(
     "--cnn_features",
     is_flag=True,
@@ -78,6 +82,7 @@ def detect(
     audio_dir: str,
     ann_dir: str,
     detection_threshold: float,
+    user: str,
     time_expansion_factor: int,
     **args,
 ):
@@ -128,8 +133,8 @@ def detect(
                 len(results["pred_dict"]["annotation"]) > 0
             ):
                 results_path = audio_file.replace(audio_dir, ann_dir)
-                #save_results_to_file(results, results_path, ann_dir+'/classification_result_'+username)
-                save_results_to_file(results, results_path, ann_dir+'/classification_result_'+audio_file.split('/')[2])
+                save_results_to_file(results, results_path, ann_dir+'/classification_result_'+user)
+                #save_results_to_file(results, results_path, ann_dir+'/classification_result_'+audio_file.split('/')[2])
         except (RuntimeError, ValueError, LookupError) as err:
             error_files.append(audio_file)
             click.secho(f"Error processing file!: {err}", fg="red")
