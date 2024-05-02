@@ -108,14 +108,13 @@ const csrfToken = document.getElementById('csrf_token').value;
  * upload to server
  * FROM : https://github.com/smart-audio/audio_diarization_annotation/tree/master
  */
-export function saveAnnotationToServer(audioLength,annotation_name,filename,regions,userName,destination) {
+export function saveAnnotationToServer(annotation_name,filename,regions,userName,destination) {
     // ! this saves also the response of the AI, maybe we should change this ?
     let data = JSON.stringify(
         Object.keys(regions).map(function (id) {
             var region = regions[id];
 
             return {
-                duration: audioLength,
                 file: filename,
                 start: region.start,
                 end: region.end,
