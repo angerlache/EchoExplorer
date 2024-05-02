@@ -609,6 +609,7 @@ def annotation(username,path):
         return jsonify(doc.get('annotations',{}))
     
     else:
+        arg = request.args.get('arg')
         data = request.data
         hash_name = get_hashname(path+'.wav')
         
@@ -638,10 +639,12 @@ def annotation(username,path):
             if doc is None: 
                 local_annotations.replace_one({"_id": hash_name}, to_add, upsert=True)
             else:
-                doc["annotations"] = data
+                if arg == 'false':doc["annotations"] = data
+                if arg == 'true':doc["annotations"] += data
                 local_annotations.update_one({'_id': doc['_id']}, {'$set': {'annotations': doc['annotations']}})
         else:
-            doc["annotations"] = data
+            if arg == 'false':doc["annotations"] = data
+            if arg == 'true':doc["annotations"] += data
             local_annotations.update_one({'_id': doc['_id']}, {'$set': {'annotations': doc['annotations'], 'validated': doc['validated'], 'validated_by': doc['validated_by']}})
  
         return jsonify({'res': 'ok'})

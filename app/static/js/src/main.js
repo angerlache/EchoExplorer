@@ -10,7 +10,6 @@ document.addEventListener('DOMContentLoaded', function () {
     const processButton2 = document.getElementById('processButton2');
     const processButton3 = document.getElementById('processButton3');
     const processButton4 = document.getElementById('processButton4');
-    const processButton5 = document.getElementById('processButton5');
     const startAI = document.getElementById('startAI');
     const visualizeButton = document.getElementById('visualizeButton');
     const playButton = document.getElementById('playButton');
@@ -637,7 +636,7 @@ document.addEventListener('DOMContentLoaded', function () {
                                         region.content.querySelector('p').textContent,false));
                 }
             }
-            console.log("new region : ",region);
+            //console.log("new region : ",region);
 
             // set last arg of setContent to true and the content will show up only when mouse over region
             region.on('over', (e) => {
@@ -1117,7 +1116,7 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     save.addEventListener('click', function () {
-        saveAnnotationToServer(annotation_name,fileInput.files[0].name,regions,userName,'local');
+        saveAnnotationToServer(annotation_name,fileInput.files[0].name,regions,userName,'local',false);
     });
     
     function processRequest(formData, filename, duration) {
@@ -1136,108 +1135,23 @@ document.addEventListener('DOMContentLoaded', function () {
                 alert('ERROR : ' + data.error)
                 return
             }
-            
-            /*console.log(data);
-            if (multipleAudio) {
-                regions = []
-                unremovableRegions = []
-                try {
-                    const response = await fetch('users/' + userName + '/annotation/' + filename.split('.')[0]);
-                    const data = await response.json();
-                    loadRegions(document,data,regions,false);
-                    loadRegions(document,data,unremovableRegions,false);
-                } catch (error) {
-                    console.error('Error fetching annotation:', error);
-                }
-            }
-            if (userName && !multipleAudio) {uploadButton.disabled = false;save.disabled = false;}
-            
-            data.start.forEach((start, index) => {
-                //console.log('Adding region:', start);
-                let note = ""
-                let specy = data.result[index]
-                
-                var idn = `bat-${Math.random().toString(32).slice(2)}`
-                var obj = {
-                    id: idn,
-                    start: parseFloat(start), //timestamp-currentPosition,
-                    end: parseFloat(data.end[index]), //timestamp-currentPosition,
-                    content: createRegionContent(document,`${specy}`, note, true),
-                    drag: false,
-                    resize: false,
-                    proba: data.probability[index],
-                    ai: data.AI,
-                }
-                regions.push(obj)
-                unremovableRegions.push(obj)
-                //Populate DataTable
-                if (!multipleAudio) {
-                    var row = Dtable.row.add([
-                        //data.result[index],
-                        specy,
-                        data.start[index],
-                        data.probability[index],
-                        data.AI,
-                        idn,
-                        "<button class='btn btn-sm delete-btn'><i class='fa fa-trash'></i></button>"
-                    ]).draw().node();
-                }
-                
-            })
-            if (multipleAudio || document.getElementById('saveAfterAI').checked) {
-                saveAnnotationToServer(filename.split('.')[0],filename,regions,userName,'local');
-                //saveAnnotationToServer(filename.split('.')[0],filename,unremovableRegions,userName,'other'); 
-            }
-            if (multipleAudio) {
-                if (duration == multipleAudioLength[multipleAudioLength.length - 1]) {
-                    document.getElementById("spinner").style.display = "none";
-                    if (marker != null) {
-                        map.removeLayer(marker)
-                    }
-                    marker = null;
-                }
-                alert("Your file " + filename + " has been processed.\n You can find it in your section 'My Audios'")
-            } else {
-                document.getElementById("spinner").style.display = "none";
-                if (marker != null) {
-                    map.removeLayer(marker)
-                }
-                marker = null;
-                alert("Your file has been processed")
-                updateWaveform()
-            }*/
 
             if (userName && !multipleAudio) {uploadButton.disabled = false;save.disabled = false;}
             
             if (multipleAudio) {
                 regions = []
                 unremovableRegions = []
-                try {
-                    const response = await fetch('users/' + userName + '/annotation/' + multipleAudioFile.files[0].name.split('.')[0]);
-                    const d = await response.json();
-                    loadRegions(document,d,regions,false);
-                    loadRegions(document,d,unremovableRegions,false);
-                } catch (error) {
-                    console.error('Error fetching annotation:', error);
-                }
             }
 
             var idx = 0;
             data.start.forEach(async (start, index) => {
                 if (index != 0 && data.files[index] != data.files[index-1]) {
-                    saveAnnotationToServer(data.files[index-1].name.split('.')[0],data.files[index-1].name,regions,userName,'local');
+                    console.log(1000,regions)
+                    saveAnnotationToServer(data.files[index-1].split('.')[0],data.files[index-1],regions,userName,'local',true);
                     //saveAnnotationToServer(multipleAudioFile.files[idx].name.split('.')[0],multipleAudioFile.files[idx].name,regions,userName,'local');
                     idx = idx + 1;
                     regions = []
                     unremovableRegions = []
-                    try {
-                        const response = await fetch('users/' + userName + '/annotation/' + data.files[index].split('.')[0]);
-                        const d = await response.json();
-                        loadRegions(document,d,regions,false);
-                        loadRegions(document,d,unremovableRegions,false);
-                    } catch (error) {
-                        console.error('Error fetching annotation:', error);
-                    }
                 }
                 let note = ""
                 let specy = data.result[index]
@@ -1272,10 +1186,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 
             })
             if (multipleAudio) {
-                saveAnnotationToServer(data.files[data.files.length-1].name.split('.')[0],data.files[data.files.length-1].name,regions,userName,'local');
+                saveAnnotationToServer(data.files[data.files.length-1].split('.')[0],data.files[data.files.length-1],regions,userName,'local',true);
                 //saveAnnotationToServer(multipleAudioFile.files[idx].name.split('.')[0],multipleAudioFile.files[idx].name,regions,userName,'local');
             } else {
-                saveAnnotationToServer(fileInput.files[0].name.split('.')[0],fileInput.files[0].name,regions,userName,'local');
+                saveAnnotationToServer(fileInput.files[0].name.split('.')[0],fileInput.files[0].name,regions,userName,'local',false);
                 updateWaveform()
             }
             document.getElementById("spinner").style.display = "none";
@@ -1354,76 +1268,19 @@ document.addEventListener('DOMContentLoaded', function () {
 
     processButton.addEventListener('click', function () {
         routine('BatML')
-        /*if (!multipleAudio) {
-            processButtonRoutine(fileInput.files[0],audioLength,'BatML')
-        } else {
-            Array.from(multipleAudioFile.files).forEach((file, i) => {
-                processButtonRoutine(file,multipleAudioLength[i],'BatML')
-            })
-        }*/
     });
 
     processButton2.addEventListener('click', function () {
         routine('BirdNET')
-        /*if (!multipleAudio) {
-            processButtonRoutine(fileInput.files[0],audioLength,'BirdNET')
-        } else {
-            Array.from(multipleAudioFile.files).forEach((file, i) => {
-                processButtonRoutine(file,multipleAudioLength[i],'BirdNET')
-            })
-        }*/
     });
 
 
     processButton3.addEventListener('click', function () {
         routine('BattyBirdNET')
-        /*if (!multipleAudio) {
-            processButtonRoutine(fileInput.files[0],audioLength,'BattyBirdNET')
-        } else {
-            Array.from(multipleAudioFile.files).forEach((file, i) => {
-                processButtonRoutine(file,multipleAudioLength[i],'BattyBirdNET')
-            })
-        }*/
     });
 
     processButton4.addEventListener('click', function () {
         routine('batdetect2')
-        /*if (!multipleAudio) {
-            processButtonRoutine(fileInput.files[0],audioLength,'batdetect2')
-        } else {
-            Array.from(multipleAudioFile.files).forEach((file, i) => {
-                processButtonRoutine(file,multipleAudioLength[i],'batdetect2')
-            })
-        }*/
-    });
-
-    processButton5.addEventListener('click', function () {
-        routine('BatML')
-        /*const formData = new FormData();
-
-        if (multipleAudio) {
-            Array.from(multipleAudioFile.files).forEach((file, index) => {
-                checkAudio(file,multipleAudioLength[index])
-                formData.append(`audio`, file)
-                formData.append(`duration`, multipleAudioLength[index])
-            })
-            predictedTime(multipleAudioLength,'BatML',Array.from(multipleAudioFile.files).map((f) => f.size),"grjf")
-        } else {
-            checkAudio(fileInput.files[0],audioLength)
-            formData.append('audio',fileInput.files[0])
-            formData.append('duration',audioLength)
-            predictedTime([audioLength],'BatML',[fileInput.files[0].size],"greg")
-
-        }
-
-        formData.append('chosenAI', 'BatML');
-        if (marker != null) {
-            formData.append('lat', marker._latlng.lat);
-            formData.append('lng', marker._latlng.lng);
-        }
-        
-
-        processRequest(formData,"gfdvg",123)*/
     });
 
     function routine(ai) {
@@ -1456,11 +1313,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
     validateButton.addEventListener('click', function () {
         // in isExpert case : regions==unremovableRegions
-        saveAnnotationToServer(annotation_name,fileInput.files[0].name,unremovableRegions,userName,'validated');
+        saveAnnotationToServer(annotation_name,fileInput.files[0].name,unremovableRegions,userName,'validated',false);
     });
 
     uploadButton.addEventListener('click', function () {
-        saveAnnotationToServer(annotation_name,fileInput.files[0].name,unremovableRegions,userName,"other");
+        saveAnnotationToServer(annotation_name,fileInput.files[0].name,unremovableRegions,userName,"other",false);
 
     });
 

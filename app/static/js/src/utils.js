@@ -108,7 +108,7 @@ const csrfToken = document.getElementById('csrf_token').value;
  * upload to server
  * FROM : https://github.com/smart-audio/audio_diarization_annotation/tree/master
  */
-export function saveAnnotationToServer(annotation_name,filename,regions,userName,destination) {
+export function saveAnnotationToServer(annotation_name,filename,regions,userName,destination,append) {
     // ! this saves also the response of the AI, maybe we should change this ?
     let data = JSON.stringify(
         Object.keys(regions).map(function (id) {
@@ -134,7 +134,7 @@ export function saveAnnotationToServer(annotation_name,filename,regions,userName
     else if (destination == "local") { path = "/users/" + userName + "/annotation/" + annotation_name}
     else {path = "/uploads/" + annotation_name}
     
-    fetch(path, {
+    fetch(path+`?arg=${append}`, {
     //fetch("/annotation/" + annotation_name, {
         method: "POST",
         body: data,
