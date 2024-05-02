@@ -483,7 +483,7 @@ def process():
     import wave
     # trying to open it checks if it has a valid header
     data = {'AI': session['AI'],'message':[]}
-    for file in files:
+    for idx,file in enumerate(files):
         with wave.open(file, 'rb') as wav_file:
             print(wav_file)
             pass
@@ -526,9 +526,9 @@ def process():
                 print('FILE NOT FOUND IN DB')
                 filename = str(hash(secured_filename+current_user.username))+".wav"
                 if request.form.get('lat') is not None:
-                    new_file = File(name=secured_filename, hashName=filename, username=current_user.username,lat=request.form.get('lat'),lng=request.form.get('lng'),duration=duration)
+                    new_file = File(name=secured_filename, hashName=filename, username=current_user.username,lat=request.form.get('lat'),lng=request.form.get('lng'),duration=durations[idx])
                 else:
-                    new_file = File(name=secured_filename, hashName=filename, username=current_user.username, duration=duration)
+                    new_file = File(name=secured_filename, hashName=filename, username=current_user.username, duration=durations[idx])
                 db.session.add(new_file)
                 db.session.commit()
 
@@ -537,56 +537,56 @@ def process():
             s3.Bucket(bucket_name).put_object(Key=current_user.username+'/'+filename,Body=file)
             data['message'].append(current_user.username+'/'+filename)
 
-        #data = {'message': current_user.username+'/'+filename, 'AI': session['AI']}
-        json_data = json.dumps(data)
-        print("request posted !")
-        
-        #""" comment this block for testing locally because s3 not available with localhost
-        ###### and use the csv fake_labels.csv with fake labels
-        #response = requests.post('https://gotham.inl.ovh/process_on_second_machine', data=json_data, headers=headers)
-        
-        # Construct the curl command
-        curl_command = ['curl', '-X', 'POST', '-H', 'Content-Type: application/json', '-d', json_data, 'https://gotham.inl.ovh/process_on_second_machine']
+    #data = {'message': current_user.username+'/'+filename, 'AI': session['AI']}
+    json_data = json.dumps(data)
+    print("request posted !")
+    
+    #""" comment this block for testing locally because s3 not available with localhost
+    ###### and use the csv fake_labels.csv with fake labels
+    #response = requests.post('https://gotham.inl.ovh/process_on_second_machine', data=json_data, headers=headers)
+    
+    # Construct the curl command
+    curl_command = ['curl', '-X', 'POST', '-H', 'Content-Type: application/json', '-d', json_data, 'https://gotham.inl.ovh/process_on_second_machine']
 
-        # Execute the curl command
-        try:
-            response = subprocess.run(curl_command, capture_output=True, text=True, check=True)
-            # Print the response
-            res = json.loads(response.stdout)
-            print("Response:", res)
-            return jsonify(res)
-        except subprocess.CalledProcessError as e:
-            # Handle any errors
-            print("Error:", e.stderr)
+    # Execute the curl command
+    try:
+        response = subprocess.run(curl_command, capture_output=True, text=True, check=True)
+        # Print the response
+        res = json.loads(response.stdout)
+        print("Response:", res)
+        return jsonify(res)
+    except subprocess.CalledProcessError as e:
+        # Handle any errors
+        print("Error:", e.stderr)
 
-        #print(response)
-        #print(response.json())
-        print('request recieved !')
-        # Save the received CSV file on the first machine
-        #with open('received_classification_result_' + current_user.username + '.csv', 'wb') as f:
-        #    f.write(response.content)
-        #"""
+    #print(response)
+    #print(response.json())
+    print('request recieved !')
+    # Save the received CSV file on the first machine
+    #with open('received_classification_result_' + current_user.username + '.csv', 'wb') as f:
+    #    f.write(response.content)
+    #"""
 
-        # Process the file using your AI model function
-        results = [[],[],[],[]]
-        
-        #with open('received_classification_result_' + current_user.username + '.csv') as resultfile:
-        """with open('fake_labels.csv') as resultfile:
-            next(resultfile)
-            for line in resultfile:
-                line = line.strip().split(',')
-                if float(line[4]) > 0.5: 
-                    results[0].append(line[1])
-                    results[1].append(line[2])
-                    results[2].append(line[3])
-                    results[3].append(line[4])
-                
+    # Process the file using your AI model function
+    results = [[],[],[],[]]
+    
+    #with open('received_classification_result_' + current_user.username + '.csv') as resultfile:
+    """with open('fake_labels.csv') as resultfile:
+        next(resultfile)
+        for line in resultfile:
+            line = line.strip().split(',')
+            if float(line[4]) > 0.5: 
+                results[0].append(line[1])
+                results[1].append(line[2])
+                results[2].append(line[3])
+                results[3].append(line[4])
+            
 
-        print(results)
-        return jsonify({'result': results[2], 'start': results[0], 'end': results[1], 'probability':results[3], 'AI':session['AI']})
-        """
+    print(results)
+    return jsonify({'result': results[2], 'start': results[0], 'end': results[1], 'probability':results[3], 'AI':session['AI']})
+    """
 
-        #return jsonify(response_data.json())
+    #return jsonify(response_data.json())
 
     return jsonify({'error': 'Invalid file format'})
 
