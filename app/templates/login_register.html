@@ -97,6 +97,7 @@
                 <label class="form-check-label" for="agreeTerms">I authorize the sharing of my audio files</label>
             </div>
             <input type="submit" value="Sign Up">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         </form>
 
         <p class="terms">
@@ -124,6 +125,7 @@
             <label for="logPassword">Password:</label>
             {{ logForm.password }}
             <input type="submit" value="Sign In">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         </form>
     </div>
 

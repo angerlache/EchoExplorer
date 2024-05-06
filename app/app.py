@@ -321,7 +321,9 @@ def retrieve_allspecies():
     if request.args.get('arg') == 'all':
         names = annotations.distinct("annotations.label")
     else:
-        names = local_annotations.distinct("annotations.label")
+        users_annotations = local_annotations.find({'username':request.args.get('arg2')})
+        names = users_annotations.distinct("annotations.label")
+
     print("all species in db :",names)
     return jsonify({'species':names})
 
@@ -573,7 +575,8 @@ def process():
     results = [[],[],[],[]]
     
     #with open('received_classification_result_' + current_user.username + '.csv') as resultfile:
-    """with open('fake_labels.csv') as resultfile:
+    """
+    with open('fake_labels.csv') as resultfile:
         next(resultfile)
         for line in resultfile:
             line = line.strip().split(',')

@@ -1,19 +1,19 @@
 
-export function generateColorMap() {
+export function generateColorMap(rVal, gVal, bVal,alpha) {
     const colorMap = [];
 
     for (let i = 0; i < 256; i++) {
         const gradient = i / 255;
-        const r = Math.sin(gradient * Math.PI * 2) * 0.5 + 0.5;
-        const g = Math.sin(gradient * Math.PI * 2 + (2 / 3) * Math.PI) * 0.5 + 0.5;
-        const b = Math.sin(gradient * Math.PI * 2 + (4 / 3) * Math.PI) * 0.5 + 0.5;
-        const alpha = 1.0;
+        const r = Math.sin(gradient * Math.PI * 2 + rVal * Math.PI) * 0.5 + 0.5;  //0
+        const g = Math.sin(gradient * Math.PI * 2 + gVal * Math.PI) * 0.5 + 0.5;  //2/3
+        const b = Math.sin(gradient * Math.PI * 2 + bVal * Math.PI) * 0.5 + 0.5;  //4/3
 
         colorMap.push([r, g, b, alpha]);
     }
 
     return colorMap;
 }
+
 
 export function containsRegion(obj, list) {
     var i;
@@ -233,7 +233,8 @@ export function addTaxonomy(taxList, iter = 0) {
             check.classList.add('form-check-input');
             check.id = label.toLowerCase();
             check.type = "checkbox";
-            check.value = "Allcheckbox" //TODO find safer way, this is dumb
+            check.classList.add('Allcheckbox')
+            check.value = label
             li.appendChild(check);
 
             const a = document.createElement('label');

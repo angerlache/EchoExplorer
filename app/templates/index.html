@@ -148,11 +148,36 @@
 
 
         <div class="btn-group">
-            <button type="button" id="optionsButton" class="btn dropdown-toggle" data-bs-toggle="dropdown" style="font-size: 0.8rem;">Options</button>
+            <button type="button" id="optionsButton" class="btn dropdown-toggle" data-bs-auto-close="false" data-bs-toggle="dropdown" style="font-size: 0.8rem;">Options</button>
             <div class="dropdown-menu" style="width: auto;">
                 <label style="font-size: 0.8rem;">
                     Max Freq: <input type="range" id="maxFreq" min="4000" max="192000" value="96000"  oninput="this.nextElementSibling.value = this.value + 'Hz'" /> <output id="freqout"> 96000 Hz</output>
                 </label>
+                <div class="dropdown-divider"></div>
+                <label style="font-size: 0.8rem;">ColorMap Editor:</label>
+                <div>
+                    <label for="red-slider" style="font-size: 0.8rem; margin-right: 13px;">Red:</label>
+                    <input type="range" id="red-slider" name="red" min="-1" max="1" step="0.01" value="0" oninput="this.nextElementSibling.value = this.value"> <output id="redout">0</output>
+                </div>
+
+                <div>
+                    <label for="green-slider" style="font-size: 0.8rem;">Green:</label>
+                    <input type="range" id="green-slider" name="green" min="-1" max="1" step="0.01" value="0.66" oninput="this.nextElementSibling.value = this.value"> <output id="greenout">0.66</output>
+                </div>
+
+                <div>
+                    <label for="blue-slider" style="font-size: 0.8rem; margin-right: 9px;">Blue:</label>
+                    <input type="range" id="blue-slider" name="blue" min="-1" max="1" step="0.01" value="-0.66" oninput="this.nextElementSibling.value = this.value"> <output id="blueout">-0.66</output>
+                </div>
+
+                <div>
+                    <label for="alpha-slider" style="font-size: 0.8rem;">Alpha:</label>
+                    <input type="range" id="alpha-slider" name="alpha" min="0" max="1" step="0.01" value="1" oninput="this.nextElementSibling.value = this.value"> <output id="alphaout">1</output>
+                </div>
+
+                <button type="button" title="AI for bats" id="baseColorMap" class="btn dropdown-item" style="font-size: 0.8rem;">BaseColorMap</button>
+                <button type="button" title="AI for bats" id="bwColorMap" class="btn dropdown-item" style="font-size: 0.8rem;">Black and White</button>
+                <div class="dropdown-divider"></div>
                 <label id="proba-container" style="font-size: 0.8rem;">
                     Classification proba: <input type="range" id="proba-slider" min="0" max="100" value="50"  oninput="this.nextElementSibling.value = this.value + ' %'" /> <output id="probaout">50 %</output>
                 </label> 
@@ -182,7 +207,7 @@
         <div class="btn-group">
             <button type="button" id="speciesButton" title="check the species you want to display" class="btn dropdown-toggle" aria-expanded="false" data-bs-auto-close="false" data-bs-toggle="dropdown" style="font-size: 0.8rem;">Species</button>
                 
-            <ul class="dropdown-menu" id="speciesBoxes" aria-labelledby="dropdownCheckSpecies">
+            <ul class="dropdown-menu" id="speciesBoxes" style="width: auto;"aria-labelledby="dropdownCheckSpecies">
                 <li>
                     <input type="checkbox" id="option1" value="Envsp" checked><label style="font-size: 0.8rem;" for="option1"> Envsp</label>
                     <button class='btn btn-sm' id="showSubOptions1" style='padding: 0; width: 20px; height: 20px; font-size: 10px;'><i class='fa fa-angle-double-right'></i></button>
@@ -265,7 +290,7 @@
         </div>
 
         <div class="btn-group">
-            <button type="button" title="check the AI's you want to show the results" id="aiButton" class="btn dropdown-toggle" aria-expanded="false" data-bs-toggle="dropdown" style="font-size: 0.8rem;">AI</button>
+            <button type="button" title="check the AI's you want to show the results" id="aiButton" class="btn dropdown-toggle" data-bs-auto-close="false"aria-expanded="false" data-bs-toggle="dropdown" style="font-size: 0.8rem;">AI</button>
             <ul class="dropdown-menu" id="aiBoxes" aria-labelledby="dropdownCheckAI"> 
                 <li> <label style="font-size: 0.8rem;"> <input type="checkbox" value="Human" checked> Human </label> </li> 
                 <li> <label style="font-size: 0.8rem;"> <input type="checkbox" value="BatML" checked> BatML </label> </li> 
@@ -334,19 +359,19 @@
         <div class="modal-content">
             <div class="modal-body">
                 <div class="row">
-                    <div class="col-sm"class="dropdown" id="taxDiv">
+                    <div class="col-md-auto"class="dropdown" id="taxDiv">
                         <button class="btn btn-light dropdown-toggle" type="button" id="taxonomyButton" data-bs-auto-close="outside" data-bs-toggle="dropdown" aria-expanded="false">
                             Select Species
                         </button>
                     </div>
 
-                    <div class="col-sm">
-                        <button class="btn-secondary" type="button" id="resetSearch">
-                            Reset
+                    <div class="col-md-auto">
+                        <button class="btn btn-light" type="button" id="resetSearch">
+                            Apply
                         </button>
                     </div>
-                    
-                    <div class="col-sm">
+                    <div class="col-sm"></div>
+                    <div class="col-md-auto">
                             <input type="text" id="autoSearch" class="form-control" placeholder="Search species..">
                             <div class="position-absolute invisible" id="autoSearchComplete"></div>
                     </div>         

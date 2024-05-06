@@ -41,6 +41,11 @@ document.addEventListener('DOMContentLoaded', function () {
     const speciesButton = document.getElementById('speciesButton')
     const aiButton = document.getElementById('aiButton')
 
+    const redSlider = document.getElementById('red-slider');
+    const blueSlider = document.getElementById('blue-slider');
+    const greenSlider = document.getElementById('green-slider');
+    const alphaSlider = document.getElementById('alpha-slider');
+
     const validatedFilesSwitch = document.getElementById('validatedFilesSwitch')
     const myFilesSwitch = document.getElementById('myFilesSwitch')
     
@@ -73,7 +78,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const ul = addTaxonomy(TaxonomyList)
 
     ul.querySelectorAll('input[type="checkbox"]').forEach(input => {
-        if (input.value != "Allcheckbox") {
+        if (!input.classList.contains("Allcheckbox")) {
             input.addEventListener('change', (event) => {
                 if(input.checked){modalCheckedBoxes.push(input.value)}
                 else {
@@ -93,7 +98,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 let isChecked = input.checked;
                 input.parentNode.querySelectorAll('input[type="checkbox"]').forEach(input => {
                     input.checked = isChecked;
-                    if (isChecked && input.value != "Allcheckbox") {modalCheckedBoxes.push(input.value)}
+                    if (isChecked) {modalCheckedBoxes.push(input.value)}
                     else {
                         let index = modalCheckedBoxes.indexOf(input.value);
                         if (index !== -1) {
@@ -360,7 +365,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function setAllSpecies(whichFiles){
-        fetch(`/retrieve_allspecies?arg=${whichFiles}`, {
+        fetch(`/retrieve_allspecies?arg=${whichFiles}&arg2=${userName}`, {
             method: "GET"
         })
         .then(response => response.json())
@@ -847,7 +852,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 //frequencyMax: 52000,
                 fftSamples: 512,  // Adjust the number of FFT samples
                 labels: true,     // Show frequency labels
-                colorMap: generateColorMap(),  // Change the color map (viridis, plasma, inferno, etc.)
+                colorMap: generateColorMap(redSlider.value,greenSlider.value,blueSlider.value,alphaSlider.value),  // Change the color map (viridis, plasma, inferno, etc.)
                 //windowFunc: 'hann',   // Change the window function (hann, hamming, blackman, etc.)
                 //scrollParent: true    // Enable scrolling within the parent container
                 minPxPerSec: 1000,
@@ -1461,4 +1466,53 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
+    redSlider.addEventListener('change', (e) => {
+        reloadSpectrogram()
+    });
+    greenSlider.addEventListener('change', (e) => {
+        reloadSpectrogram()
+    });
+    blueSlider.addEventListener('change', (e) => {
+        reloadSpectrogram()
+    });
+    alphaSlider.addEventListener('change', (e) => {
+        reloadSpectrogram()
+    });
+    
+    document.getElementById("baseColorMap").addEventListener('click', () => {
+        setRgbSliders(0,0.66,-0.66,1)
+    });
+
+
+    document.getElementById("bwColorMap").addEventListener('click', () => {
+        setRgbSliders(1,1,1,1)
+    });
+
+    function setRgbSliders(r,g,b,a){
+        redSlider.value = r;
+        document.getElementById("redout").value = r;
+
+        greenSlider.value = g;
+        document.getElementById("greenout").value = g;
+
+        blueSlider.value = b;
+        document.getElementById("blueout").value = b;
+
+        alphaSlider.value = a;
+        document.getElementById("alphaout").value = a;
+
+        reloadSpectrogram();
+
+    }
+
+
+    function reloadSpectrogram(){
+        wavesurfer.plugins.forEach(plugin => {
+            if(plugin.hasOwnProperty("spectrCc")){
+                plugin.colorMap = generateColorMap(redSlider.value,greenSlider.value,blueSlider.value,alphaSlider.value),
+                plugin.render()
+            };
+        });
+
+    }
 });
