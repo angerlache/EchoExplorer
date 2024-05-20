@@ -75,7 +75,7 @@ def run_classifier(model, audio, file_dur, samp_rate, threshold_classes, chunk_s
     Uses the model to predict the time, class and confidence level of bat calls in the file.
 
     Parameters
-    -----------
+    ----------- 
     model : Classifier
         Model used to detect and classify.
     audio : numpy array
@@ -107,6 +107,7 @@ def run_classifier(model, audio, file_dur, samp_rate, threshold_classes, chunk_s
 
     # files can be long so we split each up into separate (overlapping) chunks
     st_positions = np.arange(0, file_dur, chunk_size-model.params.window_size)
+    all_prob = {}
     for chunk_id, st_position in enumerate(st_positions):
 
         # take a chunk of the audio
@@ -116,9 +117,22 @@ def run_classifier(model, audio, file_dur, samp_rate, threshold_classes, chunk_s
 
         # make predictions
         tic = time.time()
-        pos, prob, classes = model.test_single(audio_chunk, samp_rate)
+        pos, prob, classes, notbatprob = model.test_single(audio_chunk, samp_rate)
         toc = time.time()
         test_time.append(round(toc-tic, 3))
+
+        cmult = 1.0
+        if do_time_expansion:
+            cmult = 10.0
+
+        # add all values to dictionnary for voting
+        for i in range (len(pos)):
+            k = (pos[i]+((chunk_size-model.params.window_size)*chunk_id))/cmult
+            if k in all_prob:
+                all_prob[k][1].append((classes[i],prob[i]))
+            else:
+                all_prob[k] = [notbatprob[i],[(classes[i],prob[i])]]
+        
 
         if pos.shape[0] > 0:
             prob = prob[:, 0]
@@ -129,12 +143,13 @@ def run_classifier(model, audio, file_dur, samp_rate, threshold_classes, chunk_s
                 inds = (prob >= threshold_classes[classes])
             else:
                 inds = (prob >= threshold_classes[classes]) & (pos < (chunk_size-(model.params.window_size/2.0)))
-
             # keep valid detections and convert detection time back into global time
             if pos.shape[0] > 0:
                 call_time.append(pos[inds] + st_position)
                 call_prob.append(prob[inds])
                 call_class.append(classes[inds])
+
+
 
     if len(call_time) > 0:
         call_time = np.hstack(call_time)
@@ -150,7 +165,7 @@ def run_classifier(model, audio, file_dur, samp_rate, threshold_classes, chunk_s
     print('nms computation time', model.params.nms_computation_time, '(secs)')
     print('detect time total', model.params.detect_time, '(secs)')
     print('classif time total', model.params.classif_time, '(secs)')
-    return call_time, call_prob, call_class
+    return call_time, call_prob, call_class, all_prob
 
 
 if __name__ == "__main__":
@@ -176,9 +191,10 @@ if __name__ == "__main__":
 
     audio_files = glob.glob(data_dir + '*.wav')
 
-    # name of the result file
+    # name of the result and data file
     classification_result_file = result_dir + 'classification_result_' + sys.argv[1] + '.csv'
-    
+    classification_data_file = result_dir + 'classification_data_' + sys.argv[1] + '.csv'
+
     if not os.path.isdir(result_dir):
         os.makedirs(result_dir)
 
@@ -281,6 +297,7 @@ if __name__ == "__main__":
 
     print("model name =", model_name)
     results = []
+    all_prob = {}
     # load audio file names and loop through them
     #audio_files = glob.glob(data_dir + '*.wav')
     for file_cnt, file_name in enumerate(audio_files):
@@ -295,8 +312,9 @@ if __name__ == "__main__":
         if file_dur>4:
             # run classifier
             tic = time.time()
-            call_time, call_prob, call_classes = run_classifier(model_cls, audio, file_dur, samp_rate, threshold_classes, chunk_size)
+            call_time, call_prob, call_classes, temp_all_prob = run_classifier(model_cls, audio, file_dur, samp_rate, threshold_classes, chunk_size)
             toc = time.time()
+            all_prob[file_name_root] = temp_all_prob
             print("total time = ",toc-tic)
             num_calls = len(call_time)
             if num_calls>0:
@@ -330,3 +348,19 @@ if __name__ == "__main__":
     else:
         print('no detections to save')
         wo.save_to_txt(classification_result_file, results)
+
+
+
+    with open(classification_data_file, 'w') as file:
+            head_str = 'filename,time,batproba,0,1,2,3,4,5,6'
+            file.write(head_str + '\n')
+            for filename in all_prob.keys() :
+                for key in all_prob[filename]:
+                    row_str = str(filename) + ',' + str(key) + ',' + str(1-all_prob[filename][key][0])
+                    row = all_prob[filename][key][1]
+                    for i in range(7):
+                        row_str += ',' + str(row[i][1][0])
+                    file.write(row_str + '\n')
+
+    
+

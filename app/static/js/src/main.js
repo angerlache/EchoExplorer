@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const processButton2 = document.getElementById('processButton2');
     const processButton3 = document.getElementById('processButton3');
     const processButton4 = document.getElementById('processButton4');
+    const processButton5 = document.getElementById('processButton5');
     const startAI = document.getElementById('startAI');
     const visualizeButton = document.getElementById('visualizeButton');
     const playButton = document.getElementById('playButton');
@@ -68,8 +69,8 @@ document.addEventListener('DOMContentLoaded', function () {
     let SelectedSpecies = ['Barbarg', 'Envsp', 'Myosp', 'Pip35', 'Pip50', 'Plesp', 'Rhisp','Region','other',"Barbastella barbastellus", "Eptesicus nilssonii", "Eptesicus serotinus", "Myotis alcathoe", "Myotis bechsteinii", "Myotis brandtii", "Myotis capaccinii", "Myotis dasycneme", "Myotis daubentonii", "Myotis emarginatus", "Myotis myotis", "Myotis mystacinus", "Myotis nattereri", "Nyctalus lasiopterus", "Nyctalus leisleri", "Nyctalus noctula", "Pipistrellus kuhlii", "Pipistrellus maderensis", "Pipistrellus nathusii", "Pipistrellus pipistrellus", "Pipistrellus pygmaeus", "Rhinolophus blasii", "Rhinolophus ferrumequinum", "Rhinolophus hipposideros", "Vespertilio murinus",'Plecotus auritus','Plecotus austriacus']; 
     let SpeciesList = ['Barbarg', 'Envsp', 'Myosp', 'Pip35', 'Pip50', 'Plesp', 'Rhisp','Region','other',"Barbastella barbastellus", "Eptesicus nilssonii", "Eptesicus serotinus", "Myotis alcathoe", "Myotis bechsteinii", "Myotis brandtii", "Myotis capaccinii", "Myotis dasycneme", "Myotis daubentonii", "Myotis emarginatus", "Myotis myotis", "Myotis mystacinus", "Myotis nattereri", "Nyctalus lasiopterus", "Nyctalus leisleri", "Nyctalus noctula", "Pipistrellus kuhlii", "Pipistrellus maderensis", "Pipistrellus nathusii", "Pipistrellus pipistrellus", "Pipistrellus pygmaeus", "Rhinolophus blasii", "Rhinolophus ferrumequinum", "Rhinolophus hipposideros", "Vespertilio murinus",'Plecotus auritus','Plecotus austriacus'];  
 
-    let SelectedAI = ['Human', 'BatML', 'BirdNET', 'BattyBirdNET', 'batdetect2'];
-    let AIlist = ['Human', 'BatML', 'BirdNET', 'BattyBirdNET', 'batdetect2'];
+    let SelectedAI = ['Human', 'BatML', 'BirdNET', 'BattyBirdNET', 'batdetect2','AIVoting'];
+    let AIlist = ['Human', 'BatML', 'BirdNET', 'BattyBirdNET', 'batdetect2','AIVoting'];
     const TaxonomyList = [
         'Bird',
         ['Bat', [['Barbarg',['Barbastella barbastellus']], ['Pip35',['Pipistrellus kuhlii','Pipistrellus nathusii']], ['Pip50',['Pipistrellus maderensis','Pipistrellus pipistrellus','Pipistrellus pygmaeus']], ['Envsp',['Eptesicus nilssonii','Eptesicus serotinus','Nyctalus lasiopterus','Nyctalus leisleri','Nyctalus noctula','Vespertilio murinus']],['Myosp',['Myotis alcathoe','Myotis bechsteinii','Myotis brandtii','Myotis capaccinii','Myotis dasycneme','Myotis daubentonii','Myotis emarginatus','Myotis myotis','Myotis mystacinus','Myotis nattereri']],['Plesp',['Plecotus austriacus','Plecotus auritus']],['Rhisp',['Rhinolophus blasii','Rhinolophus ferrumequinum','Rhinolophus hipposideros']]]]
@@ -1287,7 +1288,12 @@ document.addEventListener('DOMContentLoaded', function () {
     processButton4.addEventListener('click', function () {
         routine('batdetect2')
     });
+    processButton5.addEventListener('click', function () {
+        routine('AIVoting')
+    });
 
+
+    
     function routine(ai) {
         const formData = new FormData();
 

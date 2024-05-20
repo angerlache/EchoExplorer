@@ -299,24 +299,28 @@ class NeuralNet:
         call_predictions_not_bat = y_predictions_detect[:,0]
         high_preds = np.array([np.max(x) for x in call_predictions_bat])[:, np.newaxis] #=call_predictions_bat
         pred_classes = np.array([np.argmax(x)+1 for x in call_predictions_bat])[:, np.newaxis]# array de 1
-        
+
         # perform non max suppression
         pos, prob, pred_classes, call_predictions_not_bat, features = nms.nms_1d(high_preds[:,0].astype(np.float32), pred_classes, 
                                                                     call_predictions_not_bat, features, self.params.nms_win_size, file_duration)
+        
         
         # remove pred that have a higher probability of not being a bat
         pos_bat = []
         prob_bat = []
         pred_classes_bat = []
         features_bat = []
+        not_bat = []
         for i in range(len(pos)):
             if prob[i][0]>call_predictions_not_bat[i]:
                 pos_bat.append(pos[i])
                 prob_bat.append(prob[i])
                 pred_classes_bat.append(pred_classes[i])
                 features_bat.append(features[i])
+                not_bat.append(call_predictions_not_bat[i])
         toc=time.time()
         self.params.nms_computation_time += toc-tic
+
 
         # perform classification
         tic = time.time()
@@ -331,7 +335,7 @@ class NeuralNet:
 
         nms_pos = np.array(pos_bat*7)
         nms_prob = pred_proba
-        return nms_pos, nms_prob, pred_classes, nb_windows
+        return nms_pos, nms_prob, pred_classes, not_bat, nb_windows
 
 
 

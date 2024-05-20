@@ -25,7 +25,7 @@ def cli():
     click.echo(INFO_STR)
 
 
-@cli.command()
+@cli.command() 
 @click.argument(
     "audio_dir",
     type=click.Path(exists=True),
@@ -78,6 +78,13 @@ def cli():
     default=DEFAULT_MODEL_PATH,
     help="Path to trained BatDetect2 model",
 )
+@click.option(
+    "--voting",
+    is_flag = True,
+    default=False,
+    help="the ai is called before AI voting, changes output type by changing argument return_raw_preds" 
+
+)
 def detect(
     audio_dir: str,
     ann_dir: str,
@@ -114,6 +121,7 @@ def detect(
             "spec_slices": False,
             "chunk_size": 2,
             "detection_threshold": detection_threshold,
+            "return_raw_preds" : args["voting"],
         }
     )
 
@@ -128,12 +136,48 @@ def detect(
                 click.echo(f"\n{index} {audio_file}")
 
             results = api.process_file(audio_file, model, config=config)
+            
+            
+            if args["voting"] and len(results["start_times"]) > 0:
+                stimes = results["start_times"]
+                etimes = results["end_times"]
+                detprob = results["det_probs"]
+                classprobs= results["class_probs"]
 
-            if args["save_preds_if_empty"] or (
+                results_path = audio_file.replace(audio_dir, ann_dir)
+
+                audiosplit = audio_file
+                for delimiter in ['/','\\']:
+                    audiosplit = " ".join(audiosplit.split(delimiter))
+                audiosplit = audiosplit.split(" ")
+                import os
+
+                if not os.path.isdir(os.path.dirname(results_path)):
+                    os.makedirs(os.path.dirname(results_path))
+                with open("results/" + audiosplit[1] +'/classification_data_' + audiosplit[2].split('.')[0] + '.csv', 'w') as file:
+                    head_str = 'file,start,end,batproba'
+                    for i in range(len(classprobs)):
+                        head_str += ',' + str(i)
+                    file.write(head_str + '\n')
+                    for i in range(len(stimes)):
+                        row_str = str(audiosplit[2]) + ',' + str(stimes[i]) + ',' +  str(etimes[i]) + ',' +  str(detprob[i])
+                        for j in range(len(classprobs)):
+                            row_str += ',' + str(classprobs[j][i])
+                        file.write(row_str + '\n')
+
+
+
+
+            elif args["save_preds_if_empty"] or (
                 len(results["pred_dict"]["annotation"]) > 0
             ):
                 results_path = audio_file.replace(audio_dir, ann_dir)
-                save_results_to_file(results, results_path, ann_dir+'/'+audio_file.split('/')[2])
+ 
+                audiosplit = audio_file
+                for delimiter in ['/','\\']:
+                    audiosplit = " ".join(audiosplit.split(delimiter))
+
+                save_results_to_file(results, results_path, ann_dir+'/'+audiosplit[2])
                 #save_results_to_file(results, results_path, ann_dir+'/classification_result_'+audio_file.split('/')[2])
         except (RuntimeError, ValueError, LookupError) as err:
             error_files.append(audio_file)
@@ -153,7 +197,7 @@ def detect(
     # Iterate through each file in the directory
     with open(output_file, 'w') as output_csv:
         for file_name in os.listdir(directory):
-            if file_name.endswith('.csv'):
+            if file_name != 'classification_result_'+user+'.csv' and file_name.endswith('.csv'):
                 with open(os.path.join(directory, file_name), 'r') as input_csv:
                     # Skip the header line if it's not the first file
                     if output_csv.tell() != 0:

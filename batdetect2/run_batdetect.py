@@ -3,3 +3,4 @@ from batdetect2.cli import detect
 
 if __name__ == "__main__":
     detect()
+    

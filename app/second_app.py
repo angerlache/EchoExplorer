@@ -95,6 +95,20 @@ def process_on_second_machine():
         os.chdir('../app')
         csv_filepath = '../batdetect2/results/'+username+'/classification_result_' + username + '.csv'
         #csv_filepath = '../batdetect2/results/'+username+'/classification_result_' + filename + '.csv'
+
+    elif AI == 'AIVoting':
+        if not os.path.exists('../AIVoting/samples/' + username):
+            os.mkdir('../AIVoting/samples/' + username)
+        if not os.path.exists('../AIVoting/results/' + username):
+            os.mkdir('../AIVoting/results/' + username)
+
+        for m in message:
+            s3.Bucket('biodiversity-lauzelle').download_file(m,'../AIVoting/samples/'+username+'/'+m.split('/')[1]) # has .wav
+        os.chdir('../AIVoting')
+        subprocess.run("python3 mergeAI.py "+username+" 0.05",shell=True, check=True)
+        os.chdir('../app')
+        csv_filepath = '../AIVoting/results/'+username+'/classification_result_' + username + '.csv'
+        
         
     results = [[],[],[],[],[]]
     with open(csv_filepath) as resultfile:

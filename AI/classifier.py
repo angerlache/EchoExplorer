@@ -171,8 +171,8 @@ class Classifier:
             Predicted class of each prediction.
         '''
         duration = audio_samples.shape[0]/float(sampling_rate)
-        nms_pos, nms_prob, pred_classes, _ = self.model.test("classification", file_duration=duration, audio_samples=audio_samples, sampling_rate=sampling_rate) # modif: renvoit aussi matches=classes
-        return nms_pos, nms_prob, pred_classes
+        nms_pos, nms_prob, pred_classes, notbat, _ = self.model.test("classification", file_duration=duration, audio_samples=audio_samples, sampling_rate=sampling_rate) # modif: renvoit aussi matches=classes
+        return nms_pos, nms_prob, pred_classes, notbat
 
     def test_batch(self, goal, files, durations):
         """
