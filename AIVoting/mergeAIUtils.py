@@ -139,6 +139,7 @@ def compute(df, groups,species, batmlbatprob,groupprob,batdetectbatprob,batdetec
                         newr.append(groups[gproba.index(m)])
                         newr.append(m * batprob)
         if(newr != []):
+            newr[-1] =round(newr[-1],3) 
             preds.append(newr)
 
     df = pd.DataFrame(preds, columns = ['Start','End','Spec/Group','ClassificationProba']) 
