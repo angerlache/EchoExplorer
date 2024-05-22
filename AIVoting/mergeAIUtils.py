@@ -62,7 +62,7 @@ def merge(df1, df2, time_tolerance):
             
 
             newl = {
-                "timestamp": time,
+                "timestamp": round(time,3) ,
                 "batml_time": row1['time'] if not row1.empty else None,
                 "batml_batproba": row1['batproba'] if not row1.empty else None,
                 "batml_species": list(row1["0":]) if not row1.empty else [None] * 7,
