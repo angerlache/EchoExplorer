@@ -469,6 +469,9 @@ def predicted_time():
     elif data.get('AI') == 'BattyBirdNET':
         response_data = {'predicted_time': max(10,sum(duration)/5.5 +sum(size)/1e6/1.15)}
 
+    elif data.get('AI') == 'AIVoting':
+        response_data = {'predicted_time': ( max(10,sum(duration)/10 + sum(size)/1e6/1.15)) + (max(10,sum(duration)/3 + sum(size)/1e6/1.15))}
+
 
     return jsonify(response_data)
 
