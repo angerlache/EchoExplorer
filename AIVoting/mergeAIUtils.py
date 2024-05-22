@@ -65,10 +65,10 @@ def merge(df1, df2, time_tolerance):
                 "timestamp": time,
                 "batml_time": row1['time'] if not row1.empty else None,
                 "batml_batproba": row1['batproba'] if not row1.empty else None,
-                "batml_species": list(row1[2:]) if not row1.empty else [None] * 7,
+                "batml_species": list(row1["0":]) if not row1.empty else [None] * 7,
                 "batdetect_start": row2['start'] if not row2.empty else None,
                 "batdetect_batproba": row2['batproba'] if not row2.empty else None,
-                "batdetect_species": list(row2[4:]) if not row2.empty else [None] * 17
+                "batdetect_species": list(row2["0":]) if not row2.empty else [None] * 17
             }
             newresults.append(newl)
 
@@ -92,9 +92,10 @@ def addGroupProba(df, table):
     df["groupProbas"]= newcol
     return df
 
-def compute(df, groups,species, batmlbatprob,groupprob,batdetectbatprob,batdetectspeprob,totalprob):
+def compute(df, groups,species, batmlbatprob,groupprob,batdetectbatprob,batdetectspeprob,totalprob,batmlWeight,batdetectWeight):
     preds = []
     for i, row in df.iterrows():
+
         newr = []
         if pd.isna(row["batdetect_start"]) and float(row["batml_batproba"]) >  batmlbatprob:
             m = max(row["batml_species"])
@@ -102,7 +103,7 @@ def compute(df, groups,species, batmlbatprob,groupprob,batdetectbatprob,batdetec
                 newr.append(row["timestamp"])
                 newr.append(row["timestamp"])
                 newr.append(groups[row["batml_species"].index(m)])
-                newr.append(m)
+                newr.append(m * row["batml_batproba"])
 
 
         elif pd.isna(row["batml_time"]) and float(row["batdetect_batproba"]) >  batdetectbatprob:
@@ -116,16 +117,15 @@ def compute(df, groups,species, batmlbatprob,groupprob,batdetectbatprob,batdetec
                     newr.append(mx)
                 else:
                     newr.append(groups[row["groupProbas"].index(m)])
-                    newr.append(m)
+                    newr.append(m * row["batdetect_batproba"])
         else:
             proba1 = row["batml_batproba"]
             proba2 = row["batdetect_batproba"]              
-            
-            batprob = (proba1 + proba2) / 2    
+            batprob = ((batmlWeight*proba1) + (batdetectWeight*proba2)) 
             if(batprob >= totalprob):
                 gproba = []
                 for groupid in range(7):   
-                    gproba.append((row["batml_species"][groupid] + row["groupProbas"][groupid])/2)
+                    gproba.append(((batmlWeight*row["batml_species"][groupid]) + (batdetectWeight * row["groupProbas"][groupid])))
                 
                 m = max(gproba)
                 if(m > groupprob):
@@ -134,10 +134,10 @@ def compute(df, groups,species, batmlbatprob,groupprob,batdetectbatprob,batdetec
                     newr.append(row["timestamp"])
                     if(mx>batdetectspeprob):
                         newr.append(species[row["batdetect_species"].index(mx)])
-                        newr.append(mx)
+                        newr.append(mx * batprob)
                     else:
                         newr.append(groups[gproba.index(m)])
-                        newr.append(m)
+                        newr.append(m * batprob)
         if(newr != []):
             preds.append(newr)
 

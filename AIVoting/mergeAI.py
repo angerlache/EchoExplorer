@@ -10,11 +10,16 @@ import shutil
 username = sys.argv[1] 
 time_tolerance = float(sys.argv[2])  # 0.05
 
+#  batmlbatprob : probability of being a bat for ML, probabily of belonging to a group for either,    0.8 0.5
+#  probabilty of being a bat for both, probabilty of being a specific specie ml, merged proba      0.6 0.8 0.5
+#  add weights to each AIs proba
+
+
 
 #specieTables
 batdetectSpecies = ['Barbastellus barbastellus', 'Eptesicus serotinus', 'Myotis alcathoe', 'Myotis bechsteinii', 'Myotis brandtii', 'Myotis daubentonii', 'Myotis mystacinus', 'Myotis nattereri', 'Nyctalus leisleri', 'Nyctalus noctula', 'Pipistrellus nathusii', 'Pipistrellus pipistrellus', 'Pipistrellus pygmaeus', 'Plecotus auritus', 'Plecotus austriacus', 'Rhinolophus ferrumequinum', 'Rhinolophus hipposideros']
 group_names = ['Barbarg', 'Envsp', 'Myosp', 'Pip35','Pip50', 'Plesp', 'Rhisp']
-index = {0:[0], 1:[1,8,9], 2:[13,14],3:[2,3,4,5,6,7],4:[10],5:[11,12],6:[15,16]}
+index = {0:[0], 1:[1,8,9], 2:[2,3,4,5,6,7], 3:[13,14], 4:[10],5:[13,14],6:[15,16]}
 
 
 
@@ -43,8 +48,7 @@ subprocess.run('{} {} {}'.format('python3', 'run_classifier.py', username)+ " &&
 #run Batdetect2
 os.chdir('../batdetect2')
 #"source /home/batmen/anthony/myenv/bin/activate && " +   |||  + "&& rm -rf samples/"+username+"/ && rm -rf results/"+username+"/*.wav.csv" 
-subprocess.run("source /home/batmen/anthony/myenv/bin/activate && " + "{} {} {} {} {} {} {}".format("python3", "run_batdetect.py", "samples/"+username, "results/"+username, 0.5, username, "--voting")+ " && rm -rf samples/"+username+"/ && rm -rf results/"+username+"/*.wav.csv" , shell=True, check=True)
-
+subprocess.run("source /home/batmen/anthony/myenv/bin/activate && " +  "{} {} {} {} {} {} {}".format("python3", "run_batdetect.py", "samples/"+username, "results/"+username, 0.5, username, "--voting") + "&& rm -rf samples/"+username+"/ && rm -rf results/"+username+"/*.wav.csv", shell=True, check=True)
 os.chdir('../batdetect2')
 
 print(os.getcwd())
@@ -82,8 +86,9 @@ for filename in os.listdir("samples/"+username):
         newdf = utils.addGroupProba(mergedDf, index)
 
 
+        preds = utils.compute(newdf, group_names,batdetectSpecies,0.8, 0.5, 0.6, 0.8,0.5,0.5,0.5)
 
-        preds = utils.compute(newdf, group_names,batdetectSpecies,0.8, 0.5, 0.6, 0.8,0.5)
+
 
         preds.insert(0, "Filename", filename, True)
         if i == 0:
