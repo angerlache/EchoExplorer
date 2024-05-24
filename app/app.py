@@ -652,7 +652,11 @@ def annotation(username,path):
         else:
             if arg == 'false':doc["annotations"] = data
             if arg == 'true':doc["annotations"] += data
-            local_annotations.update_one({'_id': doc['_id'],'username':username}, {'$set': {'annotations': doc['annotations'], 'validated': doc['validated'], 'validated_by': doc['validated_by']}})
+            to_search = local_annotations.find_one({'_id': doc['_id'],'username':username})
+            if to_search is None:
+                local_annotations.insert_one(doc)
+            else:  
+                local_annotations.update_one({'_id': doc['_id'],'username':username}, {'$set': {'annotations': doc['annotations'], 'validated': doc['validated'], 'validated_by': doc['validated_by']}})
  
         return jsonify({'res': 'ok'})
     
