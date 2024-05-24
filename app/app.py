@@ -332,7 +332,7 @@ def delete_annotation():
     file = request.args.get('file')
     user = request.args.get('user')
 
-    result = local_annotations.delete_one({'_id': file})
+    result = local_annotations.delete_one({'_id': file,'username':user})
     doc = annotations.find_one({'_id': file})
     if doc is None and user==current_user.username:
         q = File.query.filter_by(hashName=file).first()
@@ -352,9 +352,10 @@ def delete_annotation():
 def rename_annotation():
     file = request.args.get('file')
     new_name = request.args.get('newname')
+    username = current_user.username
 
-    doc = local_annotations.find_one({'_id': file})
-    local_annotations.update_one({'_id': doc['_id']}, {'$set': {'old_name': new_name}})
+    doc = local_annotations.find_one({'_id': file,'username':username})
+    local_annotations.update_one({'_id': doc['_id'],'username':username}, {'$set': {'old_name': new_name}})
 
     return jsonify({'response': "ok"})
 
@@ -470,7 +471,7 @@ def predicted_time():
         response_data = {'predicted_time': max(10,sum(duration)/5.5 +sum(size)/1e6/1.15)}
 
     elif data.get('AI') == 'AIVoting':
-        response_data = {'predicted_time': ( max(10,sum(duration)/10 + sum(size)/1e6/1.15)) + (max(10,sum(duration)/3 + sum(size)/1e6/1.15))}
+        response_data = {'predicted_time': max(10,sum(duration)/10 + sum(duration)/3 + sum(size)/1e6/1.15)}
 
 
     return jsonify(response_data)
@@ -609,7 +610,7 @@ def annotation(username,path):
         hash_name = get_hashname(path+'.wav')
         if hash_name is None:
             return jsonify({"error": "file is not in the database"})
-        doc = local_annotations.find_one({'filename': hash_name})
+        doc = local_annotations.find_one({'filename': hash_name,'username':username})
         if doc is None:
             return jsonify({"error": "no save for this file"})
         return jsonify(doc.get('annotations',{}))
@@ -641,17 +642,17 @@ def annotation(username,path):
             to_add["location"] = {"type": "Point", "coordinates": [lng, lat]}
         doc = annotations.find_one({'filename': hash_name})
         if doc is None:
-            doc = local_annotations.find_one({'filename': hash_name})
+            doc = local_annotations.find_one({'filename': hash_name,'username':username})
             if doc is None: 
-                local_annotations.replace_one({"_id": hash_name}, to_add, upsert=True)
+                local_annotations.replace_one({"_id": hash_name,'username':username}, to_add, upsert=True)
             else:
                 if arg == 'false':doc["annotations"] = data
                 if arg == 'true':doc["annotations"] += data
-                local_annotations.update_one({'_id': doc['_id']}, {'$set': {'annotations': doc['annotations']}})
+                local_annotations.update_one({'_id': doc['_id'],'username':username}, {'$set': {'annotations': doc['annotations']}})
         else:
             if arg == 'false':doc["annotations"] = data
             if arg == 'true':doc["annotations"] += data
-            local_annotations.update_one({'_id': doc['_id']}, {'$set': {'annotations': doc['annotations'], 'validated': doc['validated'], 'validated_by': doc['validated_by']}})
+            local_annotations.update_one({'_id': doc['_id'],'username':username}, {'$set': {'annotations': doc['annotations'], 'validated': doc['validated'], 'validated_by': doc['validated_by']}})
  
         return jsonify({'res': 'ok'})
     
@@ -709,7 +710,7 @@ def pending_audio(path):
         if which_files == 'all':
             doc = annotations.find_one({'filename': hash_name})
         else:
-            doc = local_annotations.find_one({'filename': hash_name})
+            doc = local_annotations.find_one({'filename': hash_name,'username':current_user.username})
 
         if doc is None: 
             return jsonify({"error": "no save for this file"})
@@ -834,7 +835,7 @@ def split_audio():
 def download_csv():
     file = request.args.get('file')
     
-    doc = local_annotations.find_one({'_id': file})
+    doc = local_annotations.find_one({'_id': file,'username':current_user.username})
     to_csv = doc['annotations']
     keys = to_csv[0].keys()
 

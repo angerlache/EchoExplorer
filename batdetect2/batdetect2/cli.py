@@ -193,10 +193,10 @@ def detect(
 
     # Output file to store concatenated data
     output_file = ann_dir + '/classification_result_'+user+'.csv'
-
+    l = os.listdir(directory)
     # Iterate through each file in the directory
     with open(output_file, 'w') as output_csv:
-        for file_name in os.listdir(directory):
+        for file_name in l:
             if file_name != 'classification_result_'+user+'.csv' and file_name.endswith('.csv'):
                 with open(os.path.join(directory, file_name), 'r') as input_csv:
                     # Skip the header line if it's not the first file
@@ -204,6 +204,7 @@ def detect(
                         next(input_csv)
                     # Copy the contents of the file to the output file
                     for line in input_csv:
+                        line = line.replace('Barbastellus barbastellus', 'Barbastella barbastellus')
                         output_csv.write(line)
 
     if len(error_files) > 0:

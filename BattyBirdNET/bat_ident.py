@@ -675,10 +675,10 @@ if __name__ == "__main__":
 
     # Output file to store concatenated data
     output_file = args.o + '/classification_result_'+args.user+'.csv'
-
+    l = os.listdir(directory)
     # Iterate through each file in the directory
     with open(output_file, 'w') as output_csv:
-        for file_name in os.listdir(directory):
+        for file_name in l:
             if file_name.endswith('.csv'):
                 with open(os.path.join(directory, file_name), 'r') as input_csv:
                     # Skip the header line if it's not the first file
