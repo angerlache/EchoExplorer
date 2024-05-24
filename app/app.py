@@ -654,7 +654,10 @@ def annotation(username,path):
             if arg == 'true':doc["annotations"] += data
             to_search = local_annotations.find_one({'filename': doc['filename'],'username':username})
             if to_search is None:
-                local_annotations.insert_one(doc)
+                to_add['annotations'] = doc['annotations']
+                to_add['validated'] = doc['validated']
+                to_add['validated_by'] = doc['validated_by']
+                local_annotations.insert_one(to_add)
             else:  
                 local_annotations.update_one({'filename': doc['filename'],'username':username}, {'$set': {'annotations': doc['annotations'], 'validated': doc['validated'], 'validated_by': doc['validated_by']}})
  
