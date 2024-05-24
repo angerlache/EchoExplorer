@@ -657,6 +657,8 @@ def annotation(username,path):
                 to_add['annotations'] = doc['annotations']
                 to_add['validated'] = doc['validated']
                 to_add['validated_by'] = doc['validated_by']
+                if current_user.username != doc['username']:
+                    to_add['old_name'] = doc['filename']
                 local_annotations.insert_one(to_add)
             else:  
                 local_annotations.update_one({'filename': doc['filename'],'username':username}, {'$set': {'annotations': doc['annotations'], 'validated': doc['validated'], 'validated_by': doc['validated_by']}})
