@@ -195,7 +195,7 @@ def retrieve_myfilenames():
                     }
                 }
             })
-        documents = local_annotations.find({"$and": and_query}, {"_id":1, "old_name": 1, "username":1, 
+        documents = local_annotations.find({"$and": and_query}, {"filename":1, "old_name": 1, "username":1, 
                                                 "duration":1, "validated":1, "validated_by":1})
     else:
         orQuery = [{"label": species} for species in which_species]
@@ -218,16 +218,16 @@ def retrieve_myfilenames():
         else:
             and_query.append(q1)
         
-        documents = local_annotations.find({"$and": and_query},{"_id": 1, "old_name": 1, "username": 1, "duration": 1, "validated":1, "validated_by":1})
+        documents = local_annotations.find({"$and": and_query},{"filename": 1, "old_name": 1, "username": 1, "duration": 1, "validated":1, "validated_by":1})
         print("documents = ", documents)
     for doc in documents:
         if doc.get('username') == current_user.username:
             durations.append(doc.get("duration"))
-            userfiles.append(current_user.username+'/'+doc.get("_id")+'/'+doc.get("old_name"))
+            userfiles.append(current_user.username+'/'+doc.get("filename")+'/'+doc.get("old_name"))
             validated.append(doc.get('validated'))
             validated_by.append(doc.get('validated_by'))
-            lat.append(File.query.filter_by(hashName=doc.get("_id")).first().lat)
-            lng.append(File.query.filter_by(hashName=doc.get("_id")).first().lng)
+            lat.append(File.query.filter_by(hashName=doc.get("filename")).first().lat)
+            lng.append(File.query.filter_by(hashName=doc.get("filename")).first().lng)
 
     return jsonify({'audios':userfiles, 'durations': durations, 'lat': lat, 'lng': lng, 
                     'validated': validated, 'validated_by': validated_by})
@@ -273,7 +273,7 @@ def retrieve_allfilenames():
                     }
                 }
             })
-        documents = annotations.find({"$and": and_query}, {"_id":1, "username":1, "duration":1, 
+        documents = annotations.find({"$and": and_query}, {"filename":1, "username":1, "duration":1, 
                                           "validated": 1, "old_name": 1, "validated_by":1})
     else:
         orQuery = [{"label": species} for species in which_species]
@@ -295,19 +295,19 @@ def retrieve_allfilenames():
             and_query.append({'$or': [q1, q2]})
         else:
             and_query.append(q1)
-        documents = annotations.find({"$and": and_query},{"_id": 1, "old_name": 1, "username": 1, "duration": 1, "validated":1, "old_name": 1, "validated_by":1})
+        documents = annotations.find({"$and": and_query},{"filename": 1, "old_name": 1, "username": 1, "duration": 1, "validated":1, "old_name": 1, "validated_by":1})
         print(documents)
 
     for doc in documents:
         durations.append(doc.get("duration"))
         if doc.get('username') == current_user.username:
-            files.append(doc.get('username')+'/'+doc.get("_id")+'/'+doc.get("old_name"))
+            files.append(doc.get('username')+'/'+doc.get("filename")+'/'+doc.get("old_name"))
         else:
-            files.append(doc.get('username')+'/'+doc.get("_id")+'/'+doc.get("_id"))
+            files.append(doc.get('username')+'/'+doc.get("filename")+'/'+doc.get("filename"))
         validated.append(doc.get('validated'))
         validated_by.append(doc.get('validated_by'))
-        lat.append(File.query.filter_by(hashName=doc.get("_id")).first().lat)
-        lng.append(File.query.filter_by(hashName=doc.get("_id")).first().lng)
+        lat.append(File.query.filter_by(hashName=doc.get("filename")).first().lat)
+        lng.append(File.query.filter_by(hashName=doc.get("filename")).first().lng)
 
 
     print(files)
@@ -332,8 +332,8 @@ def delete_annotation():
     file = request.args.get('file')
     user = request.args.get('user')
 
-    result = local_annotations.delete_one({'_id': file,'username':user})
-    doc = annotations.find_one({'_id': file})
+    result = local_annotations.delete_one({'filename': file,'username':user})
+    doc = annotations.find_one({'filename': file})
     if doc is None and user==current_user.username:
         q = File.query.filter_by(hashName=file).first()
         db.session.delete(q)
@@ -354,8 +354,8 @@ def rename_annotation():
     new_name = request.args.get('newname')
     username = current_user.username
 
-    doc = local_annotations.find_one({'_id': file,'username':username})
-    local_annotations.update_one({'_id': doc['_id'],'username':username}, {'$set': {'old_name': new_name}})
+    doc = local_annotations.find_one({'filename': file,'username':username})
+    local_annotations.update_one({'filename': doc['filename'],'username':username}, {'$set': {'old_name': new_name}})
 
     return jsonify({'response': "ok"})
 
@@ -628,7 +628,7 @@ def annotation(username,path):
         lng = q.lng
         
         to_add = {
-            "_id": hash_name,
+            #"_id": hash_name,
             "filename": hash_name,
             "old_name": q.name,
             #"old_name": path+'.wav',
@@ -644,19 +644,19 @@ def annotation(username,path):
         if doc is None:
             doc = local_annotations.find_one({'filename': hash_name,'username':username})
             if doc is None: 
-                local_annotations.replace_one({"_id": hash_name,'username':username}, to_add, upsert=True)
+                local_annotations.replace_one({"filename": hash_name,'username':username}, to_add, upsert=True)
             else:
                 if arg == 'false':doc["annotations"] = data
                 if arg == 'true':doc["annotations"] += data
-                local_annotations.update_one({'_id': doc['_id'],'username':username}, {'$set': {'annotations': doc['annotations']}})
+                local_annotations.update_one({'filename': doc['filename'],'username':username}, {'$set': {'annotations': doc['annotations']}})
         else:
             if arg == 'false':doc["annotations"] = data
             if arg == 'true':doc["annotations"] += data
-            to_search = local_annotations.find_one({'_id': doc['_id'],'username':username})
+            to_search = local_annotations.find_one({'filename': doc['filename'],'username':username})
             if to_search is None:
                 local_annotations.insert_one(doc)
             else:  
-                local_annotations.update_one({'_id': doc['_id'],'username':username}, {'$set': {'annotations': doc['annotations'], 'validated': doc['validated'], 'validated_by': doc['validated_by']}})
+                local_annotations.update_one({'filename': doc['filename'],'username':username}, {'$set': {'annotations': doc['annotations'], 'validated': doc['validated'], 'validated_by': doc['validated_by']}})
  
         return jsonify({'res': 'ok'})
     
@@ -674,7 +674,7 @@ def validate(path):
     lng = q.lng
 
     to_add = {
-        "_id": hash_name,
+        #"_id": hash_name,
         "filename": hash_name,
         "old_name": q.name,
         #"old_name": path+'.wav',
@@ -694,7 +694,7 @@ def validate(path):
         doc["annotations"] = data
         doc["validated_by"].append(current_user.username)
 
-        annotations.update_one({'_id': doc['_id']}, {'$set': {'validated_by':doc['validated_by'],
+        annotations.update_one({'filename': doc['filename']}, {'$set': {'validated_by':doc['validated_by'],
                                                                 'validated': doc['validated'], 
                                                                 'annotations': doc['annotations']}})
     return jsonify({'res': 'ok'})
@@ -733,7 +733,7 @@ def pending_audio(path):
         lng = q.lng
 
         to_add = {
-            "_id": hash_name,
+            #"_id": hash_name,
             "filename": hash_name,
             "old_name": q.name,
             #"old_name": path+'.wav',
@@ -751,7 +751,7 @@ def pending_audio(path):
         else:
             if current_user.isExpert or (doc.get('username') == current_user.username and not doc.get('validated')):
                 doc["annotations"] = data
-                annotations.update_one({'_id': doc['_id']}, {'$set': {'annotations': doc['annotations']}})
+                annotations.update_one({'filename': doc['filename']}, {'$set': {'annotations': doc['annotations']}})
             else:
                 return jsonify({'error': 'You are not allowed to modify this file : either validated or not yours'})
         return jsonify({'res': 'ok'})  
@@ -839,7 +839,7 @@ def split_audio():
 def download_csv():
     file = request.args.get('file')
     
-    doc = local_annotations.find_one({'_id': file,'username':current_user.username})
+    doc = local_annotations.find_one({'filename': file,'username':current_user.username})
     to_csv = doc['annotations']
     keys = to_csv[0].keys()
 
