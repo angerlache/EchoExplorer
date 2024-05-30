@@ -44,7 +44,8 @@ def process_on_second_machine():
         print("file from s3")
         os.chdir('../AI')
         print(os.getcwd())
-        subprocess.run('{} {} {}'.format('python3', 'run_classifier.py', username) + " && rm -rf data/samples/" + username,shell=True,check=True)
+        subprocess.run('{} {} {}'.format('python3', 'run_classifier.py', username),shell=True,check=True)
+        subprocess.run("rm -rf data/samples/" + username,shell=True,check=True)
         print("---------------------------------------------------")
         os.chdir('../app')
         csv_filepath = '../AI/results/classification_result_' + username + '.csv'
@@ -59,7 +60,8 @@ def process_on_second_machine():
         for m in message:
             s3.Bucket('biodiversity-lauzelle').download_file(m,'../BirdNET/samples/'+username+'/'+m.split('/')[1]) # has .wav
         os.chdir('../BirdNET')
-        subprocess.run("source /home/batmen/anthony/myenv/bin/activate && {} {} {} {} {} {} {} {} {} {} && rm -rf samples/{}/ && rm results/{}".format("python3", "analyze.py", "--i", "samples/"+username+'/', '--o', 'results/'+username+'/', '--user', username,'--rtype', 'csv',username,username + '/*.' + "BirdNET.results.csv"), shell=True, check=True)
+        subprocess.run("source /home/batmen/anthony/myenv/bin/activate && {} {} {} {} {} {} {} {} {} {}".format("python3", "analyze.py", "--i", "samples/"+username+'/', '--o', 'results/'+username+'/', '--user', username,'--rtype', 'csv'), shell=True, check=True)
+        subprocess.run("rm -rf samples/{}/ && rm results/{}".format(username,username + '/*.' + "BirdNET.results.csv"), shell=True, check=True)
         #os.system('{} {} {} {} {} {} {} {} {} {}'.format("python3", "analyze.py", "--user", username, "--i", "samples/"+username+'/', '--o', 'results/', '--rtype', 'csv'))
         #os.system('rm -rf samples/'+username)
         #os.remove("results/" + filename[:-3] + "BirdNET.results.csv")
@@ -76,7 +78,8 @@ def process_on_second_machine():
         for m in message:
             s3.Bucket('biodiversity-lauzelle').download_file(m,'../BattyBirdNET/samples/'+username+'/'+m.split('/')[1]) # has .wav
         os.chdir('../BattyBirdNET')
-        subprocess.run("source /home/batmen/anthony/myenv/bin/activate && {} {} {} {} {} {} {} {} && rm -rf samples/{}/ && rm -rf results/{}/*.wav.csv".format("python3", "bat_ident.py", "--i", "samples/"+username, '--o', 'results/'+username, '--user', username,username,username), shell=True, check=True)
+        subprocess.run("source /home/batmen/anthony/myenv/bin/activate && {} {} {} {} {} {} {} {}".format("python3", "bat_ident.py", "--i", "samples/"+username, '--o', 'results/'+username, '--user', username), shell=True, check=True)
+        subprocess.run("rm -rf samples/{}/ && rm -rf results/{}/*.wav.csv".format(username,username), shell=True, check=True)
         
         os.chdir('../app')
         csv_filepath = '../BattyBirdNET/results/'+username+'/classification_result_' + username + '.csv'
@@ -91,7 +94,8 @@ def process_on_second_machine():
         for m in message:
             s3.Bucket('biodiversity-lauzelle').download_file(m,'../batdetect2/samples/'+username+'/'+m.split('/')[1]) # has .wav
         os.chdir('../batdetect2')
-        subprocess.run("source /home/batmen/anthony/myenv/bin/activate && {} {} {} {} {} {} && rm -rf samples/{}/ && rm -rf results/{}/*.wav.csv".format("python3", "run_batdetect.py", "samples/"+username, "results/"+username, 0.5, username, username, username), shell=True, check=True)
+        subprocess.run("source /home/batmen/anthony/myenv/bin/activate && {} {} {} {} {} {}".format("python3", "run_batdetect.py", "samples/"+username, "results/"+username, 0.5, username), shell=True, check=True)
+        subprocess.run("rm -rf samples/{}/ && rm -rf results/{}/*.wav.csv".format(username, username), shell=True, check=True)
         os.chdir('../app')
         csv_filepath = '../batdetect2/results/'+username+'/classification_result_' + username + '.csv'
         #csv_filepath = '../batdetect2/results/'+username+'/classification_result_' + filename + '.csv'
