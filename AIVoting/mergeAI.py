@@ -14,6 +14,15 @@ time_tolerance = float(sys.argv[2])  # 0.05
 #  probabilty of being a bat for both, probabilty of being a specific specie ml, merged proba      0.6 0.8 0.5
 #  add weights to each AIs proba
 
+weight_ML = 0.4
+weight_Detect2 = 0.6
+
+batproba_ML = 0.65
+batproba_Detect = 0.5
+batproba_Both = 0.55
+
+groupproba = 0.6
+specproba = 0.7
 
 
 #specieTables
@@ -86,7 +95,7 @@ for filename in os.listdir("samples/"+username):
         newdf = utils.addGroupProba(mergedDf, index)
 
 
-        preds = utils.compute(newdf, group_names,batdetectSpecies,0.8, 0.5, 0.6, 0.8,0.5,0.5,0.5)
+        preds = utils.compute(newdf, group_names,batdetectSpecies,batproba_ML, groupproba, batproba_Detect, specproba,batproba_Both,weight_ML,weight_Detect2)
 
 
 
