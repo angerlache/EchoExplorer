@@ -48,7 +48,7 @@ subprocess.run('{} {} {}'.format('python3', 'run_classifier.py', username)+ " &&
 #run Batdetect2
 os.chdir('../batdetect2')
 #"source /home/batmen/anthony/myenv/bin/activate && " +   |||  + "&& rm -rf samples/"+username+"/ && rm -rf results/"+username+"/*.wav.csv" 
-subprocess.run("source /home/batmen/anthony/myenv/bin/activate && " +  "{} {} {} {} {} {} {}".format("python3", "run_batdetect.py", "samples/"+username, "results/"+username, 0.5, username, "--voting") + "&& rm -rf samples/"+username+"/ && rm -rf results/"+username+"/*.wav.csv", shell=True, check=True)
+subprocess.run("source /home/batmen/anthony/myenv/bin/activate && " +  "{} {} {} {} {} {} {}".format("python3", "run_batdetect.py", "samples/"+username, "results/"+username, 0.5, username, "--voting") + "&& rm -rf samples/"+username+"/ && rm -rf results/"+username+"/classification_data*.csv && rm -rf results/"+username+"/*.wav.csv", shell=True, check=True)
 os.chdir('../batdetect2')
 
 print(os.getcwd())
