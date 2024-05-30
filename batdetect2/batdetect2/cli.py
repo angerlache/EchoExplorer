@@ -169,7 +169,7 @@ def detect(
 
 
             elif args["save_preds_if_empty"] or (
-                len(results["pred_dict"]["annotation"]) > 0
+                'pred_dict' in results and len(results["pred_dict"]["annotation"]) > 0
             ):
                 results_path = audio_file.replace(audio_dir, ann_dir)
  
@@ -196,12 +196,13 @@ def detect(
     l = os.listdir(directory)
     # Iterate through each file in the directory
     with open(output_file, 'w') as output_csv:
+        output_csv.write("filename,start,end,class,probability")
         for file_name in l:
             if file_name != 'classification_result_'+user+'.csv' and file_name.endswith('.csv'):
                 with open(os.path.join(directory, file_name), 'r') as input_csv:
                     # Skip the header line if it's not the first file
-                    if output_csv.tell() != 0:
-                        next(input_csv)
+                    #if output_csv.tell() != 0:
+                    next(input_csv)
                     # Copy the contents of the file to the output file
                     for line in input_csv:
                         line = line.replace('Barbastellus barbastellus', 'Barbastella barbastellus')

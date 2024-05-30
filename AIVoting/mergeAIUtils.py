@@ -1,5 +1,5 @@
 import pandas as pd
-
+import numpy as np
 def filter_close_time(df, time_col, bat_col, time_tolerance):
     filtered_entries = []
     checked = set()
@@ -10,6 +10,10 @@ def filter_close_time(df, time_col, bat_col, time_tolerance):
         
         current_time = row[time_col]
         close_indices = df.index[(df[time_col] >= current_time - time_tolerance) & (df[time_col] <= current_time + time_tolerance)].tolist()
+        for ele in checked:
+            if ele in close_indices:
+                close_indices.remove(ele)
+            
         max_bat_index = df.loc[close_indices][bat_col].idxmax()
         
         filtered_entries.append(df.loc[max_bat_index])
@@ -42,6 +46,11 @@ def merge(df1, df2, time_tolerance):
     newresults = []
     checked = set()
 
+    if df1.empty:
+        df1 = pd.DataFrame(columns=['filename','time','batproba','0','1','2','3','4','5','6'])
+    
+    if df2.empty:
+        df2 = pd.DataFrame(columns=['file','start','end','batproba','0','1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16'])
     l = sorted(list(df1["time"]) + list(df2["start"]))    
 
     for time in l:
@@ -97,27 +106,29 @@ def compute(df, groups,species, batmlbatprob,groupprob,batdetectbatprob,batdetec
     for i, row in df.iterrows():
 
         newr = []
-        if pd.isna(row["batdetect_start"]) and float(row["batml_batproba"]) >  batmlbatprob:
-            m = max(row["batml_species"])
-            if(m > groupprob):
-                newr.append(row["timestamp"])
-                newr.append(row["timestamp"])
-                newr.append(groups[row["batml_species"].index(m)])
-                newr.append(m * row["batml_batproba"])
+        if (pd.isna(row["batdetect_start"]) or row["batdetect_start"] == None):  
+            if float(row["batml_batproba"]) > batmlbatprob:
+                m = max(row["batml_species"])
+                if(m > groupprob):
+                    newr.append(row["timestamp"])
+                    newr.append(row["timestamp"])
+                    newr.append(groups[row["batml_species"].index(m)])
+                    newr.append(m * row["batml_batproba"])
 
 
-        elif pd.isna(row["batml_time"]) and float(row["batdetect_batproba"]) >  batdetectbatprob:
-            m = max(row["groupProbas"])
-            if(m> groupprob):
-                mx = max(row["batdetect_species"])
-                newr.append(row["timestamp"])
-                newr.append(row["timestamp"])
-                if(mx>batdetectspeprob):
-                    newr.append(species[row["batdetect_species"].index(mx)])
-                    newr.append(mx)
-                else:
-                    newr.append(groups[row["groupProbas"].index(m)])
-                    newr.append(m * row["batdetect_batproba"])
+        elif (pd.isna(row["batml_time"]) or row["batml_time"]==None): 
+            if float(row["batdetect_batproba"]) >  batdetectbatprob:
+                m = max(row["groupProbas"])
+                if(m> groupprob):
+                    mx = max(row["batdetect_species"])
+                    newr.append(row["timestamp"])
+                    newr.append(row["timestamp"])
+                    if(mx>batdetectspeprob):
+                        newr.append(species[row["batdetect_species"].index(mx)])
+                        newr.append(mx)
+                    else:
+                        newr.append(groups[row["groupProbas"].index(m)])
+                        newr.append(m * row["batdetect_batproba"])
         else:
             proba1 = row["batml_batproba"]
             proba2 = row["batdetect_batproba"]              
