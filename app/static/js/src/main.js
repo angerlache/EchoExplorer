@@ -1192,8 +1192,11 @@ document.addEventListener('DOMContentLoaded', function () {
                 
             })
             if (multipleAudio) {
-                saveAnnotationToServer(data.files[data.files.length-1].split('.')[0],data.files[data.files.length-1],regions,userName,'local',true);
-                //saveAnnotationToServer(multipleAudioFile.files[idx].name.split('.')[0],multipleAudioFile.files[idx].name,regions,userName,'local');
+                try { // because data.files might be empty
+                    saveAnnotationToServer(data.files[data.files.length-1].split('.')[0],data.files[data.files.length-1],regions,userName,'local',true);
+                } catch (error) {
+                    console.log(error);
+                }
             } else {
                 saveAnnotationToServer(fileInput.files[0].name.split('.')[0],fileInput.files[0].name,regions,userName,'local',false);
                 updateWaveform()
