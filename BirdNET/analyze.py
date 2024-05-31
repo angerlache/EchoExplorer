@@ -656,12 +656,36 @@ if __name__ == "__main__":
             results.wait()
 
     # Combine results?
-    if not cfg.OUTPUT_FILE is None:
+    """if not cfg.OUTPUT_FILE is None:
         print("Combining results into {}...\n".format(cfg.OUTPUT_FILE), end='', flush=True)
         print(cfg.OUTPUT_FILE)
         print(cfg.OUTPUT_PATH)
         combineResults(cfg.OUTPUT_PATH, cfg.OUTPUT_FILE)
-        print("done!", flush=True)
+        print("done!", flush=True)"""
+    
+    import pandas as pd
+
+    folder_path = args.o
+    output_file = args.o + '/classification_result_'+args.user+'.csv'
+
+    all_files = os.listdir(folder_path)
+
+    # Filter out non-CSV files
+    csv_files = [f for f in all_files if f.endswith('.csv') and 'classification_result' not in f]
+
+    # Create a list to hold the dataframes
+    df_list = []
+
+    for csv in csv_files:
+        file_path = os.path.join(folder_path, csv)
+        
+        # Try reading the file using default UTF-8 encoding
+        df = pd.read_csv(file_path)
+        df_list.append(df)
+    
+    big_df = pd.concat(df_list, ignore_index=True)
+
+    big_df.to_csv(output_file, index=False)
 
     # A few examples to test
     # python3 analyze.py --i example/ --o example/ --slist example/ --min_conf 0.5 --threads 4

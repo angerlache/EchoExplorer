@@ -695,7 +695,7 @@ if __name__ == "__main__":
     all_files = os.listdir(folder_path)
 
     # Filter out non-CSV files
-    csv_files = [f for f in all_files if f.endswith('.csv')]
+    csv_files = [f for f in all_files if f.endswith('.csv') and 'classification_result' not in f]
 
     # Create a list to hold the dataframes
     df_list = []
