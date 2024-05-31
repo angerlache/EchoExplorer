@@ -677,8 +677,8 @@ if __name__ == "__main__":
     output_file = args.o + '/classification_result_'+args.user+'.csv'
     l = os.listdir(directory)
     # Iterate through each file in the directory
-    with open(output_file, 'w') as output_csv:
-        output_csv.write("filename,start,end,class,probability")
+    """with open(output_file, 'w') as output_csv:
+        output_csv.write("filename,start,end,class,probability\n")
         for file_name in l:
             if file_name.endswith('.csv'):
                 with open(os.path.join(directory, file_name), 'r') as input_csv:
@@ -687,7 +687,29 @@ if __name__ == "__main__":
                     next(input_csv)
                     # Copy the contents of the file to the output file
                     for line in input_csv:
-                        output_csv.write(line)
+                        output_csv.write(line)"""
+    import pandas as pd
+
+    folder_path = directory
+
+    all_files = os.listdir(folder_path)
+
+    # Filter out non-CSV files
+    csv_files = [f for f in all_files if f.endswith('.csv')]
+
+    # Create a list to hold the dataframes
+    df_list = []
+
+    for csv in csv_files:
+        file_path = os.path.join(folder_path, csv)
+        
+        # Try reading the file using default UTF-8 encoding
+        df = pd.read_csv(file_path)
+        df_list.append(df)
+    
+    big_df = pd.concat(df_list, ignore_index=True)
+
+    big_df.to_csv(output_file, index=False)
 
     """if args.segment == "on" or args.spectrum == "on":
         script_dir = os.path.dirname(os.path.abspath(sys.argv[0]))

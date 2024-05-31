@@ -197,7 +197,7 @@ def detect(
     l = os.listdir(directory)
     # Iterate through each file in the directory
     with open(output_file, 'w') as output_csv:
-        output_csv.write("filename,start,end,class,probability")
+        output_csv.write("filename,start,end,class,probability\n")
         for file_name in l:
             if file_name != 'classification_result_'+user+'.csv' and file_name.endswith('.csv'):
                 with open(os.path.join(directory, file_name), 'r') as input_csv:
