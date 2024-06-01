@@ -177,8 +177,7 @@ def detect(
                 for delimiter in ['/','\\']:
                     audiosplit = " ".join(audiosplit.split(delimiter))
                 audiosplit = audiosplit.split(" ")
-
-                save_results_to_file(results, results_path, ann_dir+'/'+audiosplit[2].split('.')[0])
+                save_results_to_file(results, results_path, ann_dir+'/'+audiosplit[2].split('.')[0]+'.wav')
                 #save_results_to_file(results, results_path, ann_dir+'/classification_result_'+audio_file.split('/')[2])
         except (RuntimeError, ValueError, LookupError) as err:
             error_files.append(audio_file)
