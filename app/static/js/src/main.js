@@ -73,6 +73,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
     let SelectedAI = ['Human', 'BatML', 'BirdNET', 'BattyBirdNET', 'batdetect2','AIVoting'];
     let AIlist = ['Human', 'BatML', 'BirdNET', 'BattyBirdNET', 'batdetect2','AIVoting'];
+    
+    
+    //-------------------------------------------------------------------------------------------------
+    //Add taxo
     const TaxonomyList = [
         'Bird',
         ['Bat', [['Barbarg',['Barbastella barbastellus']], ['Pip35',['Pipistrellus kuhlii','Pipistrellus nathusii']], ['Pip50',['Pipistrellus maderensis','Pipistrellus pipistrellus','Pipistrellus pygmaeus']], ['Envsp',['Eptesicus nilssonii','Eptesicus serotinus','Nyctalus lasiopterus','Nyctalus leisleri','Nyctalus noctula','Vespertilio murinus']],['Myosp',['Myotis alcathoe','Myotis bechsteinii','Myotis brandtii','Myotis capaccinii','Myotis dasycneme','Myotis daubentonii','Myotis emarginatus','Myotis myotis','Myotis mystacinus','Myotis nattereri']],['Plesp',['Plecotus austriacus','Plecotus auritus']],['Rhisp',['Rhinolophus blasii','Rhinolophus ferrumequinum','Rhinolophus hipposideros']]]]
@@ -116,13 +120,10 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
     });
-
-  
-
     taxDiv.appendChild(ul);
-
+    //-----------------------------------------------------------------------------
+    //Declarations
     let wavesurfer;
-
     let wsRegions; // Define wsRegions here
     let regions = [];
     let unremovableRegions = []
@@ -130,14 +131,16 @@ document.addEventListener('DOMContentLoaded', function () {
     let maxFreq = 96000;
     let arrayBuffer;
 
-    var modalNewObservation = document.getElementById('modalNewObservation')
-    
-    // dont know exactly the diff between 'shown.bs.modal' and 'show.bs.modal'
-    // but in the latter the map is not rendered well
+    //----------------------------------------------
+    //Observation Modal + addEventListener + bizzare de call map alors que def plus tard
+    var modalNewObservation = document.getElementById('modalNewObservation') 
+    // not exactly sure about the diff between 'shown.bs.modal' and 'show.bs.modal' but in the latter the map is not rendered well
     modalNewObservation.addEventListener('shown.bs.modal', (event) => {
         map.invalidateSize();
     });
 
+    //----------------------------------------------------------
+    //Map
     var map = L.map('map').setView([50.8503, 4.3517], 8);
     var mapFiles = L.map('mapFiles').setView([50.8503, 4.3517], 8);
     var markers = L.layerGroup()
@@ -162,7 +165,6 @@ document.addEventListener('DOMContentLoaded', function () {
         console.log(marker);
         console.log(marker._latlng);
     }
-
     function showFilesFromDistance(e) {
         if (markerQuery != null) {
             mapFiles.removeLayer(markerQuery)
@@ -174,8 +176,7 @@ document.addEventListener('DOMContentLoaded', function () {
     
     map.on('click', onMapClick);
     mapFiles.on('click', showFilesFromDistance)
-    
-
+    //---------------------------------------------------
     //temporary init
     function temporaryInit() {
         wavesurfer = WaveSurfer.create({
@@ -189,7 +190,8 @@ document.addEventListener('DOMContentLoaded', function () {
         wavesurfer.registerPlugin(WaveSurfer.Timeline.create());
     }
     temporaryInit()
-
+    //-------------------------------------------------
+    //DataTable
     // add this in fileInput listener to have new table when new audio ?
     // or when audio chosen from allAudios
     const Dtable = new DataTable('#myTable',{order: [[1, 'asc']]});   
@@ -204,7 +206,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
     Dtable.search.fixed('spec', function (searchStr, data, index) {
         var spec = data[0];
-        //if (SelectedSpecies.includes("Region")){
         if (SelectedSpecies.includes("other")){
             return SelectedSpecies.includes(spec) || !(SpeciesList.includes(spec));
         }
@@ -218,9 +219,12 @@ document.addEventListener('DOMContentLoaded', function () {
         return SelectedAI.includes(ai)
     }); 
     
+    //----------------------------------------------------------------------
+    //function un peu random placée
+
     function cleanBeforeLoad(modal) {
+        //Deletes extentions of wavesurfer and empties datatables.
         if (wavesurfer) {
-            // ICI tu fait un truc pour que il fasse plus qqchs on-delete
             if(wsRegions){
                 wsRegions.unAll();
             }
@@ -231,10 +235,9 @@ document.addEventListener('DOMContentLoaded', function () {
         FilesDtable.clear().draw();
         Dtable.clear().draw();
     }
-
-
+    //--------------------------------------------
+    //FilesDTable, pas dutout compris, faut faire des comms
     var myModalEl = document.getElementById('modalAudios')
-    
     var whichFiles = 'all'
     const FilesDtable = new DataTable('#FilesTable',{order: [[1, 'asc']]}); 
     FilesDtable.column(0).visible(false);
@@ -319,6 +322,7 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
 
+
     function getFiles(whichSpecies) {
         var geoCoord = ""
         if (markerQuery != null) {
@@ -379,7 +383,8 @@ document.addEventListener('DOMContentLoaded', function () {
             console.log('Fetch Error :-S', err);
         });
     }
-    
+    //------------------------------------------------------------------
+ 
 
     document.getElementById('myAudios').addEventListener('click', () => {
         mapFiles.invalidateSize();
