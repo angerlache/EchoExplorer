@@ -331,7 +331,8 @@ def retrieve_allspecies():
 def delete_annotation():
     file = request.args.get('file')
     user = request.args.get('user')
-
+    file = get_hashname(file)
+    
     result = local_annotations.delete_one({'filename': file,'username':user})
     doc = annotations.find_one({'filename': file})
     if doc is None and user==current_user.username:
@@ -576,7 +577,7 @@ def process():
     #"""
 
     # Process the file using your AI model function
-    results = [[],[],[],[]]
+    results = [[],[],[],[],[]]
     
     #with open('received_classification_result_' + current_user.username + '.csv') as resultfile:
     """
@@ -585,14 +586,15 @@ def process():
         for line in resultfile:
             line = line.strip().split(',')
             if float(line[4]) > 0.5: 
-                results[0].append(line[1])
-                results[1].append(line[2])
-                results[2].append(line[3])
-                results[3].append(line[4])
+                results[0].append(line[0])
+                results[1].append(line[1])
+                results[2].append(line[2])
+                results[3].append(line[3])
+                results[4].append(line[4])
             
 
     print(results)
-    return jsonify({'result': results[2], 'start': results[0], 'end': results[1], 'probability':results[3], 'AI':session['AI']})
+    return jsonify({'result': results[3], 'start': results[1], 'end': results[2], 'probability':results[4], 'AI':session['AI'], 'files':results[0]})
     """
 
     #return jsonify(response_data.json())
@@ -840,21 +842,89 @@ def split_audio():
 
     return 'Invalid file format'
 
+@app.route('/multi_class_csv', methods=['POST','GET'])
+def multi_class_csv():
+    files = request.args.get('files').split(',')
+    ai = request.args.get('AI')
+
+    result = {}
+    res = []
+    for filename in files:
+        q = File.query.filter_by(name=filename,username=current_user.username).first()
+        if q is None:
+            continue
+        pipeline = [
+            {
+                '$match': {
+                    'filename': q.hashName,
+                    'username': current_user.username
+                }
+            },
+            {
+                '$unwind': '$annotations'
+            },
+            {
+                '$match': {
+                    'annotations.ai': ai
+                }
+            },
+            {
+                '$group': {
+                    '_id': '$annotations.label',
+                    'count': {'$sum': 1}
+                }
+            },
+            {
+                '$sort': {
+                    'count': -1
+                }
+            },
+            {
+                '$limit': 1
+            }
+        ]
+
+        most_cited = list(local_annotations.aggregate(pipeline))
+        if most_cited:
+            result[q.hashName] = most_cited[0]['_id']
+            res.append({'filename':q.name, 'label':most_cited[0]['_id']})
+
+    output = StringIO()
+    dict_writer = csv.DictWriter(output, ["filename","label"])
+    dict_writer.writeheader()
+    dict_writer.writerows(res)
+    
+    csv_data = output.getvalue()
+
+    # Create response with CSV data
+    response = make_response(csv_data)
+    response.headers['Content-Disposition'] = 'attachment; filename=data_'+ai+'.csv'
+    response.headers['Content-type'] = 'text/csv'
+        
+    return response
+
 @app.route('/download_csv', methods=['POST','GET'])
 def download_csv():
-    file = request.args.get('file')
-    
-    doc = local_annotations.find_one({'filename': file,'username':current_user.username})
-    to_csv = doc['annotations']
-    keys = to_csv[0].keys()
+    files = request.args.get('file').split(',')
 
     output = StringIO()
 
-    #with open('people.csv', 'w') as output_file:
-    dict_writer = csv.DictWriter(output, keys)
-    dict_writer.writeheader()
-    dict_writer.writerows(to_csv)
-    
+    for i,file in enumerate(files):
+        q = File.query.filter_by(name=file,username=current_user.username).first()
+        if q is None:
+            continue
+        doc = local_annotations.find_one({'filename': q.hashName,'username':current_user.username})
+        to_csv = doc['annotations']
+        del to_csv['id']
+        del to_csv['drag']
+        del to_csv['resize']
+        keys = to_csv[0].keys()
+
+
+        dict_writer = csv.DictWriter(output, keys)
+        if i == 0: dict_writer.writeheader()
+        dict_writer.writerows(to_csv)
+        
     csv_data = output.getvalue()
 
     # Create response with CSV data

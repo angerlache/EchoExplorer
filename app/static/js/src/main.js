@@ -20,6 +20,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const save = document.getElementById('save'); save.disabled = true;
 
     const csv = document.getElementById('csv');
+    const csvMultiClass = document.getElementById('csv-multi-class');
     const loadLabels = document.getElementById('loadLabels');
     const validateButton = document.getElementById('validateButton');
     const uploadButton = document.getElementById('uploadButton'); uploadButton.disabled = true;
@@ -28,6 +29,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const annotationsButton = document.getElementById('annotationsButton')
     const speciesButton = document.getElementById('speciesButton')
     const aiButton = document.getElementById('aiButton')
+    const deleteButton = document.getElementById('deleteButton')
 
     const chunkLengthSelector = document.getElementById('chunkLengthSelector');
     const radiusSearchSelector = document.getElementById('radiusSearchSelector'); radiusSearchSelector.value=10000
@@ -91,6 +93,7 @@ document.addEventListener('DOMContentLoaded', function () {
         annotation_name = fileInput.files[0].name.split('.')[0] //+ '.json'
         
         if (selectedFile) {
+            csvMultiClass.disabled = false
             multipleAudio = false;
             playButton.disabled = false;
             zoomButton.disabled = false;
@@ -159,6 +162,8 @@ document.addEventListener('DOMContentLoaded', function () {
             }
             wavesurfer.destroy();
         }
+        csvMultiClass.disabled = false
+        csv.disabled = false;
         multipleAudioLength = [];
         temporaryInit()
         const selectedFiles = event.target.files;
@@ -169,12 +174,12 @@ document.addEventListener('DOMContentLoaded', function () {
             uploadButton.disabled = true;
             save.disabled = true;
             loadLabels.disabled = true; 
-            csv.disabled = true;
+            //csv.disabled = true;
             validateButton.disabled = true;
             playButton.disabled = true;
             zoomButton.disabled = true;
             optionsButton.disabled = true;
-            annotationsButton.disabled = true;
+            //annotationsButton.disabled = true;
             speciesButton.disabled = true;
             aiButton.disabled = true;
             prec.disabled = true;
@@ -659,8 +664,77 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     csv.addEventListener('click', function () {
-        download_csv(fileInput.files[0].name)
+        if (multipleAudio) {
+            var files = [];
+            Array.from(multipleAudioFile.files).forEach(f => {
+                files.push(f.name)
+            });
+            var file = files.join(',');
+            download_csv(file)
+        } else {
+            download_csv(fileInput.files[0].name)
+        }
     });    
+
+    deleteButton.addEventListener('click', function () {
+        if (multipleAudio) {
+            Array.from(multipleAudioFile.files).forEach(f => {
+                fetch(`/delete_annotation?file=${f.name}&user=${userName}`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': csrfToken
+                    }
+                })
+                .then(response => response.json())
+                .then(res => {
+        
+                }).catch(function (err) {
+                    console.log('Fetch Error :-S', err);
+                });
+            });
+        } else {
+            fetch(`/delete_annotation?file=${fileInput.files[0].name}&user=${userName}`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken
+                }
+            })
+            .then(response => response.json())
+            .then(res => {
+    
+            }).catch(function (err) {
+                console.log('Fetch Error :-S', err);
+            });
+        }
+    });   
+
+    csvMultiClass.addEventListener('change', () => {
+        var selectedAI = csvMultiClass.value;
+        var files = [];
+        Array.from(multipleAudioFile.files).forEach(f => {
+            files.push(f.name)
+        });
+        
+        fetch(`/multi_class_csv?AI=${selectedAI}&files=${files.join(',')}`, {
+            method: 'GET',
+        })
+        .then(response => response.blob())
+        .then(blob => {
+            // Create a temporary link
+            const url = window.URL.createObjectURL(new Blob([blob]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', 'data_'+selectedAI+'.csv');
+
+            // Simulate click on the link to trigger download
+            document.body.appendChild(link);
+            link.click();
+
+            // Clean up
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
+        })
+    });
 
 
 
