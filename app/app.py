@@ -915,6 +915,9 @@ def download_csv():
             continue
         doc = local_annotations.find_one({'filename': q.hashName,'username':current_user.username})
         to_csv = doc['annotations']
+        del to_csv['id']
+        del to_csv['drag']
+        del to_csv['resize']
         keys = to_csv[0].keys()
 
 
