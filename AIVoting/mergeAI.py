@@ -28,7 +28,7 @@ specproba = 0.7
 #specieTables
 batdetectSpecies = ['Barbastellus barbastellus', 'Eptesicus serotinus', 'Myotis alcathoe', 'Myotis bechsteinii', 'Myotis brandtii', 'Myotis daubentonii', 'Myotis mystacinus', 'Myotis nattereri', 'Nyctalus leisleri', 'Nyctalus noctula', 'Pipistrellus nathusii', 'Pipistrellus pipistrellus', 'Pipistrellus pygmaeus', 'Plecotus auritus', 'Plecotus austriacus', 'Rhinolophus ferrumequinum', 'Rhinolophus hipposideros']
 group_names = ['Barbarg', 'Envsp', 'Myosp', 'Pip35','Pip50', 'Plesp', 'Rhisp']
-index = {0:[0], 1:[1,8,9], 2:[2,3,4,5,6,7], 3:[13,14], 4:[10],5:[13,14],6:[15,16]}
+index = {0:[0], 1:[1,8,9], 2:[2,3,4,5,6,7], 3:[11,12], 4:[10],5:[13,14],6:[15,16]}
 
 
 
